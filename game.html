@@ -38,7 +38,7 @@
         .ripple {
             position: absolute;
             border-radius: 50%;
-            border: 5px solid #4CAF50;
+            border: 7px solid #7FFFD4;
             opacity: 2;
         }
 
@@ -155,8 +155,8 @@
             gameState.grid = level.grid.map(row => [...row]);
             gameState.avatarPos = { ...level.avatar };
             gameState.centerPos = { ...level.center };
-            gameState.avatarColor = 'white';
-            gameState.colorHistory = ['white'];
+            gameState.avatarColor = level.avatarColor || 'white';
+            gameState.colorHistory = [level.avatarColor || 'white'];
             gameState.moveCount = 0;
 
             renderGrid();
@@ -424,6 +424,7 @@
                     [0, 0, 0, 0, 0, 0]
                 ],
                 avatar: { x: 2, y: 1 },
+                avatarColor: 'yellow',  // Starting color for this level
                 center: { x: 3, y: 2 },
                 corners: {
                     topLeft: { x: 0, y: 0, color: 'green' },
