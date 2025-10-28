@@ -64,13 +64,19 @@
             margin-bottom: 20px;
             font-size: 16px;
             padding: 15px;
-            background-color: #1a1a1a;
-            color: #ffffff;
+            background-color: #ffffff;
+            color: #1a1a1a;
             border-radius: 8px;
             max-width: 400px;
             margin-left: auto;
             margin-right: auto;
             line-height: 1.5;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #instructions.fade-out {
+            opacity: 0;
         }
 
         #avatar-color-display {
@@ -98,6 +104,12 @@
             background-color: #e0e0e0;
             padding: 2px;
             border: 3px solid #e0e0e0;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #grid.fade-out {
+            opacity: 0;
         }
 
         .cell {
@@ -122,9 +134,9 @@
             EMPTY: '#FFFFFF',
             GREY: '#D3D3D3',  // Avatar is grey
             BLUE: '#ADD8E6',
-            YELLOW: '#FFEB3B',
-            TEAL: '#88CCEE',
-            PINK: '#FFB6C1'
+            YELLOW: '#DDCC77',
+            TEAL: '#44AA99',
+            PINK: '#332288'
         };
 
         // Game state
@@ -185,6 +197,11 @@
             }
 
             renderGrid();
+
+            // Fade in the new level
+            const gridElement = document.getElementById('grid');
+            gridElement.classList.remove('fade-out');
+            instructionsElement.classList.remove('fade-out');
         }
 
         // Get color at position
@@ -333,10 +350,16 @@
                 // Create ripple effect
                 createRipple();
 
+                // Fade out
+                const gridElement = document.getElementById('grid');
+                const instructionsElement = document.getElementById('instructions');
+                gridElement.classList.add('fade-out');
+                instructionsElement.classList.add('fade-out');
+
                 setTimeout(() => {
                     currentLevelIndex++;
                     loadLevel(currentLevelIndex);
-                }, 1200);
+                }, 800);
             }
         }
 
@@ -394,7 +417,7 @@
             return {
                 id: 1,
                 name: "Level 1",
-                instructions: "There are no instructions for this game, intentionally. Play the game to discover controls, rules, and the goal.",
+                instructions: "There are no instructions for this game, intentionally. Using the arrow keys, play the game to discover controls, rules, and the goal.",
 
                 grid: [
                     [0, 0, 0, 0, 0, 0],
@@ -419,7 +442,7 @@
             return {
                 id: 2,
                 name: "Level 2",
-                instructions: "There are no instructions for this game, intentionally. Play the game to discover controls, rules, and the goal.",
+                instructions: "There are no instructions for this game, intentionally. Using the arrow keys, play the game to discover controls, rules, and the goal.",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
@@ -444,7 +467,7 @@
             return {
                 id: 3,
                 name: "Level 3",
-                instructions: "There are no instructions for this game, intentionally. Play the game to discover controls, rules, and the goal.",
+                instructions: "There are no instructions for this game, intentionally. Using the arrow keys, play the game to discover controls, rules, and the goal.",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
