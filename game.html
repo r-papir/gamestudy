@@ -60,6 +60,19 @@
             font-size: 18px;
         }
 
+        #instructions {
+            margin-bottom: 20px;
+            font-size: 16px;
+            padding: 15px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border-radius: 8px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+        }
+
         #avatar-color-display {
             margin-bottom: 15px;
             font-size: 16px;
@@ -97,6 +110,7 @@
     </style>
 </head>
 <body>
+    <div id="instructions"></div>
     <div id="game-container">
         <div id="ripple-container"></div>
         <div id="grid"></div>
@@ -109,7 +123,7 @@
             GREY: '#D3D3D3',  // Avatar is grey
             BLUE: '#ADD8E6',
             YELLOW: '#FFEB3B',
-            GREEN: '#008080',
+            TEAL: '#88CCEE',
             PINK: '#FFB6C1'
         };
 
@@ -123,7 +137,7 @@
             centerPos: { x: 0, y: 0 },  // Blue center box
             targetColor: 'blue',  // Color needed to win
             corners: {
-                originTopLeft: { x: 0, y: 0, color: 'green' },      // Green (reset)
+                originTopLeft: { x: 0, y: 0, color: 'teal' },      // teal (reset)
                 originTopRight: { x: 5, y: 0, color: 'yellow' },    // Yellow
                 originbBottomLeft: { x: 0, y: 5, color: 'pink' },    // Pink
                 originBottomRight: { x: 5, y: 5, color: 'blue' }    // Blue
@@ -161,13 +175,22 @@
             gameState.colorHistory = ['grey'];
             gameState.moveCount = 0;
 
+            // Update instructions display
+            const instructionsElement = document.getElementById('instructions');
+            if (level.instructions) {
+                instructionsElement.textContent = level.instructions;
+                instructionsElement.style.display = 'block';
+            } else {
+                instructionsElement.style.display = 'none';
+            }
+
             renderGrid();
         }
 
         // Get color at position
         function getColorAtPosition(x, y) {
-            // Check corners - green resets to grey
-            if (x === 0 && y === 0) return 'grey';  // Green corner resets to grey
+            // Check corners - teal resets to grey
+            if (x === 0 && y === 0) return 'grey';  // teal corner resets to grey
             if (x === 5 && y === 0) return 'yellow';
             if (x === 0 && y === 5) return 'pink';
             if (x === 5 && y === 5) return 'blue';
@@ -186,7 +209,7 @@
                     let color = COLORS.EMPTY;
 
                     // Draw corner blocks
-                    if (x === 0 && y === 0) color = COLORS.GREEN;
+                    if (x === 0 && y === 0) color = COLORS.TEAL;
                     else if (x === 5 && y === 0) color = COLORS.YELLOW;
                     else if (x === 0 && y === 5) color = COLORS.PINK;
                     else if (x === 5 && y === 5) color = COLORS.BLUE;
@@ -371,6 +394,7 @@
             return {
                 id: 1,
                 name: "Level 1",
+                instructions: "Use arrow keys to move. Stand next to colored corners to change your color. Touch the blue center while being blue. Press R to restart.",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
@@ -382,7 +406,7 @@
                 avatar: { x: 2, y: 1 },
                 center: { x: 3, y: 3 },
                 corners: {
-                    originTopLeft: { x: 0, y: 0, color: 'green' },
+                    originTopLeft: { x: 0, y: 0, color: 'teal' },
                     originTopRight: { x: 5, y: 0, color: 'yellow' },
                     originBottomLeft: { x: 0, y: 5, color: 'pink' },
                     originBottomRight: { x: 5, y: 5, color: 'blue' }
@@ -394,6 +418,7 @@
             return {
                 id: 2,
                 name: "Level 2",
+                instructions: "The corners have moved! Find the blue corner and reach the center while blue.",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
@@ -402,10 +427,10 @@
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0]
                 ],
-                avatar: { x: 1, y: 5 },
+                avatar: { x: 3, y: 0 },
                 center: { x: 4, y: 2 },
                 corners: {
-                    originTopLeft: { x: 5, y: 5, color: 'green' },
+                    originTopLeft: { x: 5, y: 5, color: 'teal' },
                     originTopRight: { x: 0, y: 0, color: 'yellow' },
                     originBottomLeft: { x: 0, y: 5, color: 'pink' },
                     originBottomRight: { x: 5, y: 0, color: 'blue' }
@@ -418,6 +443,7 @@
             return {
                 id: 3,
                 name: "Level 3",
+                instructions: "Final challenge! This time you need to be PINK when you touch the center. Good luck!",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0],
@@ -426,9 +452,9 @@
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0]
                 ],
-                avatar: { x: 2, y: 1 },
-                center: { x: 3, y: 2 },
-                targetColor: 'yellow',  // Win by being yellow instead of blue
+                avatar: { x: 3, y: 4 },
+                center: { x: 0, y: 2 },
+                targetColor: 'pink',  // Win by being pink instead of blue
                 corners: {
                     originTopLeft: { x: 0, y: 0, color: 'green' },
                     originTopRight: { x: 5, y: 0, color: 'yellow' },
