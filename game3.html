@@ -266,8 +266,8 @@
                 name: "Level 4",
                 grid: [
                     [0,0,0,3,0,0,0],
-                    [0,0,0,0,0,0,0],
-                    [0,0,0,0,0,0,0],
+                    [0,1,0,0,0,0,0],
+                    [0,0,0,0,1,1,0],
                     [0,0,2,2,0,0,3],
                     [0,0,2,1,1,0,1],
                     [2,0,0,0,0,0,1],
@@ -276,6 +276,8 @@
                 chunks: [
                     [[4,3],[4,4]],  // Two-pixel moveable chunk
                     [[4,6],[5,6]],  // Two-pixel moveable chunk
+                    [[1,1]],        // Single moveable pixel
+                    [[2,4],[2,5]],  // Two-pixel moveable chunk
                 ],
                 carStart: [0,3],  // First car position
                 goal: [6,0],      // Goal where both cars meet
