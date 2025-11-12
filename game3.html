@@ -385,8 +385,22 @@
             // Check collisions with fixed track, car, and other chunks
             for (const [r, c] of newPositions) {
                 const gridValue = gameState.grid[r][c];
-                if (gridValue === 2 || gridValue === 3) {
-                    return; // Collision with fixed track or car
+
+                // Check if this position is occupied by something other than the current chunk
+                if (gridValue !== 0) {
+                    // Check if this position is part of the current chunk (which is okay)
+                    let isPartOfCurrentChunk = false;
+                    for (const [cr, cc] of chunk) {
+                        if (cr === r && cc === c) {
+                            isPartOfCurrentChunk = true;
+                            break;
+                        }
+                    }
+
+                    // If occupied by something that's NOT part of current chunk, collision!
+                    if (!isPartOfCurrentChunk) {
+                        return; // Collision detected
+                    }
                 }
             }
 
