@@ -123,7 +123,8 @@
 </head>
 <body>
     <div id="instructions">
-        There are no instructions for this game, intentionally. Use the arrow keys, "B" key, and space bar to discover the controls, rules, and objective.
+        There are no instructions for this game, intentionally.<br>
+        Use the arrow keys, "B" key, and space bar to discover the controls, rules, and objective.
     </div>
     <div id="game-container">
         <div id="ripple-container"></div>
@@ -138,6 +139,7 @@
         // Game state
         let levels = [];
         let currentLevelIndex = 0;
+        let isBKeyPressed = false; // Track if B key is being held
         let gameState = {
             grid: [],
             chunks: [],
@@ -352,8 +354,13 @@
 
                     // Determine color based on grid value
                     if (gridValue === 1) {
-                        // If this track piece is part of the selected chunk, use selectedChunk color
-                        color = isSelected ? gameState.colors.selectedChunk : gameState.colors.track;
+                        // If B key is pressed, show all tracks in track color (no selection)
+                        // Otherwise, show selected chunks in selectedChunk color
+                        if (isBKeyPressed) {
+                            color = gameState.colors.track;
+                        } else {
+                            color = isSelected ? gameState.colors.selectedChunk : gameState.colors.track;
+                        }
                     } else if (gridValue === 2) {
                         color = gameState.colors.fixedTrack;
                     } else if (gridValue === 3) {
@@ -601,8 +608,12 @@
                 case 'b':
                 case 'B':
                     e.preventDefault();
-                    logEvent('B', 'attempt_move_car');
-                    moveCar();
+                    if (!isBKeyPressed) {
+                        isBKeyPressed = true;
+                        renderGrid(); // Re-render to show flash effect
+                        logEvent('B', 'attempt_move_car');
+                        moveCar();
+                    }
                     break;
                 case 'r':
                 case 'R':
@@ -610,6 +621,14 @@
                     logEvent('R', 'restart_level');
                     loadLevel(currentLevelIndex);
                     break;
+            }
+        });
+
+        // Handle B key release to stop flash effect
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'b' || e.key === 'B') {
+                isBKeyPressed = false;
+                renderGrid(); // Re-render to restore selection
             }
         });
 
