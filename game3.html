@@ -56,11 +56,6 @@
             transition: all 0.2s ease;
         }
 
-        .cell.selected {
-            border: 3px solid #000000;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-
         #ripple-container {
             position: absolute;
             top: 0;
@@ -129,11 +124,7 @@
 <body>
     <div id="level-indicator"></div>
     <div id="instructions">
-        <strong>Controls:</strong><br>
-        Arrow Keys: Move selected track chunk<br>
-        Spacebar: Cycle through chunks<br>
-        B: Move car (only works if path is aligned)<br>
-        R: Restart level
+        There are no instructions for this game, intentionally. Use the arrow keys, "B" key, and space bar to discover the controls, rules, and objective.
     </div>
     <div id="game-container">
         <div id="ripple-container"></div>
@@ -187,7 +178,8 @@
                     track: "#5555FF",
                     fixedTrack: "#333399",
                     car: "#FF3333",
-                    goal: "#00CC66"
+                    goal: "#00CC66",
+                    selectedChunk: "#FF88FF"
                 }
             };
         }
@@ -217,7 +209,8 @@
                     track: "#FFAA00",
                     fixedTrack: "#AA5500",
                     car: "#FF4444",
-                    goal: "#00FF99"
+                    goal: "#00FF99",
+                    selectedChunk: "#FF66FF"
                 }
             };
         }
@@ -247,7 +240,8 @@
                     track: "#00AAFF",
                     fixedTrack: "#0055AA",
                     car: "#FF3333",
-                    goal: "#33FF66"
+                    goal: "#33FF66",
+                    selectedChunk: "#FFCC00"
                 }
             };
         }
@@ -277,7 +271,8 @@
                     track: "#AAFF00",
                     fixedTrack: "#55AA00",
                     car: "#FF5555",
-                    goal: "#00CCFF"
+                    goal: "#00CCFF",
+                    selectedChunk: "#FF00AA"
                 }
             };
         }
@@ -344,7 +339,8 @@
 
                     // Determine color based on grid value
                     if (gridValue === 1) {
-                        color = gameState.colors.track;
+                        // If this track piece is part of the selected chunk, use selectedChunk color
+                        color = isSelected ? gameState.colors.selectedChunk : gameState.colors.track;
                     } else if (gridValue === 2) {
                         color = gameState.colors.fixedTrack;
                     } else if (gridValue === 3) {
@@ -354,12 +350,6 @@
                     }
 
                     cell.style.backgroundColor = color;
-
-                    if (isSelected) {
-                        cell.classList.add('selected');
-                    } else {
-                        cell.classList.remove('selected');
-                    }
                 }
             }
         }
