@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Shift</title>
+    <title>Grid Color Game</title>
     <style>
         * {
             margin: 0;
@@ -13,573 +13,743 @@
 
         body {
             font-family: 'Courier New', monospace;
-            background: #ffffff;
-            color: #1a1a1a;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             min-height: 100vh;
-            overflow: hidden;
-        }
-
-        #game-container {
-            text-align: center;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
         }
 
         #instructions {
-            font-size: 14px;
+            text-align: center;
             margin-bottom: 30px;
-            color: #888;
-            max-width: 500px;
+            max-width: 600px;
             line-height: 1.6;
         }
 
-        #grid {
-            display: inline-grid;
-            grid-template-columns: repeat(9, 40px);
-            grid-template-rows: repeat(9, 40px);
-            gap: 2px;
-            background: #e0e0e0;
-            padding: 2px;
-            border: 2px solid #e0e0e0;
+        #instructions p {
+            margin: 5px 0;
+        }
+
+        #game-container {
             position: relative;
         }
 
-        .pixel {
+        #grid {
+            display: grid;
+            gap: 2px;
+            background: #333;
+            padding: 2px;
+            border: 3px solid #555;
+            position: relative;
+        }
+
+        .cell {
             width: 40px;
             height: 40px;
-            background: #ffffff;
-            transition: background-color 0.15s ease;
+            background: #222;
             position: relative;
+            transition: background-color 0.2s;
         }
 
-        .pixel.active {
-            animation: pulse 0.3s ease;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-
-        @keyframes ripple {
-            0% {
-                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7),
-                            0 0 0 0 rgba(34, 197, 94, 0.7);
-            }
-            50% {
-                box-shadow: 0 0 0 15px rgba(34, 197, 94, 0.3),
-                            0 0 0 30px rgba(34, 197, 94, 0.1);
-            }
-            100% {
-                box-shadow: 0 0 0 30px rgba(34, 197, 94, 0),
-                            0 0 0 60px rgba(34, 197, 94, 0);
-            }
-        }
-
-        #grid.level-transition {
-            animation: fadeIn 0.5s ease;
-        }
-
-        #grid.fade-out {
-            animation: fadeOut 0.4s ease;
-        }
-
-        #grid.win-ripple {
-            animation: ripple 0.8s ease-out;
+        .cell.avatar {
+            border: 3px solid #fff;
         }
 
         #restart-btn {
-            margin-top: 30px;
-            padding: 12px 32px;
-            font-family: 'Courier New', monospace;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
             font-size: 16px;
-            background: #10b981;
+            background: #4CAF50;
             color: white;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            font-family: 'Courier New', monospace;
             display: none;
         }
 
         #restart-btn:hover {
-            background: #059669;
-            transform: scale(1.05);
+            background: #45a049;
         }
 
-        #restart-btn:active {
-            transform: scale(0.95);
+        #download-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+
+        #download-btn:hover {
+            background: #0b7dda;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        #overlay.show {
+            display: flex;
+        }
+
+        #overlay h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.5s;
+        }
+
+        #next-level-btn {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            margin-top: 20px;
+        }
+
+        #next-level-btn:hover {
+            background: #45a049;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .ripple-effect {
+            animation: ripple 0.6s ease-out;
         }
     </style>
 </head>
 <body>
+    <button id="restart-btn">Restart</button>
+    <button id="download-btn">Download Data</button>
+
+    <div id="instructions">
+        <p>There are no instructions for this game, intentionally.</p>
+        <p>Using the arrow keys, play the game to discover controls, rules, and the objective.</p>
+    </div>
+
     <div id="game-container">
-        <div id="instructions">There are no instructions for this game, intentionally. Using the "U" and "J" keys, play the game to discover controls, rules, and the objective.</div>
         <div id="grid"></div>
-        <button id="restart-btn">Restart</button>
+    </div>
+
+    <div id="overlay">
+        <h2 id="overlay-message">Level Complete!</h2>
+        <button id="next-level-btn">Next Level</button>
     </div>
 
     <script>
-        // Level color configuration
-        const levelColors = {
-            level1: '#3b82f6',  // blue
-            level2: '#fbbf24',  // yellow
-            level3: '#ef4444',  // red
-            level4: '#10b981'   // green
-        };
-
-        // Game state
-        let gameState = {
-            currentLevel: 1,
-            overlayOffset: { x: 0, y: 0 },
-            targetPattern: [],
-            overlayPattern: [],
-            gridSize: 9,
-            animating: false
-        };
-
-        // Data logging
-        let logData = [];
-        let sessionStart = new Date().toISOString();
-
-        // Level 1: Plus sign (+), horizontal movement (U = left, J = right)
-        function level1() {
-            return {
-                id: 1,
-                color: levelColors.level1,
-                movementType: 'horizontal',
-                // TARGET PATTERN - Edit this to change the objective shape
-                targetPattern: [
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0]
+        // ============================
+        // LEVEL DEFINITIONS
+        // ============================
+        const LEVELS = {
+            1: {
+                boardSize: 8,
+                avatarStart: {x: 0, y: 0},
+                spawnDockCells: [{x: 0, y: 6}, {x: 0, y: 7}, {x: 1, y: 7}],
+                spawnTriggerCell: {x: 1, y: 6},
+                spawnAdjacencyRequirement: 2,
+                hintTemplateCells: [
+                    {x: 2, y: 2, color: "purple"},
+                    {x: 2, y: 3, color: "purple"},
+                    {x: 3, y: 2, color: "purple"},
+                    {x: 3, y: 3, color: "purple"}
                 ],
-                // Hint pieces (static, always visible)
-                hintPattern: [
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 1, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0]
+                initialStaticPieces: [{x: 1, y: 6, color: "white"}],
+                spawnSequence: [
+                    {x: 5, y: 4, color: "red"},
+                    {x: 1, y: 1, color: "blue"},
+                    {x: 6, y: 6, color: "red"},
+                    {x: 4, y: 1, color: "blue"},
+                    {x: 7, y: 5, color: "purple"},
+                    {x: 6, y: 2, color: "purple"}
                 ],
-                // Overlay pieces (movable layer)
-                overlayPattern: [
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 1, 1, 1, 1, 0, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                goalPattern: [
+                    {x: 2, y: 2, requiredColor: "purple"},
+                    {x: 2, y: 3, requiredColor: "purple"},
+                    {x: 3, y: 2, requiredColor: "purple"},
+                    {x: 3, y: 3, requiredColor: "purple"}
                 ],
-                initialOffset: { x: 2, y: 0 }  // Start offset 2 pixels to the right
-            };
-        }
-
-        // Level 2: Semi-circle, diagonal movement (U = up-left, J = down-right)
-        function level2() {
-            return {
-                id: 2,
-                color: levelColors.level2,
-                movementType: 'diagonal1',
-                // TARGET PATTERN - Edit this to change the objective shape
-                targetPattern: [
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 1, 1, 1, 1, 1, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 1, 1, 0],
-                    [1, 1, 1, 0, 0, 0, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                palette: {avatarDefault: "gray", spawnDock: "black", triggerCell: "white"}
+            },
+            2: {
+                boardSize: 8,
+                avatarStart: {x: 4, y: 4},
+                spawnDockCells: [{x: 0, y: 0}, {x: 0, y: 1}, {x: 1, y: 0}],
+                spawnTriggerCell: {x: 1, y: 1},
+                spawnAdjacencyRequirement: 2,
+                hintTemplateCells: [
+                    {x: 6, y: 6, color: "cyan"},
+                    {x: 6, y: 7, color: "cyan"},
+                    {x: 7, y: 6, color: "cyan"},
+                    {x: 7, y: 7, color: "cyan"}
                 ],
-                // Hint pieces (bottom half)
-                hintPattern: [
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                initialStaticPieces: [{x: 1, y: 1, color: "white"}],
+                spawnSequence: [
+                    {x: 3, y: 3, color: "yellow"},
+                    {x: 2, y: 2, color: "yellow"},
+                    {x: 5, y: 5, color: "cyan"},
+                    {x: 5, y: 6, color: "cyan"},
+                    {x: 6, y: 5, color: "cyan"},
+                    {x: 4, y: 7, color: "cyan"}
                 ],
-                // Overlay pieces (top half)
-                overlayPattern: [
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 1, 1, 1, 1, 1, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 1, 1, 0],
-                    [1, 1, 1, 0, 0, 0, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                goalPattern: [
+                    {x: 6, y: 6, requiredColor: "cyan"},
+                    {x: 6, y: 7, requiredColor: "cyan"},
+                    {x: 7, y: 6, requiredColor: "cyan"},
+                    {x: 7, y: 7, requiredColor: "cyan"}
                 ],
-                initialOffset: { x: -1, y: -1 }  // Start offset diagonally
-            };
-        }
-
-        // Level 3: Heart, vertical movement (U = up, J = down)
-        function level3() {
-            return {
-                id: 3,
-                color: levelColors.level3,
-                movementType: 'vertical',
-                // TARGET PATTERN - Edit this to change the objective shape
-                targetPattern: [
-                    [0, 0, 1, 1, 0, 1, 1, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 1, 1, 0],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 1, 1, 1, 1, 1, 1, 1, 0],
-                    [0, 0, 1, 1, 1, 1, 1, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0]
+                palette: {avatarDefault: "gray", spawnDock: "black", triggerCell: "white"}
+            },
+            3: {
+                boardSize: 8,
+                avatarStart: {x: 3, y: 3},
+                spawnDockCells: [{x: 7, y: 0}, {x: 7, y: 1}, {x: 6, y: 0}],
+                spawnTriggerCell: {x: 6, y: 1},
+                spawnAdjacencyRequirement: 2,
+                hintTemplateCells: [
+                    {x: 1, y: 1, color: "orange"},
+                    {x: 1, y: 2, color: "orange"},
+                    {x: 2, y: 1, color: "orange"},
+                    {x: 2, y: 2, color: "orange"},
+                    {x: 5, y: 5, color: "lime"},
+                    {x: 5, y: 6, color: "lime"}
                 ],
-                // Hint pieces (bottom half of heart)
-                hintPattern: [
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 1, 1, 1, 1, 1, 1, 1, 0],
-                    [0, 0, 1, 1, 1, 1, 1, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0]
+                initialStaticPieces: [{x: 6, y: 1, color: "white"}],
+                spawnSequence: [
+                    {x: 4, y: 4, color: "green"},
+                    {x: 3, y: 5, color: "green"},
+                    {x: 2, y: 3, color: "orange"},
+                    {x: 0, y: 1, color: "orange"},
+                    {x: 0, y: 2, color: "orange"},
+                    {x: 1, y: 3, color: "orange"},
+                    {x: 6, y: 5, color: "lime"},
+                    {x: 4, y: 6, color: "lime"}
                 ],
-                // Overlay pieces (top half of heart)
-                overlayPattern: [
-                    [0, 0, 1, 1, 0, 1, 1, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 1, 1, 0],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                goalPattern: [
+                    {x: 1, y: 1, requiredColor: "orange"},
+                    {x: 1, y: 2, requiredColor: "orange"},
+                    {x: 2, y: 1, requiredColor: "orange"},
+                    {x: 2, y: 2, requiredColor: "orange"},
+                    {x: 5, y: 5, requiredColor: "lime"},
+                    {x: 5, y: 6, requiredColor: "lime"}
                 ],
-                initialOffset: { x: 0, y: -2 }  // Start offset 2 pixels up
-            };
-        }
-
-        // Level 4: Star (placeholder - you can modify this later)
-        function level4() {
-            return {
-                id: 4,
-                color: levelColors.level4,
-                movementType: 'diagonal2',
-                // TARGET PATTERN - Edit this to change the objective shape
-                targetPattern: [
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [0, 1, 1, 1, 1, 1, 1, 1, 0],
-                    [0, 1, 1, 1, 0, 1, 1, 1, 0],
-                    [1, 1, 1, 0, 0, 0, 1, 1, 1],
-                    [1, 1, 0, 0, 0, 0, 0, 1, 1],
-                    [1, 0, 0, 0, 0, 0, 0, 0, 1]
+                palette: {avatarDefault: "gray", spawnDock: "black", triggerCell: "white"}
+            },
+            4: {
+                boardSize: 8,
+                avatarStart: {x: 0, y: 7},
+                spawnDockCells: [{x: 3, y: 3}, {x: 3, y: 4}, {x: 4, y: 3}, {x: 4, y: 4}],
+                spawnTriggerCell: {x: 3, y: 3},
+                spawnAdjacencyRequirement: 3,
+                hintTemplateCells: [
+                    {x: 0, y: 0, color: "magenta"},
+                    {x: 1, y: 0, color: "magenta"},
+                    {x: 0, y: 1, color: "magenta"},
+                    {x: 7, y: 0, color: "teal"},
+                    {x: 7, y: 1, color: "teal"}
                 ],
-                // Hint pieces (left half)
-                hintPattern: [
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 1, 1, 1, 0, 0, 0, 0],
-                    [0, 1, 1, 1, 1, 0, 0, 0, 0],
-                    [0, 1, 1, 1, 0, 0, 0, 0, 0],
-                    [1, 1, 1, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 0, 0, 0, 0, 0, 0, 0, 0]
+                initialStaticPieces: [{x: 3, y: 3, color: "white"}],
+                spawnSequence: [
+                    {x: 2, y: 6, color: "pink"},
+                    {x: 5, y: 5, color: "pink"},
+                    {x: 1, y: 1, color: "magenta"},
+                    {x: 2, y: 0, color: "magenta"},
+                    {x: 0, y: 2, color: "magenta"},
+                    {x: 6, y: 0, color: "teal"},
+                    {x: 6, y: 1, color: "teal"},
+                    {x: 7, y: 2, color: "teal"}
                 ],
-                // Overlay pieces (top-right)
-                overlayPattern: [
-                    [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 0, 1, 1, 1, 0, 0, 0],
-                    [0, 0, 0, 0, 0, 1, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 1, 1, 1, 0],
-                    [0, 0, 0, 0, 0, 1, 1, 1, 0],
-                    [0, 0, 0, 0, 0, 0, 1, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 1, 1],
-                    [0, 0, 0, 0, 0, 0, 0, 0, 1]
+                goalPattern: [
+                    {x: 0, y: 0, requiredColor: "magenta"},
+                    {x: 1, y: 0, requiredColor: "magenta"},
+                    {x: 0, y: 1, requiredColor: "magenta"},
+                    {x: 7, y: 0, requiredColor: "teal"},
+                    {x: 7, y: 1, requiredColor: "teal"}
                 ],
-                initialOffset: { x: 1, y: -1 }  // Start offset diagonally opposite
-            };
-        }
-
-        // Get level data
-        function getLevelData(levelNum) {
-            switch(levelNum) {
-                case 1: return level1();
-                case 2: return level2();
-                case 3: return level3();
-                case 4: return level4();
-                default: return null;
+                palette: {avatarDefault: "gray", spawnDock: "black", triggerCell: "white"}
+            },
+            5: {
+                boardSize: 8,
+                avatarStart: {x: 4, y: 0},
+                spawnDockCells: [{x: 0, y: 0}, {x: 5, y: 5}, {x: 0, y: 5}, {x: 5, y: 0}],
+                spawnTriggerCell: {x: 0, y: 0},
+                spawnAdjacencyRequirement: 1,
+                hintTemplateCells: [
+                    {x: 5, y: 5, color: "yellow"},
+                    {x: 0, y: 0, color: "teal"},
+                    {x: 0, y: 5, color: "blue"},
+                    {x: 5, y: 0, color: "pink"}
+                ],
+                initialStaticPieces: [{x: 0, y: 0, color: "teal"}],
+                spawnSequence: [
+                    {x: 2, y: 2, color: "red"},
+                    {x: 3, y: 3, color: "red"},
+                    {x: 1, y: 4, color: "blue"},
+                    {x: 0, y: 4, color: "blue"},
+                    {x: 4, y: 1, color: "pink"},
+                    {x: 4, y: 0, color: "pink"},
+                    {x: 4, y: 4, color: "yellow"},
+                    {x: 5, y: 4, color: "yellow"}
+                ],
+                goalPattern: [
+                    {x: 5, y: 5, requiredColor: "yellow"},
+                    {x: 0, y: 0, requiredColor: "teal"},
+                    {x: 0, y: 5, requiredColor: "blue"},
+                    {x: 5, y: 0, requiredColor: "pink"}
+                ],
+                palette: {avatarDefault: "gray", spawnDock: "black", triggerCell: "white"}
             }
+        };
+
+        // ============================
+        // GAME STATE
+        // ============================
+        let currentLevel = 1;
+        let avatar = {x: 0, y: 0, color: "gray"};
+        let board = [];
+        let spawnIndex = 0;
+        let spawnHistory = [];
+        let gameLog = [];
+        let levelCompleted = false;
+
+        // ============================
+        // INITIALIZATION
+        // ============================
+        function initGame() {
+            const level = LEVELS[currentLevel];
+            avatar = {
+                x: level.avatarStart.x,
+                y: level.avatarStart.y,
+                color: level.palette.avatarDefault
+            };
+
+            // Initialize empty board
+            board = [];
+            for (let y = 0; y < level.boardSize; y++) {
+                board[y] = [];
+                for (let x = 0; x < level.boardSize; x++) {
+                    board[y][x] = {color: null, isTemplate: false, isGoal: false};
+                }
+            }
+
+            // Place hint template cells
+            level.hintTemplateCells.forEach(cell => {
+                board[cell.y][cell.x] = {color: cell.color, isTemplate: true, isGoal: false};
+            });
+
+            // Place initial static pieces
+            level.initialStaticPieces.forEach(piece => {
+                board[piece.y][piece.x] = {color: piece.color, isTemplate: false, isGoal: false};
+            });
+
+            // Mark goal pattern cells
+            level.goalPattern.forEach(goal => {
+                board[goal.y][goal.x].isGoal = true;
+            });
+
+            spawnIndex = 0;
+            spawnHistory = [];
+            levelCompleted = false;
+
+            logEvent({
+                type: "level_start",
+                level: currentLevel,
+                timestamp: Date.now()
+            });
+
+            renderBoard();
         }
 
-        // Initialize grid display
-        function initGrid() {
+        // ============================
+        // RENDERING
+        // ============================
+        function renderBoard() {
+            const level = LEVELS[currentLevel];
             const gridElement = document.getElementById('grid');
+            gridElement.style.gridTemplateColumns = `repeat(${level.boardSize}, 40px)`;
             gridElement.innerHTML = '';
 
-            for (let i = 0; i < gameState.gridSize * gameState.gridSize; i++) {
-                const pixel = document.createElement('div');
-                pixel.className = 'pixel';
-                pixel.dataset.index = i;
-                gridElement.appendChild(pixel);
+            for (let y = 0; y < level.boardSize; y++) {
+                for (let x = 0; x < level.boardSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+
+                    // Determine cell color
+                    let cellColor = '#222';
+                    const boardCell = board[y][x];
+
+                    if (boardCell.color) {
+                        cellColor = boardCell.color;
+                    }
+
+                    // Check if this is spawn dock
+                    const isDock = level.spawnDockCells.some(dock => dock.x === x && dock.y === y);
+                    if (isDock && !boardCell.color) {
+                        cellColor = level.palette.spawnDock;
+                    }
+
+                    // Check if this is trigger cell
+                    if (level.spawnTriggerCell.x === x && level.spawnTriggerCell.y === y && !boardCell.color) {
+                        cellColor = level.palette.triggerCell;
+                    }
+
+                    cell.style.backgroundColor = cellColor;
+
+                    // Draw avatar
+                    if (avatar.x === x && avatar.y === y) {
+                        cell.classList.add('avatar');
+                        cell.style.backgroundColor = avatar.color;
+                    }
+
+                    gridElement.appendChild(cell);
+                }
             }
         }
 
-        // Render the current state
-        function render() {
-            const pixels = document.querySelectorAll('.pixel');
-            const levelData = getLevelData(gameState.currentLevel);
+        // ============================
+        // MOVEMENT & GAME LOGIC
+        // ============================
+        function moveAvatar(dx, dy) {
+            if (levelCompleted) return;
 
-            pixels.forEach((pixel, index) => {
-                const x = index % gameState.gridSize;
-                const y = Math.floor(index / gameState.gridSize);
+            const level = LEVELS[currentLevel];
+            const newX = avatar.x + dx;
+            const newY = avatar.y + dy;
 
-                // Check if hint pixel should be shown (static layer)
-                const isHintActive = levelData.hintPattern[y][x] === 1;
+            // Check bounds
+            if (newX < 0 || newX >= level.boardSize || newY < 0 || newY >= level.boardSize) {
+                return;
+            }
 
-                // Calculate overlay position
-                const overlayX = x - gameState.overlayOffset.x;
-                const overlayY = y - gameState.overlayOffset.y;
+            const oldX = avatar.x;
+            const oldY = avatar.y;
 
-                // Check if overlay pixel should be shown (movable layer)
-                let isOverlayActive = false;
-                if (overlayX >= 0 && overlayX < gameState.gridSize &&
-                    overlayY >= 0 && overlayY < gameState.gridSize) {
-                    isOverlayActive = levelData.overlayPattern[overlayY][overlayX] === 1;
-                }
+            // Move avatar
+            avatar.x = newX;
+            avatar.y = newY;
 
-                // Render priority: overlay (full color) > hint (dimmed color) > background
-                if (isOverlayActive) {
-                    pixel.style.backgroundColor = levelData.color;
-                    pixel.style.opacity = '1';
-                } else if (isHintActive) {
-                    pixel.style.backgroundColor = levelData.color;
-                    pixel.style.opacity = '0.3';
+            logEvent({
+                type: "move",
+                from: {x: oldX, y: oldY},
+                to: {x: newX, y: newY},
+                avatarColor: avatar.color,
+                timestamp: Date.now()
+            });
+
+            // Check if avatar picks up color from spawned piece
+            const targetCell = board[newY][newX];
+            if (targetCell.color && !targetCell.isTemplate) {
+                avatar.color = targetCell.color;
+                board[newY][newX] = {color: null, isTemplate: false, isGoal: targetCell.isGoal};
+
+                logEvent({
+                    type: "pickup",
+                    position: {x: newX, y: newY},
+                    color: avatar.color,
+                    timestamp: Date.now()
+                });
+            }
+
+            // Try to deposit color in old position
+            const oldCell = board[oldY][oldX];
+            if (avatar.color !== level.palette.avatarDefault && !oldCell.color && !oldCell.isTemplate) {
+                // Check if old position has orthogonal neighbor with same color
+                if (hasOrthogonalNeighborWithColor(oldX, oldY, avatar.color)) {
+                    board[oldY][oldX].color = avatar.color;
+
+                    logEvent({
+                        type: "deposit",
+                        position: {x: oldX, y: oldY},
+                        color: avatar.color,
+                        timestamp: Date.now()
+                    });
                 } else {
-                    pixel.style.backgroundColor = '#ffffff';
-                    pixel.style.opacity = '1';
+                    logEvent({
+                        type: "deposit_failed",
+                        position: {x: oldX, y: oldY},
+                        color: avatar.color,
+                        reason: "no_adjacent_same_color",
+                        timestamp: Date.now()
+                    });
                 }
+            }
+
+            // Reset avatar color after move
+            avatar.color = level.palette.avatarDefault;
+
+            // Check spawn trigger
+            if (newX === level.spawnTriggerCell.x && newY === level.spawnTriggerCell.y) {
+                checkAndSpawn();
+            }
+
+            renderBoard();
+            checkWinCondition();
+        }
+
+        function hasOrthogonalNeighborWithColor(x, y, color) {
+            const level = LEVELS[currentLevel];
+            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
+
+            for (const dir of directions) {
+                const nx = x + dir.dx;
+                const ny = y + dir.dy;
+
+                if (nx >= 0 && nx < level.boardSize && ny >= 0 && ny < level.boardSize) {
+                    if (board[ny][nx].color === color) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function checkAndSpawn() {
+            const level = LEVELS[currentLevel];
+            const trigger = level.spawnTriggerCell;
+
+            // Count adjacent dock cells
+            let adjacentDockCount = 0;
+            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
+
+            for (const dir of directions) {
+                const nx = trigger.x + dir.dx;
+                const ny = trigger.y + dir.dy;
+
+                if (level.spawnDockCells.some(dock => dock.x === nx && dock.y === ny)) {
+                    adjacentDockCount++;
+                }
+            }
+
+            logEvent({
+                type: "spawn_trigger_check",
+                position: {x: trigger.x, y: trigger.y},
+                adjacentDockCount: adjacentDockCount,
+                required: level.spawnAdjacencyRequirement,
+                timestamp: Date.now()
+            });
+
+            if (adjacentDockCount >= level.spawnAdjacencyRequirement) {
+                attemptSpawn();
+            }
+        }
+
+        function attemptSpawn() {
+            const level = LEVELS[currentLevel];
+
+            if (spawnIndex >= level.spawnSequence.length) {
+                logEvent({
+                    type: "spawn_exhausted",
+                    timestamp: Date.now()
+                });
+                return;
+            }
+
+            // Try to spawn pieces in sequence
+            let spawned = false;
+            let attempts = 0;
+
+            while (!spawned && spawnIndex < level.spawnSequence.length && attempts < level.spawnSequence.length) {
+                const spawn = level.spawnSequence[spawnIndex];
+                const targetCell = board[spawn.y][spawn.x];
+
+                if (!targetCell.color && !targetCell.isTemplate) {
+                    // Spawn successful
+                    board[spawn.y][spawn.x].color = spawn.color;
+                    spawnHistory.push({
+                        index: spawnIndex,
+                        position: {x: spawn.x, y: spawn.y},
+                        color: spawn.color,
+                        timestamp: Date.now()
+                    });
+
+                    logEvent({
+                        type: "spawn_placed",
+                        spawnIndex: spawnIndex,
+                        position: {x: spawn.x, y: spawn.y},
+                        color: spawn.color,
+                        timestamp: Date.now()
+                    });
+
+                    spawnIndex++;
+                    spawned = true;
+                } else {
+                    // Cell occupied, skip to next
+                    logEvent({
+                        type: "spawn_skipped",
+                        spawnIndex: spawnIndex,
+                        position: {x: spawn.x, y: spawn.y},
+                        reason: "cell_occupied",
+                        timestamp: Date.now()
+                    });
+
+                    spawnIndex++;
+                    attempts++;
+                }
+            }
+        }
+
+        // ============================
+        // WIN CONDITION
+        // ============================
+        function checkWinCondition() {
+            const level = LEVELS[currentLevel];
+            let allMatch = true;
+
+            for (const goal of level.goalPattern) {
+                const cell = board[goal.y][goal.x];
+                if (cell.color !== goal.requiredColor) {
+                    allMatch = false;
+                    break;
+                }
+            }
+
+            if (allMatch && !levelCompleted) {
+                levelCompleted = true;
+
+                logEvent({
+                    type: "level_complete",
+                    level: currentLevel,
+                    timestamp: Date.now()
+                });
+
+                triggerWin();
+            }
+        }
+
+        function triggerWin() {
+            // Ripple effect
+            const grid = document.getElementById('grid');
+            grid.classList.add('ripple-effect');
+
+            setTimeout(() => {
+                grid.classList.remove('ripple-effect');
+
+                // Show overlay
+                const overlay = document.getElementById('overlay');
+                const message = document.getElementById('overlay-message');
+                const nextBtn = document.getElementById('next-level-btn');
+
+                if (currentLevel === 5) {
+                    message.textContent = "All Levels Complete!";
+                    nextBtn.style.display = "none";
+                    document.getElementById('restart-btn').style.display = "block";
+                } else {
+                    message.textContent = "Level Complete!";
+                    nextBtn.style.display = "block";
+                }
+
+                overlay.classList.add('show');
+            }, 600);
+        }
+
+        // ============================
+        // LOGGING
+        // ============================
+        function logEvent(event) {
+            gameLog.push(event);
+        }
+
+        function downloadData() {
+            const data = {
+                currentLevel: currentLevel,
+                gameLog: gameLog,
+                spawnHistory: spawnHistory,
+                exportTime: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `game-data-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            logEvent({
+                type: "data_downloaded",
+                timestamp: Date.now()
             });
         }
 
-        // Check if overlay matches target (i.e., offset is 0,0)
-        function checkWin() {
-            return gameState.overlayOffset.x === 0 && gameState.overlayOffset.y === 0;
-        }
-
-        // Move overlay based on key and level's movement type
-        function moveOverlay(key) {
-            if (gameState.animating) return;
-
-            const levelData = getLevelData(gameState.currentLevel);
-            let dx = 0, dy = 0;
-            let direction = '';
-
-            switch(levelData.movementType) {
-                case 'horizontal':
-                    if (key === 'u') { dx = -1; direction = 'left'; }
-                    if (key === 'j') { dx = 1; direction = 'right'; }
-                    break;
-                case 'vertical':
-                    if (key === 'u') { dy = -1; direction = 'up'; }
-                    if (key === 'j') { dy = 1; direction = 'down'; }
-                    break;
-                case 'diagonal1':
-                    if (key === 'u') { dx = -1; dy = -1; direction = 'diagonal-up-left'; }
-                    if (key === 'j') { dx = 1; dy = 1; direction = 'diagonal-down-right'; }
-                    break;
-                case 'diagonal2':
-                    if (key === 'u') { dx = 1; dy = -1; direction = 'diagonal-up-right'; }
-                    if (key === 'j') { dx = -1; dy = 1; direction = 'diagonal-down-left'; }
-                    break;
-            }
-
-            if (dx === 0 && dy === 0) return;
-
-            // Log the movement
-            logMovement(key, direction, dx, dy);
-
-            // Animate
-            gameState.animating = true;
-            gameState.overlayOffset.x += dx;
-            gameState.overlayOffset.y += dy;
-
-            render();
-
-            setTimeout(() => {
-                gameState.animating = false;
-
-                // Check win condition
-                if (checkWin()) {
-                    advanceLevel();
-                }
-            }, 150);
-        }
-
-        // Advance to next level
-        function advanceLevel() {
-            const gridElement = document.getElementById('grid');
-
-            // Trigger green ripple effect
-            gridElement.classList.add('win-ripple');
-
-            setTimeout(() => {
-                gridElement.classList.remove('win-ripple');
-
-                // Check if there's a next level
-                const nextLevelData = getLevelData(gameState.currentLevel + 1);
-
-                if (nextLevelData) {
-                    // Fade out current level
-                    gridElement.classList.add('fade-out');
-
-                    setTimeout(() => {
-                        gameState.currentLevel++;
-                        gameState.overlayOffset = { ...nextLevelData.initialOffset };
-
-                        gridElement.classList.remove('fade-out');
-                        gridElement.classList.add('level-transition');
-                        setTimeout(() => gridElement.classList.remove('level-transition'), 500);
-
-                        render();
-                    }, 400);
-                } else {
-                    // Game complete - show restart button
-                    setTimeout(() => {
-                        document.getElementById('restart-btn').style.display = 'inline-block';
-                    }, 300);
-                }
-            }, 800);
-        }
-
-        // Restart game
-        function restartGame() {
-            gameState.currentLevel = 1;
-            const firstLevel = getLevelData(1);
-            gameState.overlayOffset = { ...firstLevel.initialOffset };
-            document.getElementById('restart-btn').style.display = 'none';
-
-            const gridElement = document.getElementById('grid');
-            gridElement.classList.add('level-transition');
-            setTimeout(() => gridElement.classList.remove('level-transition'), 500);
-
-            render();
-        }
-
-        // Log movement data
-        function logMovement(key, direction, dx, dy) {
-            const movementData = {
-                timestamp: new Date().toISOString(),
-                sessionStart: sessionStart,
-                level: gameState.currentLevel,
-                eventType: 'keypress',
-                key: key,
-                direction: direction,
-                overlayPositionBefore: {
-                    x: gameState.overlayOffset.x,
-                    y: gameState.overlayOffset.y
-                },
-                overlayPositionAfter: {
-                    x: gameState.overlayOffset.x + dx,
-                    y: gameState.overlayOffset.y + dy
-                },
-                delta: { dx, dy }
-            };
-            logData.push(movementData);
-        }
-
-        // Save log data as JSON file
-        function saveLogData() {
-            const dataStr = JSON.stringify(logData, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `pixel-shift-log-${new Date().toISOString()}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        // Alternative: Send log data to server
-        function sendLogData(serverUrl) {
-            fetch(serverUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    sessionStart: sessionStart,
-                    sessionEnd: new Date().toISOString(),
-                    movements: logData
-                })
-            })
-            .then(response => response.json())
-            .then(data => console.log('Log data sent successfully:', data))
-            .catch(error => console.error('Error sending log data:', error));
-        }
-
-        // Keyboard event handler
+        // ============================
+        // EVENT LISTENERS
+        // ============================
         document.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-
-            if (key === 'u' || key === 'j') {
-                e.preventDefault();
-                moveOverlay(key);
-            }
-
-            // Secret key to save log data: press 's'
-            if (key === 's') {
-                saveLogData();
+            switch(e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    moveAvatar(0, -1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    moveAvatar(0, 1);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    moveAvatar(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    moveAvatar(1, 0);
+                    break;
             }
         });
 
-        // Restart button event handler
-        document.getElementById('restart-btn').addEventListener('click', restartGame);
+        document.getElementById('download-btn').addEventListener('click', downloadData);
 
-        // Initialize game
-        function initGame() {
-            const firstLevel = getLevelData(1);
-            gameState.overlayOffset = { ...firstLevel.initialOffset };
-            initGrid();
-            render();
-        }
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            currentLevel = 1;
+            document.getElementById('restart-btn').style.display = "none";
+            document.getElementById('overlay').classList.remove('show');
+            initGame();
+        });
 
-        // Start the game
+        document.getElementById('next-level-btn').addEventListener('click', () => {
+            if (currentLevel < 5) {
+                currentLevel++;
+                document.getElementById('overlay').classList.remove('show');
+                initGame();
+            }
+        });
+
+        // ============================
+        // START GAME
+        // ============================
         initGame();
     </script>
 </body>
