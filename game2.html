@@ -460,22 +460,6 @@
 
             // Block if cell has ANY color (template, spawned, or deposited) and is NOT a trigger
             if (targetCell.color && !isOnTrigger) {
-                // Movement blocked - but check if avatar can pick up color from spawned piece
-                if (!targetCell.isTemplate && avatar.color === level.palette.avatarDefault) {
-                    // Avatar is gray and touched a spawned/deposited piece - pick up the color
-                    avatar.color = targetCell.color;
-
-                    logEvent({
-                        type: "pickup",
-                        position: {x: newX, y: newY},
-                        color: avatar.color,
-                        timestamp: Date.now()
-                    });
-
-                    renderBoard();
-                    return; // Movement still blocked, but color picked up
-                }
-
                 // Check if avatar can deposit (carrying same color as blocked piece)
                 if (!targetCell.isTemplate && avatar.color === targetCell.color && avatar.color !== level.palette.avatarDefault) {
                     // Avatar touched same color - deposit in previous position and reset
@@ -494,6 +478,22 @@
                     renderBoard();
                     checkWinCondition();
                     return; // Movement blocked, but deposited
+                }
+
+                // Movement blocked - but check if avatar can pick up color from spawned piece
+                if (!targetCell.isTemplate) {
+                    // Avatar touched a spawned/deposited piece - pick up the color (replaces current color)
+                    avatar.color = targetCell.color;
+
+                    logEvent({
+                        type: "pickup",
+                        position: {x: newX, y: newY},
+                        color: avatar.color,
+                        timestamp: Date.now()
+                    });
+
+                    renderBoard();
+                    return; // Movement still blocked, but color picked up
                 }
 
                 // Just blocked, no pickup or deposit
