@@ -174,7 +174,8 @@
             BLUE: '#ADD8E6',
             YELLOW: '#DDCC77',
             TEAL: '#44AA99',
-            PINK: '#CC6677'
+            PINK: '#CC6677',
+            LIME: '#882255'
         };
 
         // Game state
@@ -637,14 +638,15 @@
                     [0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 0]
                 ],
-                avatar: { x: 5, y: 5 },
+                avatar: { x: 4, y: 5 },
                 center: { x: 1, y: 2 },
                 targetColor: 'pink',  // Win by being pink instead of blue
                 corners: {
                     originTopLeft: { x: 0, y: 5, color: 'yellow' },
                     originTopRight: { x: 5, y: 0, color: 'blue' },
                     originBottomLeft: { x: 3, y: 0, color: 'pink' },
-                    originBottomRight: { x: 3, y: 1, color: 'teal' }
+                    originBottomRight: { x: 3, y: 1, color: 'teal' },
+                    originBottomRightCorner: { x: 5, y: 5, color: 'lime' }
                 }
             };
         }
