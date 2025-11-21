@@ -228,8 +228,8 @@
             gameState.centerPos = { ...level.center };
             gameState.corners = JSON.parse(JSON.stringify(level.corners)); // Deep copy corners
             gameState.targetColor = level.targetColor || 'blue';  // Default to blue if not specified
-            gameState.avatarColor = 'grey';
-            gameState.colorHistory = ['grey'];
+            gameState.avatarColor = level.initialAvatarColor || 'grey';
+            gameState.colorHistory = [level.initialAvatarColor || 'grey'];
             gameState.moveCount = 0;
 
             // Update instructions display
@@ -448,6 +448,27 @@
             }
         }
 
+        // Generate game state matrix
+        function generateGameStateMatrix() {
+            // Initialize 6x6 matrix with empty cells
+            const matrix = Array(6).fill(null).map(() => Array(6).fill('E'));
+
+            // Place corners with letter codes
+            for (const cornerKey in gameState.corners) {
+                const corner = gameState.corners[cornerKey];
+                const colorCode = corner.color.charAt(0).toUpperCase(); // First letter
+                matrix[corner.y][corner.x] = colorCode;
+            }
+
+            // Place center with 'C'
+            matrix[gameState.centerPos.y][gameState.centerPos.x] = 'C';
+
+            // Place avatar with 'A'
+            matrix[gameState.avatarPos.y][gameState.avatarPos.x] = 'A';
+
+            return matrix;
+        }
+
         // Log movement data
         function logMovement(key, direction, dx, dy) {
             const movementData = {
@@ -457,7 +478,8 @@
                 direction: direction,
                 positionBefore: { x: gameState.avatarPos.x, y: gameState.avatarPos.y },
                 colorBefore: gameState.avatarColor,
-                delta: { dx: dx, dy: dy }
+                delta: { dx: dx, dy: dy },
+                gameStateBefore: generateGameStateMatrix()
             };
             sessionData.movements.push(movementData);
         }
@@ -564,6 +586,7 @@
                 ],
                 avatar: { x: 2, y: 5 },
                 center: { x: 2, y: 4 },
+                initialAvatarColor: 'blue',
                 targetColor: 'lime',  // Win by being yellow instead of blue
                 corners: {
                     originTopLeft: { x: 0, y: 0, color: 'blue' },
@@ -589,6 +612,7 @@
                 ],
                 avatar: { x: 5, y: 2 },
                 center: { x: 1, y: 2 },
+                initialAvatarColor: 'yellow',
                 targetColor: 'pink',  // Win by being pink instead of blue
                 corners: {
                     originTopLeft: { x: 0, y: 0, color: 'yellow' },
@@ -639,6 +663,7 @@
                 ],
                 avatar: { x: 1, y: 0 },
                 center: { x: 4, y: 3 },
+                initialAvatarColor: 'lime',
                 targetColor: 'pink',  // Win by being pink instead of blue
                 corners: {
                     originTopLeft: { x: 5, y: 0, color: 'yellow' },
