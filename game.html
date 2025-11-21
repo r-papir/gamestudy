@@ -135,10 +135,12 @@
 
         #restart-button {
             left: 20px;
+            display: none;
         }
 
         #download-button {
             right: 20px;
+            display: block;
         }
 
         #restart-button:hover, #download-button:hover {
@@ -419,11 +421,10 @@
                     if (currentLevelIndex < levels.length) {
                         loadLevel(currentLevelIndex);
                     } else {
-                        // Game complete - show restart and download buttons
+                        // Game complete - show restart button
                         gridElement.classList.remove('fade-out');
                         instructionsElement.classList.remove('fade-out');
                         document.getElementById('restart-button').style.display = 'block';
-                        document.getElementById('download-button').style.display = 'block';
                     }
                 }, 800);
             }
@@ -500,7 +501,6 @@
         document.getElementById('restart-button').addEventListener('click', () => {
             currentLevelIndex = 0;
             document.getElementById('restart-button').style.display = 'none';
-            document.getElementById('download-button').style.display = 'none';
             loadLevel(currentLevelIndex);
         });
 
