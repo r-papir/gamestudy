@@ -156,8 +156,8 @@
             1: {
                 boardSize: 8,
                 avatarStart: {x: 0, y: 0},
-                spawnDockCells: [{x: 7, y: 0}],
-                spawnTriggerCell: {x: 7, y: 0},
+                spawnDockCells: [{x: 0, y: 7}],
+                spawnTriggerCell: {x: 0, y: 7},
                 spawnAdjacencyRequirement: 0,
                 spawnRemoverDockCells: [{x: 7, y: 7}],
                 spawnRemoverTriggerCell: {x: 7, y: 7},
@@ -184,8 +184,8 @@
             2: {
                 boardSize: 8,
                 avatarStart: {x: 4, y: 4},
-                spawnDockCells: [{x: 7, y: 0}],
-                spawnTriggerCell: {x: 7, y: 0},
+                spawnDockCells: [{x: 0, y: 7}],
+                spawnTriggerCell: {x: 0, y: 7},
                 spawnAdjacencyRequirement: 0,
                 spawnRemoverDockCells: [{x: 7, y: 7}],
                 spawnRemoverTriggerCell: {x: 7, y: 7},
@@ -221,8 +221,8 @@
             3: {
                 boardSize: 8,
                 avatarStart: {x: 3, y: 3},
-                spawnDockCells: [{x: 7, y: 0}],
-                spawnTriggerCell: {x: 7, y: 0},
+                spawnDockCells: [{x: 0, y: 7}],
+                spawnTriggerCell: {x: 0, y: 7},
                 spawnAdjacencyRequirement: 0,
                 spawnRemoverDockCells: [{x: 7, y: 7}],
                 spawnRemoverTriggerCell: {x: 7, y: 7},
@@ -259,8 +259,8 @@
             4: {
                 boardSize: 8,
                 avatarStart: {x: 0, y: 0},
-                spawnDockCells: [{x: 7, y: 0}],
-                spawnTriggerCell: {x: 7, y: 0},
+                spawnDockCells: [{x: 0, y: 7}],
+                spawnTriggerCell: {x: 0, y: 7},
                 spawnAdjacencyRequirement: 0,
                 spawnRemoverDockCells: [{x: 7, y: 7}],
                 spawnRemoverTriggerCell: {x: 7, y: 7},
@@ -295,8 +295,8 @@
             5: {
                 boardSize: 8,
                 avatarStart: {x: 4, y: 0},
-                spawnDockCells: [{x: 7, y: 0}],
-                spawnTriggerCell: {x: 7, y: 0},
+                spawnDockCells: [{x: 0, y: 7}],
+                spawnTriggerCell: {x: 0, y: 7},
                 spawnAdjacencyRequirement: 0,
                 spawnRemoverDockCells: [{x: 7, y: 7}],
                 spawnRemoverTriggerCell: {x: 7, y: 7},
@@ -470,9 +470,9 @@
             }
 
             // Check if target cell is blocked by ANY piece
-            // Avatar can ONLY move onto the two dock cells at (7,0) and (7,7) - everything else blocks
+            // Avatar can ONLY move onto the two dock cells at (0,7) and (7,7) - everything else blocks
             const targetCell = board[newX][newY];
-            const isOnSpawnDock = (newX === 7 && newY === 0);
+            const isOnSpawnDock = (newX === 0 && newY === 7);
             const isOnRemoverDock = (newX === 7 && newY === 7);
             const isOnDock = isOnSpawnDock || isOnRemoverDock;
 
