@@ -62,6 +62,10 @@
             background: #1a1a1a57
         }
 
+        .cell.dock {
+            border: 4px solid #000;
+        }
+
         #restart-btn {
             position: fixed;
             top: 20px;
@@ -134,19 +138,19 @@
             1: {
                 boardSize: 8,
                 avatarStart: {x: 0, y: 0},
-                spawnDockCells: [{x: 7, y: 0}, {x: 7, y: 1}, {x: 6, y: 0}],
-                spawnTriggerCell: {x: 6, y: 1},
-                spawnAdjacencyRequirement: 2,
-                spawnRemoverDockCells: [{x: 7, y: 6}, {x: 7, y: 7}, {x: 6, y: 7}],
-                spawnRemoverTriggerCell: {x: 6, y: 6},
-                spawnRemoverAdjacencyRequirement: 2,
+                spawnDockCells: [{x: 7, y: 0}],
+                spawnTriggerCell: {x: 7, y: 0},
+                spawnAdjacencyRequirement: 0,
+                spawnRemoverDockCells: [{x: 7, y: 7}],
+                spawnRemoverTriggerCell: {x: 7, y: 7},
+                spawnRemoverAdjacencyRequirement: 0,
                 hintTemplateCells: [
                     {x: 3, y: 4, color: "purple"}
                 ],
                 initialStaticPieces: [],
                 spawnSequence: [
                     {x: 0, y: 0, color: "red"},
-                    {x: 7, y: 0, color: "cyan"},
+                    {x: 0, y: 7, color: "cyan"},
                     {x: 5, y: 2, color: "lime"},
                     {x: 4, y: 1, color: "purple"},
                     {x: 7, y: 5, color: "red"},
@@ -162,12 +166,12 @@
             2: {
                 boardSize: 8,
                 avatarStart: {x: 4, y: 4},
-                spawnDockCells: [{x: 7, y: 0}, {x: 7, y: 1}, {x: 6, y: 0}],
-                spawnTriggerCell: {x: 6, y: 1},
-                spawnAdjacencyRequirement: 2,
-                spawnRemoverDockCells: [{x: 7, y: 6}, {x: 7, y: 7}, {x: 6, y: 7}],
-                spawnRemoverTriggerCell: {x: 6, y: 6},
-                spawnRemoverAdjacencyRequirement: 2,
+                spawnDockCells: [{x: 7, y: 0}],
+                spawnTriggerCell: {x: 7, y: 0},
+                spawnAdjacencyRequirement: 0,
+                spawnRemoverDockCells: [{x: 7, y: 7}],
+                spawnRemoverTriggerCell: {x: 7, y: 7},
+                spawnRemoverAdjacencyRequirement: 0,
                 hintTemplateCells: [
                     {x: 2, y: 2, color: "purple"},
                     {x: 3, y: 2, color: "purple"},
@@ -199,12 +203,12 @@
             3: {
                 boardSize: 8,
                 avatarStart: {x: 3, y: 3},
-                spawnDockCells: [{x: 7, y: 0}, {x: 7, y: 1}, {x: 6, y: 0}],
-                spawnTriggerCell: {x: 6, y: 1},
-                spawnAdjacencyRequirement: 2,
-                spawnRemoverDockCells: [{x: 7, y: 6}, {x: 7, y: 7}, {x: 6, y: 7}],
-                spawnRemoverTriggerCell: {x: 6, y: 6},
-                spawnRemoverAdjacencyRequirement: 2,
+                spawnDockCells: [{x: 7, y: 0}],
+                spawnTriggerCell: {x: 7, y: 0},
+                spawnAdjacencyRequirement: 0,
+                spawnRemoverDockCells: [{x: 7, y: 7}],
+                spawnRemoverTriggerCell: {x: 7, y: 7},
+                spawnRemoverAdjacencyRequirement: 0,
                 hintTemplateCells: [
                     {x: 1, y: 1, color: "orange"},
                     {x: 1, y: 2, color: "orange"},
@@ -236,13 +240,13 @@
             },
             4: {
                 boardSize: 8,
-                avatarStart: {x: 0, y: 7},
-                spawnDockCells: [{x: 7, y: 0}, {x: 7, y: 1}, {x: 6, y: 0}],
-                spawnTriggerCell: {x: 6, y: 1},
-                spawnAdjacencyRequirement: 2,
-                spawnRemoverDockCells: [{x: 7, y: 6}, {x: 7, y: 7}, {x: 6, y: 7}],
-                spawnRemoverTriggerCell: {x: 6, y: 6},
-                spawnRemoverAdjacencyRequirement: 2,
+                avatarStart: {x: 0, y: 0},
+                spawnDockCells: [{x: 7, y: 0}],
+                spawnTriggerCell: {x: 7, y: 0},
+                spawnAdjacencyRequirement: 0,
+                spawnRemoverDockCells: [{x: 7, y: 7}],
+                spawnRemoverTriggerCell: {x: 7, y: 7},
+                spawnRemoverAdjacencyRequirement: 0,
                 hintTemplateCells: [
                     {x: 0, y: 0, color: "magenta"},
                     {x: 1, y: 0, color: "magenta"},
@@ -273,12 +277,12 @@
             5: {
                 boardSize: 8,
                 avatarStart: {x: 4, y: 0},
-                spawnDockCells: [{x: 7, y: 0}, {x: 7, y: 1}, {x: 6, y: 0}],
-                spawnTriggerCell: {x: 6, y: 1},
-                spawnAdjacencyRequirement: 2,
-                spawnRemoverDockCells: [{x: 7, y: 6}, {x: 7, y: 7}, {x: 6, y: 7}],
-                spawnRemoverTriggerCell: {x: 6, y: 6},
-                spawnRemoverAdjacencyRequirement: 2,
+                spawnDockCells: [{x: 7, y: 0}],
+                spawnTriggerCell: {x: 7, y: 0},
+                spawnAdjacencyRequirement: 0,
+                spawnRemoverDockCells: [{x: 7, y: 7}],
+                spawnRemoverTriggerCell: {x: 7, y: 7},
+                spawnRemoverAdjacencyRequirement: 0,
                 hintTemplateCells: [
                     {x: 5, y: 5, color: "yellow"},
                     {x: 0, y: 0, color: "teal"},
@@ -391,6 +395,7 @@
                     const isDock = level.spawnDockCells.some(dock => dock.x === x && dock.y === y);
                     if (isDock && !boardCell.color) {
                         cellColor = level.palette.spawnDock;
+                        cell.classList.add('dock');
                     }
 
                     // Check if avatar is on this cell
@@ -408,6 +413,7 @@
                             const isRemoverDock = level.spawnRemoverDockCells.some(dock => dock.x === x && dock.y === y);
                             if (isRemoverDock && !boardCell.color) {
                                 cellColor = level.palette.spawnDock;
+                                cell.classList.add('dock');
                             }
                         }
 
@@ -446,13 +452,14 @@
             }
 
             // Check if target cell is blocked by ANY piece
-            // Avatar can ONLY move onto trigger cells - everything else blocks
+            // Avatar can ONLY move onto the two dock cells at (7,0) and (7,7) - everything else blocks
             const targetCell = board[newX][newY];
-            const isOnTrigger = (level.spawnTriggerCell.x === newX && level.spawnTriggerCell.y === newY) ||
-                               (level.spawnRemoverTriggerCell && level.spawnRemoverTriggerCell.x === newX && level.spawnRemoverTriggerCell.y === newY);
+            const isOnSpawnDock = (newX === 7 && newY === 0);
+            const isOnRemoverDock = (newX === 7 && newY === 7);
+            const isOnDock = isOnSpawnDock || isOnRemoverDock;
 
-            // Block if cell has ANY color (template, spawned, or deposited) and is NOT a trigger
-            if (targetCell.color && !isOnTrigger) {
+            // Block if cell has ANY color (template, spawned, or deposited) and is NOT a dock
+            if (targetCell.color && !isOnDock) {
                 // Movement blocked - but check if avatar can pick up color from spawned piece
                 if (!targetCell.isTemplate && avatar.color === level.palette.avatarDefault) {
                     // Avatar is not carrying anything - pick up the color (replaces current color)
