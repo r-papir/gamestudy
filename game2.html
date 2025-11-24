@@ -824,19 +824,19 @@
             switch(e.key) {
                 case 'ArrowUp':
                     e.preventDefault();
-                    moveAvatar(-1, 0); // decrease x (move up)
+                    moveAvatar(0, -1); // decrease y (move up)
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
-                    moveAvatar(1, 0); // increase x (move down)
+                    moveAvatar(0, 1); // increase y (move down)
                     break;
                 case 'ArrowLeft':
                     e.preventDefault();
-                    moveAvatar(0, -1); // decrease y (move left)
+                    moveAvatar(-1, 0); // decrease x (move left)
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
-                    moveAvatar(0, 1); // increase y (move right)
+                    moveAvatar(1, 0); // increase x (move right)
                     break;
             }
         });
