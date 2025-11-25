@@ -308,6 +308,46 @@
                 title: "Level 2",
                 avatarStart: { row: 5, col: 1 },
                 dock: { row: 3, col: 3 },
+                cyclicSpawn: ["yellow", "lime", "teal", "blue", "violet"],
+                partialPattern: [],
+                targets: [
+                    // Row 1: teal, blue, lime, blue, teal
+                    { row: 1, col: 1, color: "teal" },
+                    { row: 1, col: 2, color: "blue" },
+                    { row: 1, col: 3, color: "lime" },
+                    { row: 1, col: 4, color: "blue" },
+                    { row: 1, col: 5, color: "teal" },
+                    // Row 2: blue, teal, blue, teal, blue
+                    { row: 2, col: 1, color: "blue" },
+                    { row: 2, col: 2, color: "teal" },
+                    { row: 2, col: 3, color: "blue" },
+                    { row: 2, col: 4, color: "teal" },
+                    { row: 2, col: 5, color: "blue" },
+                    // Row 3: lime, blue, [DOCK], blue, lime
+                    { row: 3, col: 1, color: "lime" },
+                    { row: 3, col: 2, color: "blue" },
+                    // col 3 is dock
+                    { row: 3, col: 4, color: "blue" },
+                    { row: 3, col: 5, color: "lime" },
+                    // Row 4: blue, teal, blue, teal, blue
+                    { row: 4, col: 1, color: "blue" },
+                    { row: 4, col: 2, color: "teal" },
+                    { row: 4, col: 3, color: "blue" },
+                    { row: 4, col: 4, color: "teal" },
+                    { row: 4, col: 5, color: "blue" },
+                    // Row 5: teal, blue, lime, blue, teal
+                    { row: 5, col: 1, color: "teal" },
+                    { row: 5, col: 2, color: "blue" },
+                    { row: 5, col: 3, color: "lime" },
+                    { row: 5, col: 4, color: "blue" },
+                    { row: 5, col: 5, color: "teal" }
+                ]
+            },
+            {
+                id: 3,
+                title: "Level 3",
+                avatarStart: { row: 5, col: 1 },
+                dock: { row: 3, col: 3 },
                 cyclicSpawn: ["pink", "blue", "yellow", "violet", "lime", "teal", "magenta"],
                 partialPattern: [],
                 targets: [
@@ -340,20 +380,6 @@
                     { row: 5, col: 2, color: "yellow" },
                     { row: 5, col: 3, color: "pink" },
                     { row: 5, col: 4, color: "yellow" },
-                    { row: 5, col: 5, color: "pink" }
-                ]
-            },
-            {
-                id: 3,
-                title: "Corners",
-                avatarStart: { row: 3, col: 3 },
-                dock: { row: 3, col: 3 },
-                enabledColors: ["blue", "yellow", "teal", "pink"],
-                partialPattern: [],
-                targets: [
-                    { row: 1, col: 1, color: "blue" },
-                    { row: 1, col: 5, color: "yellow" },
-                    { row: 5, col: 1, color: "teal" },
                     { row: 5, col: 5, color: "pink" }
                 ]
             }
