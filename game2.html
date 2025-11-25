@@ -399,6 +399,7 @@
         let spawnIndex = 0;
         let spawnSequence = [];
         let lastSpawnedColor = null;
+        let lastMoveDirection = { dr: 0, dc: 0 };
 
         // ============================
         // HELPER FUNCTIONS
@@ -498,6 +499,7 @@
             moveCount = 0;
             spawnIndex = 0;
             lastSpawnedColor = null;
+            lastMoveDirection = { dr: 0, dc: 0 };
 
             // Set up spawn sequence based on level type
             if (level.cyclicSpawn) {
@@ -599,6 +601,9 @@
             avatar.col = newCol;
             moveCount++;
 
+            // Store the last movement direction
+            lastMoveDirection = { dr: dr, dc: dc };
+
             logEvent({
                 type: "move",
                 from: lastAvatarPos,
@@ -688,6 +693,34 @@
         function repeatLastSpawn() {
             if (levelCompleted) return;
             if (!lastSpawnedColor) return; // No color spawned yet
+
+            // Calculate position opposite to last movement direction
+            const repeatRow = avatar.row - lastMoveDirection.dr;
+            const repeatCol = avatar.col - lastMoveDirection.dc;
+
+            // Check if repeat position is valid
+            if (repeatRow < 1 || repeatRow > 5 || repeatCol < 1 || repeatCol > 5) {
+                // Out of bounds - can't place repeat block
+                logEvent({
+                    type: "repeat_blocked",
+                    reason: "out_of_bounds",
+                    attemptedPosition: { row: repeatRow, col: repeatCol },
+                    timestamp: Date.now()
+                });
+                return;
+            }
+
+            // Check if repeat position is blocked by locked piece
+            if (grid[repeatRow][repeatCol].isLocked) {
+                logEvent({
+                    type: "repeat_blocked",
+                    reason: "locked_piece",
+                    attemptedPosition: { row: repeatRow, col: repeatCol },
+                    timestamp: Date.now()
+                });
+                return;
+            }
+
             if (dragging) {
                 // Already carrying a block - trash it first
                 logEvent({
@@ -699,22 +732,25 @@
                 dragging = null;
             }
 
-            // Spawn the last color again
+            // Spawn the last color again at the calculated position
             const colorHex = COLORS[lastSpawnedColor];
 
             dragging = {
                 colorKey: lastSpawnedColor,
                 colorHex: colorHex,
-                currentPos: null
+                currentPos: { row: repeatRow, col: repeatCol }
             };
 
             logEvent({
                 type: "repeat_spawn",
                 colorKey: lastSpawnedColor,
                 colorHex: colorHex,
+                blockPosition: { row: repeatRow, col: repeatCol },
                 timestamp: Date.now()
             });
 
+            // Check if block should lock immediately
+            checkLock();
             renderBoard();
         }
 
