@@ -40,31 +40,37 @@
 
         #grid {
             display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-template-rows: repeat(5, 60px);
             gap: 2px;
             background: #e0e0e0;
             padding: 2px;
             border: 3px solid #e0e0e0;
             position: relative;
-            opacity: 1;
-            transition: opacity 0.5s ease-in-out;
         }
 
         .cell {
-            width: 40px;
-            height: 40px;
+            width: 60px;
+            height: 60px;
             background: #fff;
             position: relative;
             transition: background-color 0.2s;
         }
 
-        .cell.avatar {
-            border: 3px solid #1a1a1a57;
-            background: #1a1a1a57
+        .cell.dock {
+            background: #fff;
+            border: 3px solid #000;
         }
 
-        .cell.dock {
-            border: 4px solid #000;
+        .cell.avatar {
+            background: #fff;
+            border: 3px solid #1a1a1a57;
         }
+
+        .cell.dragged {
+            border: 3px solid #999999;
+        }
+
 
         #restart-btn {
             position: fixed;
@@ -77,7 +83,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: 'Trebuchet MS', monospace;
             display: none;
         }
 
@@ -96,24 +102,64 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
+            font-family: 'Trebuchet MS', monospace;
         }
 
         #download-btn:hover {
             background: #0b7dda;
         }
 
-        @keyframes ripple {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.5); opacity: 0; }
+        #level-complete-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
 
-        .ripple-effect {
-            animation: ripple 0.6s ease-out;
-            position: absolute;
-            border-radius: 50%;
-            border: 7px solid #32CD32;
-            opacity: 2;
+        #level-complete-overlay.show {
+            display: flex;
+        }
+
+        .overlay-content {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .overlay-content h2 {
+            margin-bottom: 20px;
+        }
+
+        #next-level-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Trebuchet MS', monospace;
+        }
+
+        #next-level-btn:hover {
+            background: #45a049;
+        }
+
+        @keyframes lockPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .lock-animation {
+            animation: lockPulse 0.3s ease-out;
         }
     </style>
 </head>
@@ -130,12 +176,18 @@
         <div id="grid"></div>
     </div>
 
+    <div id="level-complete-overlay">
+        <div class="overlay-content">
+            <h2>Level Complete!</h2>
+            <button id="next-level-btn">Next Level</button>
+        </div>
+    </div>
+
     <script>
         // ============================
         // COLOR PALETTE
         // ============================
         const COLORS = {
-            gray: "#D3D3D3",
             blue: "#ADD8E6",
             yellow: "#DDCC77",
             teal: "#44AA99",
@@ -143,243 +195,148 @@
             violet: "#332288",
             lime: "#BBCC33",
             magenta: "#882255",
-            blue2: "#88CCEE",
-            black: "#000000",
-            white: "#FFFFFF",
             lavender: "#E0CCF5"
         };
 
         // ============================
         // LEVEL DEFINITIONS
         // ============================
-        const LEVELS = {
-            1: {
-                boardSize: 8,
-                avatarStart: {x: 0, y: 0},
-                spawnDockCells: [{x: 0, y: 0}],
-                spawnTriggerCell: {x: 0, y: 0},
-                spawnAdjacencyRequirement: 0,
-                spawnRemoverDockCells: [{x: 7, y: 0}],
-                spawnRemoverTriggerCell: {x: 7, y: 0},
-                spawnRemoverAdjacencyRequirement: 0,
-                hintTemplateCells: [
-                    {x: 3, y: 4, color: COLORS.lavender},
-                ],
-                initialStaticPieces: [],
-                spawnSequence: [
-                    {x: 0, y: 7, color: COLORS.pink},
-                    {x: 7, y: 7, color: COLORS.blue},
-                    {x: 2, y: 5, color: COLORS.lime},
-                    {x: 5, y: 1, color: COLORS.lavender}
-                ],
-                goalPattern: [
-                    {x: 3, y: 3, requiredColor: COLORS.violet},
-                    {x: 3, y: 4, requiredColor: COLORS.violet},
-                    {x: 4, y: 3, requiredColor: COLORS.violet},
-                    {x: 4, y: 4, requiredColor: COLORS.violet}
-                ],
-                palette: {avatarDefault: COLORS.gray, spawnDock: COLORS.black, triggerCell: COLORS.white}
+        const LEVELS = [
+            {
+                id: 1,
+                title: "Level 1",
+                avatarStart: { row: 5, col: 1 },
+                dock: { row: 3, col: 3 },
+                spawnSequence: ["blue", "magenta", "lime", "blue", "violet", "yellow", "magenta", "teal", "lime"],
+                partialPattern: [],
+                targets: [
+                    // Outer perimeter - all blue (16 pieces)
+                    { row: 1, col: 1, color: "blue" },
+                    { row: 1, col: 2, color: "blue" },
+                    { row: 1, col: 3, color: "blue" },
+                    { row: 1, col: 4, color: "blue" },
+                    { row: 1, col: 5, color: "blue" },
+                    { row: 2, col: 1, color: "blue" },
+                    { row: 2, col: 5, color: "blue" },
+                    { row: 3, col: 1, color: "blue" },
+                    { row: 3, col: 5, color: "blue" },
+                    { row: 4, col: 1, color: "blue" },
+                    { row: 4, col: 5, color: "blue" },
+                    { row: 5, col: 1, color: "blue" },
+                    { row: 5, col: 2, color: "blue" },
+                    { row: 5, col: 3, color: "blue" },
+                    { row: 5, col: 4, color: "blue" },
+                    { row: 5, col: 5, color: "blue" },
+                    // Inner ring - all magenta (8 pieces)
+                    { row: 2, col: 2, color: "magenta" },
+                    { row: 2, col: 3, color: "magenta" },
+                    { row: 2, col: 4, color: "magenta" },
+                    { row: 3, col: 2, color: "magenta" },
+                    { row: 3, col: 4, color: "magenta" },
+                    { row: 4, col: 2, color: "magenta" },
+                    { row: 4, col: 3, color: "magenta" },
+                    { row: 4, col: 4, color: "magenta" }
+                ]
             },
-            2: {
-                boardSize: 8,
-                avatarStart: {x: 4, y: 4},
-                spawnDockCells: [{x: 0, y: 0}],
-                spawnTriggerCell: {x: 0, y: 0},
-                spawnAdjacencyRequirement: 0,
-                spawnRemoverDockCells: [{x: 7, y: 0}],
-                spawnRemoverTriggerCell: {x: 7, y: 0},
-                spawnRemoverAdjacencyRequirement: 0,
-                hintTemplateCells: [
-                    {x: 2, y: 2, color: COLORS.violet},
-                    {x: 3, y: 2, color: COLORS.violet},
-                    {x: 4, y: 2, color: COLORS.violet},
-                    {x: 4, y: 3, color: COLORS.violet},
-                    {x: 4, y: 5, color: COLORS.violet},
-                    {x: 5, y: 2, color: COLORS.violet},
-                    {x: 5, y: 3, color: COLORS.violet},
-                    {x: 5, y: 4, color: COLORS.violet},
-                    {x: 5, y: 5, color: COLORS.violet}
+            {
+                id: 2,
+                title: "Cross Pattern",
+                avatarStart: { row: 5, col: 1 },
+                dock: { row: 3, col: 3 },
+                enabledColors: ["pink", "violet", "lime"],
+                partialPattern: [
+                    { row: 3, col: 1, color: "pink" }
                 ],
-                initialStaticPieces: [],
-                spawnSequence: [
-                    {x: 3, y: 3, color: COLORS.yellow},
-                    {x: 2, y: 2, color: COLORS.yellow},
-                    {x: 5, y: 5, color: COLORS.blue2},
-                    {x: 5, y: 6, color: COLORS.blue2},
-                    {x: 6, y: 5, color: COLORS.blue2},
-                    {x: 4, y: 7, color: COLORS.blue2}
-                ],
-                goalPattern: [
-                    {x: 6, y: 6, requiredColor: COLORS.blue2},
-                    {x: 6, y: 7, requiredColor: COLORS.blue2},
-                    {x: 7, y: 6, requiredColor: COLORS.blue2},
-                    {x: 7, y: 7, requiredColor: COLORS.blue2}
-                ],
-                palette: {avatarDefault: COLORS.gray, spawnDock: COLORS.black, triggerCell: COLORS.white}
+                targets: [
+                    { row: 3, col: 1, color: "pink" },
+                    { row: 3, col: 2, color: "violet" },
+                    { row: 3, col: 4, color: "violet" },
+                    { row: 3, col: 5, color: "lime" },
+                    { row: 1, col: 3, color: "pink" },
+                    { row: 5, col: 3, color: "lime" }
+                ]
             },
-            3: {
-                boardSize: 8,
-                avatarStart: {x: 3, y: 3},
-                spawnDockCells: [{x: 0, y: 0}],
-                spawnTriggerCell: {x: 0, y: 0},
-                spawnAdjacencyRequirement: 0,
-                spawnRemoverDockCells: [{x: 7, y: 0}],
-                spawnRemoverTriggerCell: {x: 7, y: 0},
-                spawnRemoverAdjacencyRequirement: 0,
-                hintTemplateCells: [
-                    {x: 1, y: 1, color: COLORS.yellow},
-                    {x: 1, y: 2, color: COLORS.yellow},
-                    {x: 2, y: 1, color: COLORS.yellow},
-                    {x: 2, y: 2, color: COLORS.yellow},
-                    {x: 5, y: 5, color: COLORS.lime},
-                    {x: 5, y: 6, color: COLORS.lime}
-                ],
-                initialStaticPieces: [],
-                spawnSequence: [
-                    {x: 4, y: 4, color: COLORS.lime},
-                    {x: 3, y: 5, color: COLORS.lime},
-                    {x: 2, y: 3, color: COLORS.yellow},
-                    {x: 0, y: 1, color: COLORS.yellow},
-                    {x: 0, y: 2, color: COLORS.yellow},
-                    {x: 1, y: 3, color: COLORS.yellow},
-                    {x: 6, y: 5, color: COLORS.lime},
-                    {x: 4, y: 6, color: COLORS.lime}
-                ],
-                goalPattern: [
-                    {x: 1, y: 1, requiredColor: COLORS.yellow},
-                    {x: 1, y: 2, requiredColor: COLORS.yellow},
-                    {x: 2, y: 1, requiredColor: COLORS.yellow},
-                    {x: 2, y: 2, requiredColor: COLORS.yellow},
-                    {x: 5, y: 5, requiredColor: COLORS.lime},
-                    {x: 5, y: 6, requiredColor: COLORS.lime}
-                ],
-                palette: {avatarDefault: COLORS.gray, spawnDock: COLORS.black, triggerCell: COLORS.white}
-            },
-            4: {
-                boardSize: 8,
-                avatarStart: {x: 0, y: 0},
-                spawnDockCells: [{x: 0, y: 0}],
-                spawnTriggerCell: {x: 0, y: 0},
-                spawnAdjacencyRequirement: 0,
-                spawnRemoverDockCells: [{x: 7, y: 0}],
-                spawnRemoverTriggerCell: {x: 7, y: 0},
-                spawnRemoverAdjacencyRequirement: 0,
-                hintTemplateCells: [
-                    {x: 0, y: 0, color: COLORS.magenta},
-                    {x: 1, y: 0, color: COLORS.magenta},
-                    {x: 0, y: 1, color: COLORS.magenta},
-                    {x: 7, y: 0, color: COLORS.teal},
-                    {x: 7, y: 1, color: COLORS.teal}
-                ],
-                initialStaticPieces: [],
-                spawnSequence: [
-                    {x: 2, y: 6, color: COLORS.pink},
-                    {x: 5, y: 5, color: COLORS.pink},
-                    {x: 1, y: 1, color: COLORS.magenta},
-                    {x: 2, y: 0, color: COLORS.magenta},
-                    {x: 0, y: 2, color: COLORS.magenta},
-                    {x: 6, y: 0, color: COLORS.teal},
-                    {x: 6, y: 1, color: COLORS.teal},
-                    {x: 7, y: 2, color: COLORS.teal}
-                ],
-                goalPattern: [
-                    {x: 0, y: 0, requiredColor: COLORS.magenta},
-                    {x: 1, y: 0, requiredColor: COLORS.magenta},
-                    {x: 0, y: 1, requiredColor: COLORS.magenta},
-                    {x: 7, y: 0, requiredColor: COLORS.teal},
-                    {x: 7, y: 1, requiredColor: COLORS.teal}
-                ],
-                palette: {avatarDefault: COLORS.gray, spawnDock: COLORS.black, triggerCell: COLORS.white}
-            },
-            5: {
-                boardSize: 8,
-                avatarStart: {x: 4, y: 0},
-                spawnDockCells: [{x: 0, y: 0}],
-                spawnTriggerCell: {x: 0, y: 0},
-                spawnAdjacencyRequirement: 0,
-                spawnRemoverDockCells: [{x: 7, y: 0}],
-                spawnRemoverTriggerCell: {x: 7, y: 0},
-                spawnRemoverAdjacencyRequirement: 0,
-                hintTemplateCells: [
-                    {x: 5, y: 5, color: COLORS.yellow},
-                    {x: 0, y: 0, color: COLORS.teal},
-                    {x: 0, y: 5, color: COLORS.blue},
-                    {x: 5, y: 0, color: COLORS.pink}
-                ],
-                initialStaticPieces: [],
-                spawnSequence: [
-                    {x: 2, y: 2, color: COLORS.pink},
-                    {x: 3, y: 3, color: COLORS.pink},
-                    {x: 1, y: 4, color: COLORS.blue},
-                    {x: 0, y: 4, color: COLORS.blue},
-                    {x: 4, y: 1, color: COLORS.pink},
-                    {x: 4, y: 0, color: COLORS.pink},
-                    {x: 4, y: 4, color: COLORS.yellow},
-                    {x: 5, y: 4, color: COLORS.yellow}
-                ],
-                goalPattern: [
-                    {x: 5, y: 5, requiredColor: COLORS.yellow},
-                    {x: 0, y: 0, requiredColor: COLORS.teal},
-                    {x: 0, y: 5, requiredColor: COLORS.blue},
-                    {x: 5, y: 0, requiredColor: COLORS.pink}
-                ],
-                palette: {avatarDefault: COLORS.gray, spawnDock: COLORS.black, triggerCell: COLORS.white}
+            {
+                id: 3,
+                title: "Corners",
+                avatarStart: { row: 3, col: 3 },
+                dock: { row: 3, col: 3 },
+                enabledColors: ["blue", "yellow", "teal", "pink"],
+                partialPattern: [],
+                targets: [
+                    { row: 1, col: 1, color: "blue" },
+                    { row: 1, col: 5, color: "yellow" },
+                    { row: 5, col: 1, color: "teal" },
+                    { row: 5, col: 5, color: "pink" }
+                ]
             }
-        };
+        ];
 
         // ============================
         // GAME STATE
         // ============================
-        let currentLevel = 1;
-        let avatar = {x: 0, y: 0, color: "gray"};
-        let board = [];
-        let spawnIndex = 0;
-        let spawnHistory = [];
+        let currentLevel = 0;
+        let avatar = { row: 5, col: 1, color: null };
+        let grid = [];
+        let dragging = null;
+        let lastAvatarPos = null;
         let gameLog = [];
         let levelCompleted = false;
+        let moveCount = 0;
+        let spawnIndex = 0;
 
         // ============================
         // INITIALIZATION
         // ============================
         function initGame() {
             const level = LEVELS[currentLevel];
+
             avatar = {
-                x: level.avatarStart.x,
-                y: level.avatarStart.y,
-                color: level.palette.avatarDefault
+                row: level.avatarStart.row,
+                col: level.avatarStart.col,
+                color: null
             };
 
-            // Initialize empty board
-            board = [];
-            for (let x = 0; x < level.boardSize; x++) {
-                board[x] = [];
-                for (let y = 0; y < level.boardSize; y++) {
-                    board[x][y] = {color: null, isTemplate: false, isGoal: false};
+            // Initialize empty 5x5 grid
+            grid = [];
+            for (let row = 1; row <= 5; row++) {
+                grid[row] = [];
+                for (let col = 1; col <= 5; col++) {
+                    grid[row][col] = {
+                        color: null,
+                        isLocked: false,
+                        isTarget: false,
+                        targetColor: null
+                    };
                 }
             }
 
-            // Place hint template cells
-            level.hintTemplateCells.forEach(cell => {
-                board[cell.x][cell.y] = {color: cell.color, isTemplate: true, isGoal: false};
+            // Mark the center dock
+            grid[level.dock.row][level.dock.col].isDock = true;
+
+            // Place partial pattern (already locked pieces)
+            level.partialPattern.forEach(piece => {
+                grid[piece.row][piece.col].color = COLORS[piece.color];
+                grid[piece.row][piece.col].isLocked = true;
+                grid[piece.row][piece.col].colorKey = piece.color;
             });
 
-            // Place initial static pieces
-            level.initialStaticPieces.forEach(piece => {
-                board[piece.x][piece.y] = {color: piece.color, isTemplate: false, isGoal: false};
+            // Mark target cells
+            level.targets.forEach(target => {
+                grid[target.row][target.col].isTarget = true;
+                grid[target.row][target.col].targetColor = target.color;
             });
 
-            // Mark goal pattern cells
-            level.goalPattern.forEach(goal => {
-                board[goal.x][goal.y].isGoal = true;
-            });
-
-            spawnIndex = 0;
-            spawnHistory = [];
+            dragging = null;
+            lastAvatarPos = null;
             levelCompleted = false;
+            moveCount = 0;
+            spawnIndex = 0;
 
             logEvent({
                 type: "level_start",
-                level: currentLevel,
+                level: currentLevel + 1,
+                levelTitle: level.title,
                 timestamp: Date.now()
             });
 
@@ -390,68 +347,40 @@
         // RENDERING
         // ============================
         function renderBoard() {
-            const level = LEVELS[currentLevel];
             const gridElement = document.getElementById('grid');
-            gridElement.style.gridTemplateColumns = `repeat(${level.boardSize}, 40px)`;
             gridElement.innerHTML = '';
 
-            // Render from top to bottom of screen (high y to low y in math coordinates)
-            // Mathematical graph: (0,0) = bottom-left, board[x][y] where x=column, y=row
-            for (let screenRow = 0; screenRow < level.boardSize; screenRow++) {
-                const y = level.boardSize - 1 - screenRow;  // flip y-axis for math graph
-                for (let x = 0; x < level.boardSize; x++) {
+            // Render from top to bottom (row 1 to row 5)
+            for (let row = 1; row <= 5; row++) {
+                for (let col = 1; col <= 5; col++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
 
-                    // Determine cell color
-                    let cellColor = '#fff';
-                    const boardCell = board[x][y];
+                    const cellData = grid[row][col];
 
-                    if (boardCell.color) {
-                        cellColor = boardCell.color;
-                    } else if (boardCell.isGoal) {
-                        // Show grey background for empty goal cells (hint)
-                        cellColor = COLORS.gray;
-                    }
-
-                    // Check if this is spawn dock
-                    const isDock = level.spawnDockCells.some(dock => dock.x === x && dock.y === y);
-                    if (isDock && !boardCell.color) {
-                        cellColor = level.palette.spawnDock;
+                    // Check if dock
+                    if (cellData.isDock) {
                         cell.classList.add('dock');
                     }
 
-                    // Check if avatar is on this cell
-                    const isAvatar = (avatar.x === x && avatar.y === y);
+                    // Check if avatar is here
+                    const isAvatar = (avatar.row === row && avatar.col === col);
 
-                    // Only show trigger/dock colors if avatar is NOT on this cell
-                    if (!isAvatar) {
-                        // Check if this is trigger cell
-                        if (level.spawnTriggerCell.x === x && level.spawnTriggerCell.y === y && !boardCell.color) {
-                            cellColor = level.palette.triggerCell;
-                        }
+                    // Check if dragged block is here
+                    const isDragged = dragging && dragging.currentPos &&
+                                     dragging.currentPos.row === row &&
+                                     dragging.currentPos.col === col;
 
-                        // Check if this is spawn remover dock
-                        if (level.spawnRemoverDockCells) {
-                            const isRemoverDock = level.spawnRemoverDockCells.some(dock => dock.x === x && dock.y === y);
-                            if (isRemoverDock && !boardCell.color) {
-                                cellColor = level.palette.spawnDock;
-                                cell.classList.add('dock');
-                            }
-                        }
-
-                        // Check if this is spawn remover trigger cell
-                        if (level.spawnRemoverTriggerCell && level.spawnRemoverTriggerCell.x === x && level.spawnRemoverTriggerCell.y === y && !boardCell.color) {
-                            cellColor = level.palette.triggerCell;
-                        }
-                    }
-
-                    cell.style.backgroundColor = cellColor;
-
-                    // Draw avatar
                     if (isAvatar) {
                         cell.classList.add('avatar');
-                        cell.style.backgroundColor = avatar.color;
+                    } else if (isDragged) {
+                        cell.classList.add('dragged');
+                        cell.style.backgroundColor = dragging.colorHex;
+                    } else if (cellData.isLocked) {
+                        cell.classList.add('locked');
+                        cell.style.backgroundColor = cellData.color;
                     }
 
                     gridElement.appendChild(cell);
@@ -462,334 +391,226 @@
         // ============================
         // MOVEMENT & GAME LOGIC
         // ============================
-        function moveAvatar(dx, dy) {
+        function moveAvatar(dr, dc, keyPressed) {
             if (levelCompleted) return;
 
-            const level = LEVELS[currentLevel];
-            const newX = avatar.x + dx;
-            const newY = avatar.y + dy;
+            const newRow = avatar.row + dr;
+            const newCol = avatar.col + dc;
 
             // Check bounds
-            if (newX < 0 || newX >= level.boardSize || newY < 0 || newY >= level.boardSize) {
-                return;
-            }
-
-            // Check if target cell is blocked by ANY piece
-            // Avatar can ONLY move onto the two dock cells at (0,0) and (7,0) - everything else blocks
-            // Mathematical graph: (0,0) = bottom-left, (7,0) = bottom-right
-            const targetCell = board[newX][newY];
-            const isOnSpawnDock = (newX === 0 && newY === 0);
-            const isOnRemoverDock = (newX === 7 && newY === 0);
-            const isOnDock = isOnSpawnDock || isOnRemoverDock;
-
-            // Block if cell has ANY color (template, spawned, or deposited) and is NOT a dock
-            if (targetCell.color && !isOnDock) {
-                // Movement blocked - but check if avatar can pick up color from spawned piece
-                if (!targetCell.isTemplate && avatar.color === level.palette.avatarDefault) {
-                    // Avatar is not carrying anything - pick up the color (replaces current color)
-                    avatar.color = targetCell.color;
-
-                    logEvent({
-                        type: "pickup",
-                        position: {x: newX, y: newY},
-                        color: avatar.color,
-                        timestamp: Date.now()
-                    });
-
-                    renderBoard();
-                    return; // Movement still blocked, but color picked up
-                }
-
-                // Just blocked, no pickup
+            if (newRow < 1 || newRow > 5 || newCol < 1 || newCol > 5) {
                 logEvent({
                     type: "move_blocked",
-                    attemptedPosition: {x: newX, y: newY},
-                    blockedBy: targetCell.color,
-                    isTemplate: targetCell.isTemplate,
+                    reason: "out_of_bounds",
+                    attemptedPosition: { row: newRow, col: newCol },
+                    keyPressed: keyPressed,
                     timestamp: Date.now()
                 });
                 return;
             }
 
-            const oldX = avatar.x;
-            const oldY = avatar.y;
+            // Check if blocked by locked piece
+            if (grid[newRow][newCol].isLocked) {
+                logEvent({
+                    type: "move_blocked",
+                    reason: "locked_piece",
+                    attemptedPosition: { row: newRow, col: newCol },
+                    keyPressed: keyPressed,
+                    timestamp: Date.now()
+                });
+                return;
+            }
+
+            // Check if blocked by dragged piece (can't move into trailing block)
+            if (dragging && dragging.currentPos &&
+                dragging.currentPos.row === newRow &&
+                dragging.currentPos.col === newCol) {
+                logEvent({
+                    type: "move_blocked",
+                    reason: "dragged_piece",
+                    attemptedPosition: { row: newRow, col: newCol },
+                    keyPressed: keyPressed,
+                    timestamp: Date.now()
+                });
+                return;
+            }
+
+            // Movement is valid - store last position
+            lastAvatarPos = { row: avatar.row, col: avatar.col };
 
             // Move avatar
-            avatar.x = newX;
-            avatar.y = newY;
+            avatar.row = newRow;
+            avatar.col = newCol;
+            moveCount++;
 
             logEvent({
                 type: "move",
-                from: {x: oldX, y: oldY},
-                to: {x: newX, y: newY},
-                avatarColor: avatar.color,
+                from: lastAvatarPos,
+                to: { row: newRow, col: newCol },
+                moveNumber: moveCount,
+                avatarCarryingColor: dragging ? dragging.colorKey : null,
+                keyPressed: keyPressed,
                 timestamp: Date.now()
             });
 
-            // Check adjacent cells for pickup or deposit
-            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
-            let actionTaken = false;
-
-            for (const dir of directions) {
-                const adjX = newX + dir.dx;
-                const adjY = newY + dir.dy;
-
-                if (adjX >= 0 && adjX < level.boardSize && adjY >= 0 && adjY < level.boardSize) {
-                    const adjCell = board[adjX][adjY];
-
-                    // Check if touching same color - DEPOSIT (works with any colored cell including templates)
-                    if (adjCell.color === avatar.color && avatar.color !== level.palette.avatarDefault) {
-                        // Deposit in current position and reset to gray
-                        board[newX][newY].color = avatar.color;
-                        avatar.color = level.palette.avatarDefault;
-                        actionTaken = true;
-
-                        logEvent({
-                            type: "deposit",
-                            position: {x: newX, y: newY},
-                            color: board[newX][newY].color,
-                            timestamp: Date.now()
-                        });
-                        break;
-                    }
+            // Check if entered dock
+            if (grid[newRow][newCol].isDock) {
+                if (!dragging) {
+                    // Empty-handed: spawn a new color
+                    spawnColor();
+                } else {
+                    // Carrying a block: trash it
+                    removeBlock();
                 }
             }
 
-            // If didn't deposit, check for pickup
-            if (!actionTaken) {
-                for (const dir of directions) {
-                    const adjX = newX + dir.dx;
-                    const adjY = newY + dir.dy;
+            // Update dragging position if currently dragging
+            if (dragging) {
+                dragging.currentPos = lastAvatarPos;
 
-                    if (adjX >= 0 && adjX < level.boardSize && adjY >= 0 && adjY < level.boardSize) {
-                        const adjCell = board[adjX][adjY];
-
-                        // Check if touching a colored piece - PICKUP
-                        if (!adjCell.isTemplate && adjCell.color) {
-                            // Pick up this color (replaces current)
-                            avatar.color = adjCell.color;
-
-                            logEvent({
-                                type: "pickup",
-                                position: {x: adjX, y: adjY},
-                                color: avatar.color,
-                                timestamp: Date.now()
-                            });
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Check spawn trigger
-            if (newX === level.spawnTriggerCell.x && newY === level.spawnTriggerCell.y) {
-                checkAndSpawn();
-            }
-
-            // Check spawn remover trigger
-            if (level.spawnRemoverTriggerCell && newX === level.spawnRemoverTriggerCell.x && newY === level.spawnRemoverTriggerCell.y) {
-                checkAndRemoveSpawn();
+                // Check if dragged block should lock
+                checkLock();
             }
 
             renderBoard();
             checkWinCondition();
         }
 
-        function hasOrthogonalNeighborWithColor(x, y, color) {
+        function spawnColor() {
             const level = LEVELS[currentLevel];
-            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
+            let colorKey;
 
-            for (const dir of directions) {
-                const nx = x + dir.dx;
-                const ny = y + dir.dy;
-
-                if (nx >= 0 && nx < level.boardSize && ny >= 0 && ny < level.boardSize) {
-                    if (board[nx][ny].color === color) {
-                        return true;
-                    }
-                }
+            // Use spawn sequence if defined, otherwise use enabledColors randomly
+            if (level.spawnSequence && spawnIndex < level.spawnSequence.length) {
+                colorKey = level.spawnSequence[spawnIndex];
+                spawnIndex++;
+            } else if (level.enabledColors) {
+                colorKey = level.enabledColors[Math.floor(Math.random() * level.enabledColors.length)];
+            } else {
+                // Fallback to random from all colors
+                const allColors = Object.keys(COLORS);
+                colorKey = allColors[Math.floor(Math.random() * allColors.length)];
             }
 
-            return false;
-        }
+            const colorHex = COLORS[colorKey];
 
-        function checkAndSpawn() {
-            const level = LEVELS[currentLevel];
-            const trigger = level.spawnTriggerCell;
-
-            // Count adjacent dock cells
-            let adjacentDockCount = 0;
-            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
-
-            for (const dir of directions) {
-                const nx = trigger.x + dir.dx;
-                const ny = trigger.y + dir.dy;
-
-                if (level.spawnDockCells.some(dock => dock.x === nx && dock.y === ny)) {
-                    adjacentDockCount++;
-                }
-            }
+            dragging = {
+                colorKey: colorKey,
+                colorHex: colorHex,
+                currentPos: null
+            };
 
             logEvent({
-                type: "spawn_trigger_check",
-                position: {x: trigger.x, y: trigger.y},
-                adjacentDockCount: adjacentDockCount,
-                required: level.spawnAdjacencyRequirement,
+                type: "spawn",
+                colorKey: colorKey,
+                colorHex: colorHex,
+                spawnIndex: spawnIndex - 1,
+                dockPosition: level.dock,
+                timestamp: Date.now()
+            });
+        }
+
+        function removeBlock() {
+            if (!dragging) return;
+
+            logEvent({
+                type: "remove",
+                colorKey: dragging.colorKey,
+                colorHex: dragging.colorHex,
+                dockPosition: LEVELS[currentLevel].dock,
                 timestamp: Date.now()
             });
 
-            if (adjacentDockCount >= level.spawnAdjacencyRequirement) {
-                attemptSpawn();
-            }
+            // Remove the dragged block
+            dragging = null;
         }
 
-        function attemptSpawn() {
-            const level = LEVELS[currentLevel];
+        function checkLock() {
+            if (!dragging || !dragging.currentPos) return;
 
-            if (spawnIndex >= level.spawnSequence.length) {
+            const row = dragging.currentPos.row;
+            const col = dragging.currentPos.col;
+            const cell = grid[row][col];
+
+            // Check if this is a target cell with matching color
+            if (cell.isTarget && cell.targetColor === dragging.colorKey) {
+                // Lock the block
+                grid[row][col].color = dragging.colorHex;
+                grid[row][col].isLocked = true;
+                grid[row][col].colorKey = dragging.colorKey;
+
                 logEvent({
-                    type: "spawn_exhausted",
+                    type: "lock",
+                    position: { row, col },
+                    colorKey: dragging.colorKey,
                     timestamp: Date.now()
                 });
-                return;
-            }
 
-            // Try to spawn pieces in sequence
-            let spawned = false;
-            let attempts = 0;
+                // Reset dragging state
+                dragging = null;
 
-            while (!spawned && spawnIndex < level.spawnSequence.length && attempts < level.spawnSequence.length) {
-                const spawn = level.spawnSequence[spawnIndex];
-                const targetCell = board[spawn.x][spawn.y];
-
-                if (!targetCell.color && !targetCell.isTemplate) {
-                    // Spawn successful
-                    board[spawn.x][spawn.y].color = spawn.color;
-                    spawnHistory.push({
-                        index: spawnIndex,
-                        position: {x: spawn.x, y: spawn.y},
-                        color: spawn.color,
-                        timestamp: Date.now()
-                    });
-
-                    logEvent({
-                        type: "spawn_placed",
-                        spawnIndex: spawnIndex,
-                        position: {x: spawn.x, y: spawn.y},
-                        color: spawn.color,
-                        timestamp: Date.now()
-                    });
-
-                    spawnIndex++;
-                    spawned = true;
-                } else {
-                    // Cell occupied, skip to next
-                    logEvent({
-                        type: "spawn_skipped",
-                        spawnIndex: spawnIndex,
-                        position: {x: spawn.x, y: spawn.y},
-                        reason: "cell_occupied",
-                        timestamp: Date.now()
-                    });
-
-                    spawnIndex++;
-                    attempts++;
+                // Visual feedback
+                const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                if (cellElement) {
+                    cellElement.classList.add('lock-animation');
+                    setTimeout(() => cellElement.classList.remove('lock-animation'), 300);
                 }
             }
         }
 
-        function checkAndRemoveSpawn() {
-            const level = LEVELS[currentLevel];
-            if (!level.spawnRemoverTriggerCell) return;
-
-            const trigger = level.spawnRemoverTriggerCell;
-
-            // Count adjacent spawn remover dock cells
-            let adjacentDockCount = 0;
-            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}];
-
-            for (const dir of directions) {
-                const nx = trigger.x + dir.dx;
-                const ny = trigger.y + dir.dy;
-
-                if (level.spawnRemoverDockCells.some(dock => dock.x === nx && dock.y === ny)) {
-                    adjacentDockCount++;
-                }
-            }
-
-            logEvent({
-                type: "spawn_remover_trigger_check",
-                position: {x: trigger.x, y: trigger.y},
-                adjacentDockCount: adjacentDockCount,
-                required: level.spawnRemoverAdjacencyRequirement,
-                timestamp: Date.now()
-            });
-
-            if (adjacentDockCount >= level.spawnRemoverAdjacencyRequirement) {
-                // Remove the most recent spawn
-                if (spawnHistory.length > 0) {
-                    const lastSpawn = spawnHistory.pop();
-                    board[lastSpawn.position.x][lastSpawn.position.y].color = null;
-
-                    logEvent({
-                        type: "spawn_removed",
-                        position: lastSpawn.position,
-                        color: lastSpawn.color,
-                        timestamp: Date.now()
-                    });
-
-                    spawnIndex--;
-                    renderBoard();
-                }
-            }
-        }
-
-        // ============================
-        // WIN CONDITION
-        // ============================
         function checkWinCondition() {
             const level = LEVELS[currentLevel];
-            let allMatch = true;
+            let allTargetsLocked = true;
 
-            for (const goal of level.goalPattern) {
-                const cell = board[goal.x][goal.y];
-                if (cell.color !== goal.requiredColor) {
-                    allMatch = false;
+            for (const target of level.targets) {
+                const cell = grid[target.row][target.col];
+                if (!cell.isLocked || cell.colorKey !== target.color) {
+                    allTargetsLocked = false;
                     break;
                 }
             }
 
-            if (allMatch && !levelCompleted) {
+            if (allTargetsLocked && !levelCompleted) {
                 levelCompleted = true;
 
                 logEvent({
                     type: "level_complete",
-                    level: currentLevel,
+                    level: currentLevel + 1,
+                    moveCount: moveCount,
                     timestamp: Date.now()
                 });
 
-                triggerWin();
+                showLevelComplete();
             }
         }
 
-        function triggerWin() {
-            // Ripple effect
-            const grid = document.getElementById('grid');
-            grid.classList.add('ripple-effect');
+        function showLevelComplete() {
+            const overlay = document.getElementById('level-complete-overlay');
+            overlay.classList.add('show');
+        }
 
-            setTimeout(() => {
-                grid.classList.remove('ripple-effect');
+        function nextLevel() {
+            const overlay = document.getElementById('level-complete-overlay');
+            overlay.classList.remove('show');
 
-                // Auto-advance to next level or show restart button
-                if (currentLevel === 5) {
-                    // Show restart button after completing level 5
-                    document.getElementById('restart-btn').style.display = "block";
-                } else {
-                    // Auto-advance to next level
-                    currentLevel++;
-                    initGame();
-                }
-            }, 600);
+            if (currentLevel < LEVELS.length - 1) {
+                currentLevel++;
+                initGame();
+            } else {
+                // Game complete - show restart button
+                logEvent({
+                    type: "game_complete",
+                    timestamp: Date.now()
+                });
+                document.getElementById('restart-btn').style.display = 'block';
+            }
+        }
+
+        function restartGame() {
+            currentLevel = 0;
+            gameLog = [];
+            document.getElementById('restart-btn').style.display = 'none';
+            initGame();
         }
 
         // ============================
@@ -801,17 +622,16 @@
 
         function downloadData() {
             const data = {
-                currentLevel: currentLevel,
+                currentLevel: currentLevel + 1,
                 gameLog: gameLog,
-                spawnHistory: spawnHistory,
                 exportTime: new Date().toISOString()
             };
 
-            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `game-data-${Date.now()}.json`;
+            a.download = `game2-data-${Date.now()}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -827,33 +647,29 @@
         // EVENT LISTENERS
         // ============================
         document.addEventListener('keydown', (e) => {
-            switch(e.key) {
+            switch (e.key) {
                 case 'ArrowUp':
                     e.preventDefault();
-                    moveAvatar(0, 1); // increase y (move up in math graph)
+                    moveAvatar(-1, 0, 'ArrowUp');
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
-                    moveAvatar(0, -1); // decrease y (move down in math graph)
+                    moveAvatar(1, 0, 'ArrowDown');
                     break;
                 case 'ArrowLeft':
                     e.preventDefault();
-                    moveAvatar(-1, 0); // decrease x (move left)
+                    moveAvatar(0, -1, 'ArrowLeft');
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
-                    moveAvatar(1, 0); // increase x (move right)
+                    moveAvatar(0, 1, 'ArrowRight');
                     break;
             }
         });
 
         document.getElementById('download-btn').addEventListener('click', downloadData);
-
-        document.getElementById('restart-btn').addEventListener('click', () => {
-            currentLevel = 1;
-            document.getElementById('restart-btn').style.display = "none";
-            initGame();
-        });
+        document.getElementById('restart-btn').addEventListener('click', restartGame);
+        document.getElementById('next-level-btn').addEventListener('click', nextLevel);
 
         // ============================
         // START GAME
