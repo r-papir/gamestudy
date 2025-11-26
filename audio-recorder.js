@@ -357,20 +357,25 @@ const AudioRecorder = (function() {
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
 
         // Create export object matching the track-puzzle-session format
+        // while also including all original data (game_id, reasoning, guid, etc.)
         const exportData = {
             sessionStart: new Date(state.startTime).toISOString(),
             sessionEnd: new Date().toISOString(),
             gameId: state.gameId,
-            events: state.keystrokes.map(ks => ({
+            duration: Date.now() - state.startTime,
+            events: state.keystrokes.map((ks, idx) => ({
                 timestamp: new Date(state.startTime + ks.timestamp).toISOString(),
                 level: ks.gameState.level || 1,
                 key: ks.key,
                 action: ks.action,
                 gameStateBefore: ks.gameState.gameStateMatrix || null,
                 selectedChunk: ks.gameState.selectedChunkIndex !== undefined ? ks.gameState.selectedChunkIndex : null,
-                // Include additional game state info
                 vehiclePos: ks.gameState.vehiclePos || null,
-                goalPos: ks.gameState.goalPos || null
+                goalPos: ks.gameState.goalPos || null,
+                // Include original fields from gameFrames
+                actionId: idx,
+                reasoning: findNearbyReasoning(ks.timestamp),
+                guid: generateGuid()
             })),
             transcription: state.transcription.map(t => ({
                 timestamp: new Date(state.startTime + t.timestamp).toISOString(),
@@ -391,6 +396,7 @@ const AudioRecorder = (function() {
             lines.push(`  "sessionStart": ${JSON.stringify(data.sessionStart)},`);
             lines.push(`  "sessionEnd": ${JSON.stringify(data.sessionEnd)},`);
             lines.push(`  "gameId": ${JSON.stringify(data.gameId)},`);
+            lines.push(`  "duration": ${data.duration},`);
 
             // Events array
             lines.push('  "events": [');
@@ -415,7 +421,10 @@ const AudioRecorder = (function() {
 
                 lines.push(`      "selectedChunk": ${event.selectedChunk !== null ? event.selectedChunk : 'null'},`);
                 lines.push(`      "vehiclePos": ${JSON.stringify(event.vehiclePos)},`);
-                lines.push(`      "goalPos": ${JSON.stringify(event.goalPos)}`);
+                lines.push(`      "goalPos": ${JSON.stringify(event.goalPos)},`);
+                lines.push(`      "actionId": ${event.actionId},`);
+                lines.push(`      "reasoning": ${JSON.stringify(event.reasoning)},`);
+                lines.push(`      "guid": ${JSON.stringify(event.guid)}`);
 
                 const eventComma = i < data.events.length - 1 ? ',' : '';
                 lines.push(`    }${eventComma}`);
