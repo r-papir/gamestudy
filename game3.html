@@ -483,7 +483,14 @@
                             currentLevelIndex++;
                             isTransitioning = false; // Reset for next level
                             if (currentLevelIndex < levels.length) {
+                                // Keep grid hidden while loading new level
+                                gridElement.style.opacity = '0';
                                 loadLevel(currentLevelIndex);
+                                // Small delay to ensure render completes before fade-in
+                                setTimeout(() => {
+                                    gridElement.style.opacity = '';
+                                    gridElement.classList.remove('fade-out');
+                                }, 50);
                             } else {
                                 // Game complete - show restart button
                                 gridElement.classList.remove('fade-out');
