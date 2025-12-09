@@ -92,41 +92,34 @@
         }
 
 
-        #restart-btn {
+        #restart-btn, #download-btn {
             position: fixed;
             top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+            padding: 15px 30px;
+            font-size: 18px;
             font-family: 'Trebuchet MS', monospace;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            border: 3px solid #1a1a1a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        #restart-btn {
+            left: 20px;
             display: none;
         }
 
-        #restart-btn:hover {
-            background: #45a049;
-        }
-
         #download-btn {
-            position: fixed;
-            top: 20px;
             right: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Trebuchet MS', monospace;
+            display: block;
         }
 
-        #download-btn:hover {
-            background: #0b7dda;
+        #restart-btn:hover, #download-btn:hover {
+            background-color: #1a1a1a;
+            color: #ffffff;
         }
 
         #skip-level-btn {
