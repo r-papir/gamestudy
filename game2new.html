@@ -160,6 +160,18 @@
     </style>
 </head>
 <body>
+    <script>
+    // Verify calibration before allowing game play
+    (function() {
+        var calibrated = localStorage.getItem('webgazerCalibrationComplete') === 'true';
+        var hasData = localStorage.getItem('webgazerGlobalData') !== null;
+        if (!calibrated || !hasData) {
+            var returnUrl = encodeURIComponent(window.location.pathname);
+            window.location.href = 'calibration.html?return=' + returnUrl;
+        }
+    })();
+    </script>
+
     <div id="instructions">
         There are no instructions for this game, intentionally.<br>
         Use the arrow keys to discover the controls, rules, and objective.
