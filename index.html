@@ -80,8 +80,7 @@
     // Check if calibration is needed before showing game selection
     (function() {
         var calibrated = localStorage.getItem('webgazerCalibrationComplete') === 'true';
-        var hasData = localStorage.getItem('webgazerGlobalData') !== null;
-        if (!calibrated || !hasData) {
+        if (!calibrated) {
             window.location.href = 'calibration.html';
         }
     })();

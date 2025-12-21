@@ -18,8 +18,7 @@ const Calibration = (function() {
      */
     function hasExistingCalibration() {
         const calibrationFlag = localStorage.getItem(CALIBRATION_FLAG_KEY);
-        const webgazerData = localStorage.getItem('webgazerGlobalData');
-        return calibrationFlag === 'true' && webgazerData !== null;
+        return calibrationFlag === 'true';
     }
 
     /**
