@@ -122,6 +122,18 @@
             color: #ffffff;
         }
 
+        .audio-recorder-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            text-align: right;
+        }
+
+        #download-btn {
+            top: 100px;
+        }
+
         #skip-level-btn {
             position: fixed;
             bottom: 20px;
@@ -976,6 +988,9 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
+            // Also export the recording session data (audio, transcription, gaze)
+            AudioRecorder.exportRecording();
+
             logEvent({
                 type: "data_downloaded",
                 timestamp: Date.now()
@@ -1081,7 +1096,9 @@
                 const row = Math.floor((screenY - rect.top) / cellHeight) + 1;
 
                 return { x: Math.min(col, 5), y: Math.min(row, 5) };
-            }
+            },
+            hideExportButton: true,
+            insertBeforeSelector: '#download-btn'
         });
     </script>
 </body>

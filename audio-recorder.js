@@ -33,6 +33,8 @@ const AudioRecorder = (function() {
         onKeystroke: null,         // Optional callback when keystroke is recorded
         screenToGrid: null,        // Function to convert screen (x,y) to grid coords, returns {x, y} or null if off-grid
         keyActionMap: {},          // Map of key names to semantic action names (e.g., {'ArrowUp': 'move_chunk_up'})
+        hideExportButton: false,   // Set to true to hide the Export Session button (when merged with game's download)
+        insertBeforeSelector: null, // CSS selector - insert UI before this element (e.g., '#download-button')
     };
 
     // DOM elements
@@ -538,7 +540,9 @@ const AudioRecorder = (function() {
 
         // Assemble container
         elements.container.appendChild(elements.recordBtn);
-        elements.container.appendChild(elements.exportBtn);
+        if (!config.hideExportButton) {
+            elements.container.appendChild(elements.exportBtn);
+        }
         elements.container.appendChild(elements.statusDiv);
     }
 
@@ -579,31 +583,43 @@ const AudioRecorder = (function() {
         });
 
         // Insert UI into page
-        // Look for common insertion points
-        const insertionPoints = [
-            '#game-container',
-            '#instructions',
-            '.game-container',
-            'body'
-        ];
-
         let inserted = false;
-        for (const selector of insertionPoints) {
-            const target = document.querySelector(selector);
-            if (target) {
-                if (selector === 'body') {
-                    // Insert after first child for body
-                    if (target.firstChild) {
-                        target.insertBefore(elements.container, target.firstChild.nextSibling);
-                    } else {
-                        target.appendChild(elements.container);
-                    }
-                } else {
-                    // Insert after the found element
-                    target.parentNode.insertBefore(elements.container, target.nextSibling);
-                }
+
+        // If insertBeforeSelector is specified, try to insert before that element
+        if (config.insertBeforeSelector) {
+            const target = document.querySelector(config.insertBeforeSelector);
+            if (target && target.parentNode) {
+                target.parentNode.insertBefore(elements.container, target);
                 inserted = true;
-                break;
+            }
+        }
+
+        // Fall back to common insertion points
+        if (!inserted) {
+            const insertionPoints = [
+                '#game-container',
+                '#instructions',
+                '.game-container',
+                'body'
+            ];
+
+            for (const selector of insertionPoints) {
+                const target = document.querySelector(selector);
+                if (target) {
+                    if (selector === 'body') {
+                        // Insert after first child for body
+                        if (target.firstChild) {
+                            target.insertBefore(elements.container, target.firstChild.nextSibling);
+                        } else {
+                            target.appendChild(elements.container);
+                        }
+                    } else {
+                        // Insert after the found element
+                        target.parentNode.insertBefore(elements.container, target.nextSibling);
+                    }
+                    inserted = true;
+                    break;
+                }
             }
         }
 
@@ -631,6 +647,7 @@ const AudioRecorder = (function() {
             }
         },
         isRecording: () => state.isRecording,
-        getState: () => ({ ...state })
+        getState: () => ({ ...state }),
+        exportRecording
     };
 })();
