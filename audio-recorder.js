@@ -33,14 +33,12 @@ const AudioRecorder = (function() {
         onKeystroke: null,         // Optional callback when keystroke is recorded
         screenToGrid: null,        // Function to convert screen (x,y) to grid coords, returns {x, y} or null if off-grid
         keyActionMap: {},          // Map of key names to semantic action names (e.g., {'ArrowUp': 'move_chunk_up'})
-        hideExportButton: false,   // Set to true to hide the Export Session button (when merged with game's download)
         insertBeforeSelector: null, // CSS selector - insert UI before this element (e.g., '#download-button')
     };
 
     // DOM elements
     let elements = {
         recordBtn: null,
-        exportBtn: null,
         statusDiv: null,
         container: null
     };
@@ -296,8 +294,6 @@ const AudioRecorder = (function() {
         if (state.isRecording) {
             elements.recordBtn.textContent = 'Stop Recording';
             elements.recordBtn.classList.add('recording');
-            elements.exportBtn.classList.add('disabled');
-            elements.exportBtn.disabled = true;
             elements.statusDiv.textContent = 'Recording gameplay and audio...';
             elements.statusDiv.classList.add('active');
         } else {
@@ -305,8 +301,6 @@ const AudioRecorder = (function() {
             elements.recordBtn.classList.remove('recording');
 
             if (state.keystrokes.length > 0 || state.gazeData.length > 0) {
-                elements.exportBtn.classList.remove('disabled');
-                elements.exportBtn.disabled = false;
                 const transcriptCount = state.transcription.length;
                 const gazeCount = state.gazeData.length;
                 elements.statusDiv.textContent = `Recording complete. ${state.keystrokes.length} actions, ${transcriptCount} speech, ${gazeCount} gaze points.`;
@@ -526,13 +520,6 @@ const AudioRecorder = (function() {
         elements.recordBtn.textContent = 'Start Recording';
         elements.recordBtn.onclick = toggleRecording;
 
-        // Create export button
-        elements.exportBtn = document.createElement('button');
-        elements.exportBtn.className = 'audio-recorder-btn disabled';
-        elements.exportBtn.textContent = 'Export Session';
-        elements.exportBtn.disabled = true;
-        elements.exportBtn.onclick = exportRecording;
-
         // Create status div
         elements.statusDiv = document.createElement('div');
         elements.statusDiv.className = 'audio-recorder-status';
@@ -540,9 +527,6 @@ const AudioRecorder = (function() {
 
         // Assemble container
         elements.container.appendChild(elements.recordBtn);
-        if (!config.hideExportButton) {
-            elements.container.appendChild(elements.exportBtn);
-        }
         elements.container.appendChild(elements.statusDiv);
     }
 
