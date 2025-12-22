@@ -160,7 +160,7 @@
     <script>
     // Verify calibration before allowing game play
     (function() {
-        var calibrated = localStorage.getItem('webgazerCalibrationComplete') === 'true';
+        var calibrated = sessionStorage.getItem('webgazerCalibrationComplete') === 'true';
         if (!calibrated) {
             var returnUrl = encodeURIComponent(window.location.pathname);
             window.location.href = 'calibration.html?return=' + returnUrl;

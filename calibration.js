@@ -14,10 +14,10 @@ const Calibration = (function() {
     let webgazerReady = false;
 
     /**
-     * Check if calibration data exists in localStorage
+     * Check if calibration data exists in sessionStorage
      */
     function hasExistingCalibration() {
-        const calibrationFlag = localStorage.getItem(CALIBRATION_FLAG_KEY);
+        const calibrationFlag = sessionStorage.getItem(CALIBRATION_FLAG_KEY);
         return calibrationFlag === 'true';
     }
 
@@ -25,14 +25,14 @@ const Calibration = (function() {
      * Mark calibration as complete
      */
     function setCalibrationComplete() {
-        localStorage.setItem(CALIBRATION_FLAG_KEY, 'true');
+        sessionStorage.setItem(CALIBRATION_FLAG_KEY, 'true');
     }
 
     /**
      * Clear calibration data for recalibration
      */
     function clearCalibration() {
-        localStorage.removeItem(CALIBRATION_FLAG_KEY);
+        sessionStorage.removeItem(CALIBRATION_FLAG_KEY);
         localStorage.removeItem('webgazerGlobalData');
         if (webgazerReady && typeof webgazer !== 'undefined') {
             webgazer.clearData();
@@ -165,8 +165,16 @@ const Calibration = (function() {
             webgazer.pause();
         }
 
-        // Small delay to ensure data is saved
+        // Ensure calibration flag is set before navigating (defensive - may already be set)
+        setCalibrationComplete();
+
+        // Small delay to ensure all data is saved
         setTimeout(function() {
+            // Verify flag is set, retry if needed
+            if (sessionStorage.getItem(CALIBRATION_FLAG_KEY) !== 'true') {
+                sessionStorage.setItem(CALIBRATION_FLAG_KEY, 'true');
+            }
+
             const params = new URLSearchParams(window.location.search);
             const returnUrl = params.get('return');
             if (returnUrl && returnUrl.startsWith('/')) {
@@ -174,7 +182,7 @@ const Calibration = (function() {
             } else {
                 window.location.href = 'index.html';
             }
-        }, 100);
+        }, 200);
     }
 
     /**

@@ -79,7 +79,8 @@
     <script>
     // Check if calibration is needed before showing game selection
     (function() {
-        var calibrated = localStorage.getItem('webgazerCalibrationComplete') === 'true';
+        // Use sessionStorage so calibration happens once per browser session
+        var calibrated = sessionStorage.getItem('webgazerCalibrationComplete') === 'true';
         if (!calibrated) {
             window.location.href = 'calibration.html';
         }
