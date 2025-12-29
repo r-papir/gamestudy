@@ -633,6 +633,41 @@
             };
         }
 
+        function level2() {
+            // Grid reference:
+            // 1   2   3   4   5
+            // 6   7   8   9   10
+            // 11  12  13  14  15
+            // 16  17  18  19  20
+            // 21  22  23  24  25
+
+            const avatarStart = pixelToCoords(13);    // Pixel 13 = (2, 2) center
+            const transformerPos = pixelToCoords(15); // Pixel 15 = (4, 2) right side of center row
+            const goalPos = pixelToCoords(11);        // Pixel 11 = (0, 2) left side of center row
+            const pixel15 = pixelToCoords(15);        // Pixel 15 = (4, 2)
+
+            return {
+                id: 2,
+                name: "Level 2",
+                instructions: "There are no instructions for this game, intentionally.<br>Use the arrow keys to discover the controls, rules, and objective.",
+                avatarStart: avatarStart,
+                avatarColor: 'grey',
+                avatarDirection: 'horizontal', // left/right only
+                startingGameState: 'A',
+                goalPos: goalPos,
+                goalColor: 'teal',
+                transformerPos: transformerPos,
+                tiles: {
+                    stateA: [
+                        { x: pixel15.x, y: pixel15.y, type: 'color', newColor: 'teal' } // Color changer at box 15 → teal
+                    ],
+                    stateB: [
+                        { x: pixel15.x, y: pixel15.y, type: 'color', newColor: 'yellow' } // Color changer at box 15 → yellow
+                    ]
+                }
+            };
+        }
+
         function level3() {
             // Grid reference:
             // 1   2   3   4   5
@@ -675,6 +710,7 @@
         // Build levels array
         levels = [
             level1(),
+            level2(),
             level3()
         ];
 
