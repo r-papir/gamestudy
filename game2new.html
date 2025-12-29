@@ -211,7 +211,7 @@
             avatarDirection: 'vertical', // 'vertical' = up/down, 'horizontal' = left/right
             currentGameState: 'A', // 'A' or 'B'
             goalPos: { x: 0, y: 0 },
-            goalColor: 'pink',
+            goalColor: 'rose',
             transformerPositions: [], // Array of {x, y} for multiple triggers
             tiles: {
                 stateA: [],
@@ -724,7 +724,7 @@
                 avatarDirection: 'vertical', // up/down
                 startingGameState: 'A',
                 goalPos: goalPos,
-                goalColor: 'pink',
+                goalColor: 'rose',
                 transformerPos: transformerPos,
                 tiles: {
                     stateA: [
@@ -733,7 +733,7 @@
                     ],
                     stateB: [
                         // Pixel 13 disabled (not in list)
-                        { x: pixel15.x, y: pixel15.y, type: 'color', newColor: 'pink' }, // Color changer at pixel 15
+                        { x: pixel15.x, y: pixel15.y, type: 'color', newColor: 'rose' }, // Color changer at pixel 15
                         { x: avatarStart.x, y: avatarStart.y, type: 'direction' } // Direction changer at pixel 3 (start position)
                     ]
                 }
@@ -838,7 +838,7 @@
             const pixel2 = pixelToCoords(2);          // Pixel 2 = (1, 0)
             const pixel5 = pixelToCoords(5);          // Pixel 5 = (4, 0)
             const pixel6 = pixelToCoords(6);          // Pixel 6 = (0, 1)
-            const pixel7 = pixelToCoords(7);          // Pixel 7 = (1, 1)
+            const pixel9 = pixelToCoords(9);          // Pixel 9 = (3, 1)
             const pixel10 = pixelToCoords(10);        // Pixel 10 = (4, 1)
             const pixel20 = pixelToCoords(20);        // Pixel 20 = (4, 3)
             const pixel24 = pixelToCoords(24);        // Pixel 24 = (3, 4)
@@ -861,7 +861,7 @@
                 tiles: {
                     stateA: [
                         { x: pixel10.x, y: pixel10.y, type: 'direction' }, // Direction changer at box 10
-                        { x: pixel5.x, y: pixel5.y, type: 'portal', destX: pixel7.x, destY: pixel7.y }, // Portal at box 5 → box 7
+                        { x: pixel5.x, y: pixel5.y, type: 'portal', destX: pixel9.x, destY: pixel9.y }, // Portal at box 5 → box 9
                         { x: pixel20.x, y: pixel20.y, type: 'portal', destX: pixel24.x, destY: pixel24.y } // Portal at box 20 → box 24
                     ],
                     stateB: [
@@ -874,6 +874,80 @@
             };
         }
 
+        function level7() {
+            // Grid reference:
+            // 1   2   3   4   5
+            // 6   7   8   9   10
+            // 11  12  13  14  15
+            // 16  17  18  19  20
+            // 21  22  23  24  25
+
+            const avatarStart = pixelToCoords(23);    // Pixel 23 = (2, 4)
+            const trigger1 = pixelToCoords(1);        // Pixel 1 = (0, 0)
+            const trigger2 = pixelToCoords(8);        // Pixel 8 = (2, 1)
+            const trigger3 = pixelToCoords(25);       // Pixel 25 = (4, 4)
+            const goalPos = pixelToCoords(13);        // Pixel 13 = (2, 2) center
+
+            // Pixel coordinates for tiles
+            const pixel3 = pixelToCoords(3);
+            const pixel4 = pixelToCoords(4);
+            const pixel5 = pixelToCoords(5);
+            const pixel6 = pixelToCoords(6);
+            const pixel7 = pixelToCoords(7);
+            const pixel9 = pixelToCoords(9);
+            const pixel10 = pixelToCoords(10);
+            const pixel11 = pixelToCoords(11);
+            const pixel12 = pixelToCoords(12);
+            const pixel14 = pixelToCoords(14);
+            const pixel15 = pixelToCoords(15);
+            const pixel17 = pixelToCoords(17);
+            const pixel19 = pixelToCoords(19);
+            const pixel21 = pixelToCoords(21);
+            const pixel22 = pixelToCoords(22);
+            const pixel23 = pixelToCoords(23);
+            const pixel24 = pixelToCoords(24);
+
+            // Custom color cycle for this level
+            const level7ColorCycle = ['rose', 'blue', 'yellow', 'teal'];
+
+            return {
+                id: 7,
+                name: "Level 7",
+                instructions: "There are no instructions for this game, intentionally.<br>Use the arrow keys to discover the controls, rules, and objective.",
+                avatarStart: avatarStart,
+                avatarColor: 'yellow',
+                avatarDirection: 'horizontal', // left/right only
+                startingGameState: 'A',
+                goalPos: goalPos,
+                goalColor: 'yellow',
+                transformerPositions: [trigger1, trigger2, trigger3], // Triggers at boxes 1, 8, and 25
+                tiles: {
+                    stateA: [
+                        { x: pixel22.x, y: pixel22.y, type: 'colorCycle', cycle: level7ColorCycle }, // Color transformer at box 22
+                        { x: pixel11.x, y: pixel11.y, type: 'portal', destX: pixel7.x, destY: pixel7.y }, // Portal at box 11 → box 7
+                        { x: pixel12.x, y: pixel12.y, type: 'direction' }, // Direction transformer at box 12
+                        { x: pixel15.x, y: pixel15.y, type: 'portal', destX: pixel19.x, destY: pixel19.y }, // Portal at box 15 → box 19
+                        { x: pixel10.x, y: pixel10.y, type: 'direction' }, // Direction transformer at box 10
+                        { x: pixel5.x, y: pixel5.y, type: 'portal', destX: pixel9.x, destY: pixel9.y }, // Portal at box 5 → box 9
+                        { x: pixel3.x, y: pixel3.y, type: 'colorCycle', cycle: level7ColorCycle }, // Color transformer at box 3
+                        { x: pixel6.x, y: pixel6.y, type: 'direction' }, // Direction transformer at box 6
+                        { x: pixel21.x, y: pixel21.y, type: 'direction' } // Direction transformer at box 21
+                    ],
+                    stateB: [
+                        { x: pixel24.x, y: pixel24.y, type: 'direction' }, // Direction transformer at box 24
+                        { x: pixel14.x, y: pixel14.y, type: 'colorCycle', cycle: level7ColorCycle }, // Color transformer at box 14
+                        { x: pixel6.x, y: pixel6.y, type: 'colorCycle', cycle: level7ColorCycle }, // Color transformer at box 6
+                        { x: pixel12.x, y: pixel12.y, type: 'colorCycle', cycle: level7ColorCycle }, // Color transformer at box 12
+                        { x: pixel4.x, y: pixel4.y, type: 'direction' }, // Direction transformer at box 4
+                        { x: pixel3.x, y: pixel3.y, type: 'direction' }, // Direction transformer at box 3
+                        { x: pixel10.x, y: pixel10.y, type: 'portal', destX: pixel14.x, destY: pixel14.y }, // Portal at box 10 → box 14
+                        { x: pixel17.x, y: pixel17.y, type: 'portal', destX: pixel23.x, destY: pixel23.y }, // Portal at box 17 → box 23
+                        { x: pixel21.x, y: pixel21.y, type: 'direction' } // Direction transformer at box 21
+                    ]
+                }
+            };
+        }
+
         // Build levels array
         levels = [
             level1(),
@@ -881,7 +955,8 @@
             level3(),
             level4(),
             level5(),
-            level6()
+            level6(),
+            level7()
         ];
 
         // Start game
