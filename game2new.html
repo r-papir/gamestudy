@@ -596,7 +596,44 @@
         });
 
         // Level definitions
-        function level2() {
+        function level1() {
+            // Grid reference:
+            // 1   2   3   4   5
+            // 6   7   8   9   10
+            // 11  12  13  14  15
+            // 16  17  18  19  20
+            // 21  22  23  24  25
+
+            const avatarStart = pixelToCoords(1);     // Pixel 1 = (0, 0) top-left
+            const transformerPos = pixelToCoords(21); // Pixel 21 = (0, 4) bottom-left
+            const goalPos = pixelToCoords(25);        // Pixel 25 = (4, 4) bottom-right
+            const pixel1 = pixelToCoords(1);          // Pixel 1 = (0, 0)
+            const pixel5 = pixelToCoords(5);          // Pixel 5 = (4, 0)
+
+            return {
+                id: 1,
+                name: "Level 1",
+                instructions: "There are no instructions for this game, intentionally.<br>Use the arrow keys to discover the controls, rules, and objective.",
+                avatarStart: avatarStart,
+                avatarColor: 'blue',
+                avatarDirection: 'vertical', // up/down
+                startingGameState: 'A',
+                goalPos: goalPos,
+                goalColor: 'blue',
+                transformerPos: transformerPos,
+                tiles: {
+                    stateA: [
+                        // No direction changers visible in state A
+                    ],
+                    stateB: [
+                        { x: pixel1.x, y: pixel1.y, type: 'direction' }, // Direction changer at box 1
+                        { x: pixel5.x, y: pixel5.y, type: 'direction' }  // Direction changer at box 5
+                    ]
+                }
+            };
+        }
+
+        function level3() {
             // Grid reference:
             // 1   2   3   4   5
             // 6   7   8   9   10
@@ -611,8 +648,8 @@
             const pixel15 = pixelToCoords(15);       // Pixel 15 = (4, 2)
 
             return {
-                id: 2,
-                name: "Level 2",
+                id: 3,
+                name: "Level 3",
                 instructions: "There are no instructions for this game, intentionally.<br>Use the arrow keys to discover the controls, rules, and objective.",
                 avatarStart: avatarStart,
                 avatarColor: 'yellow',
@@ -637,7 +674,8 @@
 
         // Build levels array
         levels = [
-            level2()
+            level1(),
+            level3()
         ];
 
         // Start game
