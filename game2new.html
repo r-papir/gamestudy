@@ -191,8 +191,15 @@
             YELLOW: '#DDCC77',
             PINK: '#CC6677',
             BLUE: '#ADD8E6',
-            TEAL: '#44AA99'
+            TEAL: '#44AA99',
+            LIME: '#BBCC33',
+            VIOLET: '#332288',
+            MAGENTA: '#882255',
+            ROSE: '#CC6677'
         };
+
+        // Color cycle for cycling color changers
+        const COLOR_CYCLE = ['yellow', 'lime', 'teal', 'blue', 'violet', 'magenta', 'rose'];
 
         // Game state
         let levels = [];
@@ -387,6 +394,16 @@
                 } else if (tile.type === 'color') {
                     // Change color
                     gameState.avatarColor = tile.newColor;
+                } else if (tile.type === 'colorCycle') {
+                    // Cycle to next color in sequence
+                    const currentIndex = COLOR_CYCLE.indexOf(gameState.avatarColor);
+                    if (currentIndex === -1) {
+                        // If current color not in cycle (e.g., grey), start at first color
+                        gameState.avatarColor = COLOR_CYCLE[0];
+                    } else {
+                        // Move to next color, wrap around to beginning
+                        gameState.avatarColor = COLOR_CYCLE[(currentIndex + 1) % COLOR_CYCLE.length];
+                    }
                 }
             }
         }
@@ -644,7 +661,7 @@
             const avatarStart = pixelToCoords(13);    // Pixel 13 = (2, 2) center
             const transformerPos = pixelToCoords(15); // Pixel 15 = (4, 2) right side of center row
             const goalPos = pixelToCoords(11);        // Pixel 11 = (0, 2) left side of center row
-            const pixel15 = pixelToCoords(15);        // Pixel 15 = (4, 2)
+            const pixel14 = pixelToCoords(14);        // Pixel 14 = (3, 2)
 
             return {
                 id: 2,
@@ -659,10 +676,10 @@
                 transformerPos: transformerPos,
                 tiles: {
                     stateA: [
-                        { x: pixel15.x, y: pixel15.y, type: 'color', newColor: 'teal' } // Color changer at box 15 → teal
+                        { x: pixel14.x, y: pixel14.y, type: 'colorCycle' } // Cycling color changer at box 14
                     ],
                     stateB: [
-                        { x: pixel15.x, y: pixel15.y, type: 'color', newColor: 'yellow' } // Color changer at box 15 → yellow
+                        { x: pixel14.x, y: pixel14.y, type: 'colorCycle' } // Cycling color changer at box 14
                     ]
                 }
             };
