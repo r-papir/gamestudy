@@ -428,7 +428,7 @@
 
             // Get current avatar cell and fade it out
             const currentCell = document.getElementById(`cell-${gameState.avatarPos.x}-${gameState.avatarPos.y}`);
-            currentCell.style.transition = 'opacity 0.2s ease-out';
+            currentCell.style.transition = 'opacity 0.35s ease-out';
             currentCell.style.opacity = '0.3';
 
             // After fade out, move avatar and fade in at destination
@@ -443,7 +443,7 @@
                 // Get destination cell and animate fade in
                 const destCell = document.getElementById(`cell-${destX}-${destY}`);
                 destCell.style.opacity = '0.3';
-                destCell.style.transition = 'opacity 0.2s ease-in';
+                destCell.style.transition = 'opacity 0.35s ease-in';
 
                 // Trigger fade in
                 setTimeout(() => {
@@ -455,9 +455,9 @@
                         // Reset transition on all cells
                         currentCell.style.transition = '';
                         destCell.style.transition = '';
-                    }, 200);
+                    }, 350);
                 }, 20);
-            }, 250);
+            }, 400);
         }
 
         // Check win condition
