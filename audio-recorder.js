@@ -456,17 +456,6 @@ const AudioRecorder = (function() {
             return lines.join('\n');
         }
 
-        const jsonString = formatExportData(exportData);
-        const jsonBlob = new Blob([jsonString], { type: 'application/json' });
-        const jsonUrl = URL.createObjectURL(jsonBlob);
-        const jsonLink = document.createElement('a');
-        jsonLink.href = jsonUrl;
-        jsonLink.download = `${config.gamePrefix}-session-${timestamp}.json`;
-        document.body.appendChild(jsonLink);
-        jsonLink.click();
-        document.body.removeChild(jsonLink);
-        URL.revokeObjectURL(jsonUrl);
-
         // Download eye-tracking data as separate file
         if (state.gazeData.length > 0) {
             const eyeTrackingString = formatEyeTrackingData(eyeTrackingData);
@@ -494,10 +483,9 @@ const AudioRecorder = (function() {
             URL.revokeObjectURL(audioUrl);
         }
 
-        const audioMsg = state.audioChunks.length > 0 ? '\n- Audio recording' : '';
+        const audioMsg = state.audioChunks.length > 0 ? '\n- Audio recording (.webm)' : '';
         const gazeMsg = state.gazeData.length > 0 ? `\n- Eye-tracking data (${state.gazeData.length} gaze points)` : '';
-        const transcriptMsg = state.transcription.length > 0 ? `\n- ${state.transcription.length} transcriptions` : '';
-        alert(`Exported ${state.keystrokes.length} events!${transcriptMsg}${gazeMsg}\n\nFiles:\n- JSON: session data${gazeMsg}${audioMsg}`);
+        alert(`Exported!${gazeMsg}${audioMsg}`);
     }
 
     // Create and inject the recording UI
@@ -671,6 +659,15 @@ const AudioRecorder = (function() {
         };
     }
 
+    // Get transcription data for inclusion in game's JSON export
+    function getTranscription() {
+        return state.transcription.map(t => ({
+            timestamp: state.startTime ? new Date(state.startTime + t.timestamp).toISOString() : new Date(t.timestamp).toISOString(),
+            text: t.text,
+            confidence: t.confidence
+        }));
+    }
+
     // Public API
     return {
         init,
@@ -682,6 +679,7 @@ const AudioRecorder = (function() {
         },
         isRecording: () => state.isRecording,
         getState: () => ({ ...state }),
+        getTranscription,
         exportRecording
     };
 })();

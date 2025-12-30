@@ -607,6 +607,9 @@
         document.getElementById('download-button').addEventListener('click', () => {
             sessionData.sessionEnd = new Date().toISOString();
 
+            // Include transcription data from audio recorder
+            sessionData.transcription = AudioRecorder.getTranscription();
+
             let dataStr = JSON.stringify(sessionData, null, 2);
 
             // Post-process to compress gameStateBefore arrays
@@ -635,7 +638,7 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Also export the recording session data (audio, transcription, gaze)
+            // Export eye-tracking and audio files
             AudioRecorder.exportRecording();
         });
 
