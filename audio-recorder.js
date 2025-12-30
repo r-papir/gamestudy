@@ -487,6 +487,7 @@ const AudioRecorder = (function() {
                 background-color: #ff0000;
                 border-color: #ff3333;
                 animation: audio-recorder-pulse 1.5s infinite;
+                will-change: opacity;
             }
             .audio-recorder-btn.disabled {
                 background-color: #666;
@@ -503,6 +504,8 @@ const AudioRecorder = (function() {
                 margin-top: 10px;
                 font-size: 12px;
                 color: #666;
+                min-width: 200px;
+                white-space: nowrap;
             }
             .audio-recorder-status.active {
                 color: #ff6666;
@@ -519,6 +522,13 @@ const AudioRecorder = (function() {
         elements.recordBtn.className = 'audio-recorder-btn';
         elements.recordBtn.textContent = 'Start Recording';
         elements.recordBtn.onclick = toggleRecording;
+
+        // Prevent spacebar from triggering the button (only allow direct clicks)
+        elements.recordBtn.onkeydown = function(e) {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+            }
+        };
 
         // Create status div
         elements.statusDiv = document.createElement('div');
