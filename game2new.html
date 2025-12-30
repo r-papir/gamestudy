@@ -791,16 +791,22 @@
             // 16  17  18  19  20
             // 21  22  23  24  25
 
-            const avatarStart = pixelToCoords(7);     // Pixel 7 = (1, 1)
-            const trigger1 = pixelToCoords(6);        // Pixel 6 = (0, 1)
-            const trigger2 = pixelToCoords(23);       // Pixel 23 = (2, 4)
-            const goalPos = pixelToCoords(21);        // Pixel 21 = (0, 4) bottom-left
+            const avatarStart = pixelToCoords(23);    // Pixel 23 = (2, 4)
+            const trigger1 = pixelToCoords(24);       // Pixel 24 = (3, 4) game state trigger
+            const trigger2 = pixelToCoords(6);        // Pixel 6 = (0, 1) game state trigger
+            const goalPos = pixelToCoords(23);        // Pixel 23 = (2, 4) same as avatar start
+            const pixel1 = pixelToCoords(1);          // Pixel 1 = (0, 0)
             const pixel3 = pixelToCoords(3);          // Pixel 3 = (2, 0)
-            const pixel19 = pixelToCoords(19);        // Pixel 19 = (3, 3)
-            const pixel24 = pixelToCoords(24);        // Pixel 24 = (3, 4)
+            const pixel5 = pixelToCoords(5);          // Pixel 5 = (4, 0)
+            const pixel11 = pixelToCoords(11);        // Pixel 11 = (0, 2)
+            const pixel13 = pixelToCoords(13);        // Pixel 13 = (2, 2)
+            const pixel14 = pixelToCoords(14);        // Pixel 14 = (3, 2)
+            const pixel15 = pixelToCoords(15);        // Pixel 15 = (4, 2)
+            const pixel17 = pixelToCoords(17);        // Pixel 17 = (1, 3)
+            const pixel22 = pixelToCoords(22);        // Pixel 22 = (1, 4)
 
             // Custom color cycle for this level
-            const level5ColorCycle = ['magenta', 'rose', 'yellow', 'violet', 'lime', 'teal', 'blue'];
+            const level5ColorCycle = ['rose', 'magenta', 'violet', 'blue'];
 
             return {
                 id: 5,
@@ -808,18 +814,24 @@
                 instructions: "There are no instructions for this game, intentionally.<br>Use the arrow keys to discover the controls, rules, and objective.",
                 avatarStart: avatarStart,
                 avatarColor: 'rose',
-                avatarDirection: 'horizontal', // left/right only
+                avatarDirection: 'vertical', // up/down
                 startingGameState: 'A',
                 goalPos: goalPos,
                 goalColor: 'violet',
-                transformerPositions: [trigger1, trigger2], // Multiple triggers at boxes 1 and 23
+                transformerPositions: [trigger1, trigger2], // Game state triggers at boxes 24 and 6
                 tiles: {
                     stateA: [
-                        { x: pixel19.x, y: pixel19.y, type: 'colorCycle', cycle: level5ColorCycle }, // Color cycler at box 19
-                        { x: pixel24.x, y: pixel24.y, type: 'direction' } // Direction changer at box 24
+                        { x: pixel1.x, y: pixel1.y, type: 'direction' }, // Direction changer at box 1
+                        { x: pixel3.x, y: pixel3.y, type: 'direction' }, // Direction changer at box 3
+                        { x: pixel5.x, y: pixel5.y, type: 'direction' }, // Direction changer at box 5
+                        { x: pixel14.x, y: pixel14.y, type: 'direction' }, // Direction changer at box 14
+                        { x: pixel15.x, y: pixel15.y, type: 'direction' } // Direction changer at box 15
                     ],
                     stateB: [
-                        { x: pixel3.x, y: pixel3.y, type: 'direction' } // Direction changer at box 3
+                        { x: pixel11.x, y: pixel11.y, type: 'direction' }, // Direction changer at box 11
+                        { x: pixel13.x, y: pixel13.y, type: 'colorCycle', cycle: level5ColorCycle }, // Color changer at box 13
+                        { x: pixel17.x, y: pixel17.y, type: 'direction' }, // Direction changer at box 17
+                        { x: pixel22.x, y: pixel22.y, type: 'colorCycle', cycle: level5ColorCycle } // Color changer at box 22
                     ]
                 }
             };
