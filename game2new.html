@@ -229,6 +229,22 @@
         // Data collection
         let sessionData = {
             game: "Game B",
+            legend: {
+                "E": "Empty - background cell",
+                "G": "Goal - destination the avatar must reach with correct color",
+                "T": "Transformer - grey box that toggles game state (A/B)",
+                "D": "Direction - dotted box that switches movement direction",
+                "C": "Color - dotted box that cycles avatar color",
+                "A": "Avatar - the player's piece"
+            },
+            coordinates: {
+                "grid": "5x5 grid, pixels numbered 1-25",
+                "origin": "(0,0) is top-left corner (pixel 1)",
+                "x": "increases left to right (0-4)",
+                "y": "increases top to bottom (0-4)",
+                "dx": "-1 = left, +1 = right, 0 = no horizontal movement",
+                "dy": "-1 = up, +1 = down, 0 = no vertical movement"
+            },
             sessionStart: new Date().toISOString(),
             movements: []
         };
