@@ -209,7 +209,8 @@
             LIME: '#BBCC33',
             VIOLET: '#332288',
             MAGENTA: '#882255',
-            ROSE: '#CC6677'
+            ROSE: '#CC6677',
+            ORANGE: '#FF5F15'
         };
 
         // Color cycle for cycling color changers
@@ -704,6 +705,9 @@
             const goalPos = pixelToCoords(11);        // Pixel 11 = (0, 2) left side of center row
             const pixel14 = pixelToCoords(14);        // Pixel 14 = (3, 2)
 
+            // Color cycle for this level
+            const level2ColorCycle = ['yellow', 'violet', 'orange', 'teal', 'lime', 'violet'];
+
             return {
                 id: 2,
                 name: "Level 2",
@@ -720,7 +724,7 @@
                         // No color changer visible in state A
                     ],
                     stateB: [
-                        { x: pixel14.x, y: pixel14.y, type: 'colorCycle' } // Cycling color changer at box 14 (only visible in state B)
+                        { x: pixel14.x, y: pixel14.y, type: 'colorCycle', cycle: level2ColorCycle } // Cycling color changer at box 14 (only visible in state B)
                     ]
                 }
             };
@@ -740,6 +744,9 @@
             const pixel13 = pixelToCoords(13);       // Pixel 13 = (2, 2) center
             const pixel15 = pixelToCoords(15);       // Pixel 15 = (4, 2)
 
+            // Color cycle for this level
+            const level3ColorCycle = ['rose', 'lime', 'magenta', 'yellow'];
+
             return {
                 id: 3,
                 name: "Level 3",
@@ -758,7 +765,7 @@
                     ],
                     stateB: [
                         // Pixel 13 disabled (not in list)
-                        { x: pixel15.x, y: pixel15.y, type: 'color', newColor: 'rose' }, // Color changer at pixel 15
+                        { x: pixel15.x, y: pixel15.y, type: 'colorCycle', cycle: level3ColorCycle }, // Cycling color changer at pixel 15
                         { x: avatarStart.x, y: avatarStart.y, type: 'direction' } // Direction changer at pixel 3 (start position)
                     ]
                 }
@@ -782,7 +789,7 @@
             const pixel15 = pixelToCoords(15);        // Pixel 15 = (4, 2)
 
             // Color cycle for this level
-            const level4ColorCycle = ['teal', 'yellow', 'lime', 'blue', 'violet'];
+            const level4ColorCycle = ['teal', 'yellow', 'violet', 'lime', 'orange', 'rose'];
 
             return {
                 id: 4,
@@ -835,7 +842,7 @@
             const pixel22 = pixelToCoords(22);        // Pixel 22 = (1, 4)
 
             // Custom color cycle for this level
-            const level5ColorCycle = ['rose', 'magenta', 'violet', 'blue'];
+            const level5ColorCycle = ['rose', 'violet', 'orange', 'magenta', 'yellow'];
 
             return {
                 id: 5,

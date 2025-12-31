@@ -455,23 +455,27 @@
                 // Create ripple effect
                 createRipple();
 
-                // Fade out
                 const gridElement = document.getElementById('grid');
                 const instructionsElement = document.getElementById('instructions');
-                gridElement.classList.add('fade-out');
-                instructionsElement.classList.add('fade-out');
 
+                // Delay before fade-out so player can see the solution
                 setTimeout(() => {
-                    currentLevelIndex++;
-                    if (currentLevelIndex < levels.length) {
-                        loadLevel(currentLevelIndex);
-                    } else {
-                        // Game complete - show restart button
-                        gridElement.classList.remove('fade-out');
-                        instructionsElement.classList.remove('fade-out');
-                        document.getElementById('restart-button').style.display = 'block';
-                    }
-                }, 1200);
+                    // Fade out
+                    gridElement.classList.add('fade-out');
+                    instructionsElement.classList.add('fade-out');
+
+                    setTimeout(() => {
+                        currentLevelIndex++;
+                        if (currentLevelIndex < levels.length) {
+                            loadLevel(currentLevelIndex);
+                        } else {
+                            // Game complete - show restart button
+                            gridElement.classList.remove('fade-out');
+                            instructionsElement.classList.remove('fade-out');
+                            document.getElementById('restart-button').style.display = 'block';
+                        }
+                    }, 1200);
+                }, 800);
             }
         }
 
