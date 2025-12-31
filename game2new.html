@@ -51,6 +51,10 @@
         @keyframes ripple {
             0% {
                 transform: scale(0);
+                opacity: 0;
+            }
+            10% {
+                transform: scale(0.5);
                 opacity: 0.8;
             }
             100% {
@@ -236,7 +240,7 @@
             legend: {
                 "E": "Empty - background cell",
                 "G": "Goal - destination the avatar must reach with correct color",
-                "T": "Transformer - grey box that toggles game state (A/B)",
+                "T": "Toggle - grey box that toggles game state (A/B)",
                 "D": "Direction - dotted box that switches movement direction",
                 "C": "Color - dotted box that cycles avatar color",
                 "A": "Avatar - the player's piece"
@@ -821,6 +825,7 @@
             const goalPos = pixelToCoords(18);        // Pixel 18 = (2, 3)
             const pixel1 = pixelToCoords(1);          // Pixel 1 = (0, 0)
             const pixel3 = pixelToCoords(3);          // Pixel 3 = (2, 0)
+            const pixel5 = pixelToCoords(5);          // Pixel 5 = (4, 0)
             const pixel11 = pixelToCoords(11);        // Pixel 11 = (0, 2)
             const pixel12 = pixelToCoords(12);        // Pixel 12 = (1, 2)
             const pixel13 = pixelToCoords(13);        // Pixel 13 = (2, 2)
@@ -847,6 +852,7 @@
                     stateA: [
                         { x: pixel1.x, y: pixel1.y, type: 'direction' }, // Direction changer at box 1
                         { x: pixel3.x, y: pixel3.y, type: 'direction' }, // Direction changer at box 3
+                        { x: pixel5.x, y: pixel5.y, type: 'direction' }, // Direction changer at box 5
                         { x: pixel14.x, y: pixel14.y, type: 'direction' }, // Direction changer at box 14
                         { x: pixel15.x, y: pixel15.y, type: 'direction' } // Direction changer at box 15
                     ],
