@@ -494,8 +494,11 @@ const AudioRecorder = (function() {
         const style = document.createElement('style');
         style.textContent = `
             .audio-recorder-controls {
-                margin: 15px 0;
-                text-align: center;
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                text-align: right;
             }
             .audio-recorder-btn {
                 background-color: #333;
@@ -507,6 +510,7 @@ const AudioRecorder = (function() {
                 cursor: pointer;
                 font-family: inherit;
                 font-size: 14px;
+                min-width: 140px;
             }
             .audio-recorder-btn:hover {
                 background-color: #555;
