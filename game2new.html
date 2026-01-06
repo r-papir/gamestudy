@@ -159,12 +159,12 @@
         }
 
         .cell.goal {
-            border: 4px solid;
+            border: 10px solid;
             background-color: #FFFFFF;
         }
 
         .cell.active-tile {
-            border: 5px dotted #888888;
+            border: 8px dotted #666666;
         }
 
         .cell.avatar {
@@ -386,7 +386,7 @@
                     if (x === gameState.goalPos.x && y === gameState.goalPos.y) {
                         cell.classList.add('goal');
                         cell.style.borderColor = COLORS[gameState.goalColor.toUpperCase()];
-                        cell.style.borderWidth = '4px';
+                        cell.style.borderWidth = '10px';
                         cell.style.borderStyle = 'solid';
                         cell.style.backgroundColor = COLORS.EMPTY;
                     }
@@ -396,8 +396,8 @@
                     if (tile) {
                         cell.classList.add('active-tile');
                         cell.style.borderStyle = 'dotted';
-                        cell.style.borderWidth = '5px';
-                        cell.style.borderColor = '#888888';
+                        cell.style.borderWidth = '8px';
+                        cell.style.borderColor = '#666666';
                     }
 
                     // Draw avatar (on top of everything)
@@ -627,8 +627,10 @@
         document.getElementById('download-button').addEventListener('click', () => {
             sessionData.sessionEnd = new Date().toISOString();
 
-            // Include transcription data from audio recorder
-            sessionData.transcription = AudioRecorder.getTranscription();
+            // Include transcription data from audio recorder (with safety check)
+            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+                ? AudioRecorder.getTranscription()
+                : [];
 
             let dataStr = JSON.stringify(sessionData, null, 2);
 
@@ -658,8 +660,10 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Export eye-tracking and audio files
-            AudioRecorder.exportRecording();
+            // Export eye-tracking and audio files (with safety check)
+            if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
+                AudioRecorder.exportRecording();
+            }
         });
 
         // Level definitions

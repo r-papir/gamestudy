@@ -281,7 +281,7 @@
                 ],
                 vehicleStart: [0,3],
                 goal: [6,0],
-                requiredPosition: { row: 5, col: 2 },  // Box 38: must have movable piece here to win
+                requiredPosition: { row: 6, col: 3 },  // Must have movable piece here to win
                 colors: {
                     background: "#FFFFFF",
                     track: "#44AA99",
@@ -799,8 +799,10 @@
         document.getElementById('download-button').addEventListener('click', () => {
             sessionData.sessionEnd = new Date().toISOString();
 
-            // Include transcription data from audio recorder
-            sessionData.transcription = AudioRecorder.getTranscription();
+            // Include transcription data from audio recorder (with safety check)
+            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+                ? AudioRecorder.getTranscription()
+                : [];
 
             // Convert to JSON with standard formatting first
             let dataStr = JSON.stringify(sessionData, null, 2);
@@ -835,8 +837,10 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Export eye-tracking and audio files
-            AudioRecorder.exportRecording();
+            // Export eye-tracking and audio files (with safety check)
+            if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
+                AudioRecorder.exportRecording();
+            }
         });
 
         // Initialize game
