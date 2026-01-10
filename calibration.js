@@ -8,6 +8,7 @@ const Calibration = (function() {
     const CLICKS_PER_POINT = 5;
     const TOTAL_POINTS = 9;
     const CALIBRATION_FLAG_KEY = 'webgazerCalibrationComplete';
+    const CALIBRATION_SKIPPED_KEY = 'eyeTrackingSkipped';
 
     // State
     let pointsCompleted = 0;
@@ -18,7 +19,29 @@ const Calibration = (function() {
      */
     function hasExistingCalibration() {
         const calibrationFlag = sessionStorage.getItem(CALIBRATION_FLAG_KEY);
-        return calibrationFlag === 'true';
+        const skippedFlag = sessionStorage.getItem(CALIBRATION_SKIPPED_KEY);
+        return calibrationFlag === 'true' || skippedFlag === 'true';
+    }
+
+    /**
+     * Skip calibration and proceed to games
+     */
+    function skipCalibration() {
+        sessionStorage.setItem(CALIBRATION_SKIPPED_KEY, 'true');
+
+        // Stop WebGazer if it was started
+        if (webgazerReady && typeof webgazer !== 'undefined') {
+            webgazer.end();
+        }
+
+        // Navigate to return URL or index
+        const params = new URLSearchParams(window.location.search);
+        const returnUrl = params.get('return');
+        if (returnUrl && returnUrl.startsWith('/')) {
+            window.location.href = returnUrl;
+        } else {
+            window.location.href = 'index.html';
+        }
     }
 
     /**
@@ -224,6 +247,8 @@ const Calibration = (function() {
             location.reload();
         });
 
+        document.getElementById('skip-calibration-btn').addEventListener('click', skipCalibration);
+
         // Check for camera/WebGazer support
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             document.getElementById('error-message').textContent =
@@ -258,7 +283,8 @@ const Calibration = (function() {
         init: init,
         hasExistingCalibration: hasExistingCalibration,
         clearCalibration: clearCalibration,
-        recalibrate: recalibrate
+        recalibrate: recalibrate,
+        skipCalibration: skipCalibration
     };
 })();
 
