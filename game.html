@@ -232,7 +232,8 @@
                 originBottomRight: { x: 5, y: 5, color: 'blue' }    // Blue
             },
             moveCount: 0,
-            colorHistory: ['grey']  // Track color transitions
+            colorHistory: ['grey'],  // Track color transitions
+            levelComplete: false  // Prevent movement after winning
         };
 
         // Data collection
@@ -287,6 +288,7 @@
             gameState.avatarColor = level.initialAvatarColor || 'grey';
             gameState.colorHistory = [level.initialAvatarColor || 'grey'];
             gameState.moveCount = 0;
+            gameState.levelComplete = false;
 
             // Update instructions display
             const instructionsElement = document.getElementById('instructions');
@@ -437,6 +439,11 @@
 
         // Move avatar
         function moveAvatar(dx, dy) {
+            // Prevent movement after level is complete
+            if (gameState.levelComplete) {
+                return;
+            }
+
             const newX = gameState.avatarPos.x + dx;
             const newY = gameState.avatarPos.y + dy;
 
@@ -461,6 +468,9 @@
 
             // Check win condition after every move
             if (checkWinCondition()) {
+                // Lock movement immediately
+                gameState.levelComplete = true;
+
                 // Create ripple effect
                 createRipple();
 
