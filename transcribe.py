@@ -6,7 +6,7 @@ import os
 
 Tk().withdraw()
 
-output_dir = "/Users/rachel/Documents/TAP_Transcriptions"
+output_dir = "/Users/rachel/Documents/TAP_transcriptions"
 os.makedirs(output_dir, exist_ok=True)
 
 print("Select audio files to transcribe...")
