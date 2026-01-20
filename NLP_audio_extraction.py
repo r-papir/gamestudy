@@ -5,12 +5,29 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from collections import Counter
+from tkinter import Tk, filedialog
 
 # All data files read from and saved to Downloads (not in git repo)
 DATA_DIR = "/Users/rachelpapirmeister/Downloads"
-TRANSCRIPT_DIR = f"{DATA_DIR}/TAP_transcriptions"
-GAME_DATA_DIR = f"{DATA_DIR}/game_data"
+TRANSCRIPT_DIR = None  # Will be set by user via file picker
+GAME_DATA_DIR = None   # Will be set by user via file picker
 OUTPUT_DIR = DATA_DIR
+
+
+def select_folder(title="Select a folder"):
+    """Open a folder selection dialog"""
+    Tk().withdraw()
+    folder = filedialog.askdirectory(title=title, initialdir=DATA_DIR)
+    return folder if folder else None
+
+
+def select_file(title="Select a file", filetypes=None):
+    """Open a file selection dialog"""
+    if filetypes is None:
+        filetypes = [("All files", "*.*")]
+    Tk().withdraw()
+    file = filedialog.askopenfilename(title=title, initialdir=DATA_DIR, filetypes=filetypes)
+    return file if file else None
 
 
 class SpeechCategoryClassifier:
@@ -622,20 +639,34 @@ def create_final_dataset(classified_speech_df, game_data_dir=GAME_DATA_DIR, outp
 # FULL PIPELINE SCRIPT
 def run_full_pipeline():
     """Run the complete analysis pipeline"""
+    global TRANSCRIPT_DIR, GAME_DATA_DIR
 
     print("=" * 60)
     print("NLP SPEECH CLASSIFICATION PIPELINE")
     print("=" * 60)
-    print(f"\nData directories:")
+
+    # Prompt user to select folders
+    print("\nPlease select your TRANSCRIPTS folder...")
+    TRANSCRIPT_DIR = select_folder("Select folder containing transcript files (.txt)")
+    if not TRANSCRIPT_DIR:
+        print("No folder selected. Exiting.")
+        return None
     print(f"  Transcripts: {TRANSCRIPT_DIR}")
+
+    print("\nPlease select your GAME DATA folder...")
+    GAME_DATA_DIR = select_folder("Select folder containing game data files (.json)")
+    if not GAME_DATA_DIR:
+        print("No folder selected. Exiting.")
+        return None
     print(f"  Game data: {GAME_DATA_DIR}")
+
     print(f"  Output: {OUTPUT_DIR}")
 
     # 1. Process transcripts with NLP
     print("\n" + "=" * 50)
     print("STEP 1: Classifying speech segments with NLP")
     print("=" * 50)
-    classified_df = process_all_transcripts()
+    classified_df = process_all_transcripts(transcript_dir=TRANSCRIPT_DIR)
 
     if len(classified_df) == 0:
         print("\nPipeline stopped: No transcripts to process.")
@@ -658,6 +689,15 @@ def run_full_pipeline():
 
 def continue_pipeline_after_review():
     """Continue pipeline after manual review is complete"""
+    global GAME_DATA_DIR
+
+    # Prompt for game data folder
+    print("\nPlease select your GAME DATA folder...")
+    GAME_DATA_DIR = select_folder("Select folder containing game data files (.json)")
+    if not GAME_DATA_DIR:
+        print("No folder selected. Exiting.")
+        return None
+    print(f"  Game data: {GAME_DATA_DIR}")
 
     # Load the classified data
     classified_file = f"{OUTPUT_DIR}/classified_speech_segments.csv"
@@ -674,7 +714,7 @@ def continue_pipeline_after_review():
     print("\n" + "=" * 50)
     print("STEP 4: Linking speech to movements")
     print("=" * 50)
-    final_dataset = create_final_dataset(final_classified_df)
+    final_dataset = create_final_dataset(final_classified_df, game_data_dir=GAME_DATA_DIR)
 
     print("\n" + "=" * 50)
     print("PIPELINE COMPLETE!")
