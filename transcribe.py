@@ -1,56 +1,70 @@
-import speech_recognition as sr
-from pydub import AudioSegment
+import whisper
 from tkinter import Tk
 from tkinter.filedialog import askopenfilenames
 import os
+import re
 
-Tk().withdraw()
+def transcription():
+    def format_timestamp(seconds):
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
-output_dir = "/Users/rachel/Documents/TAP_transcriptions"
-os.makedirs(output_dir, exist_ok=True)
+    def get_puzzle_label(filename):
+        game_map = {'1': 'A', '2': 'B', '3': 'C'}
+        match = re.search(r'game(\d)', filename, re.IGNORECASE)
+        if match:
+            game_num = match.group(1)
+            return f"Puzzle {game_map.get(game_num, game_num)}"
+        return None
 
-print("Select audio files to transcribe...")
-audio_files = askopenfilenames(
-    title="Select audio files",
-    filetypes=[("Audio files", "*.mp3 *.wav *.m4a *.flac"), ("All files", "*.*")]
-)
+    Tk().withdraw()
 
-if not audio_files:
-    print("No files selected. Exiting.")
-    exit()
+    output_dir = "/Users/rachelpapirmeister/Documents/TAP_transcriptions"
+    os.makedirs(output_dir, exist_ok=True)
 
-print(f"\nSelected {len(audio_files)} file(s)\n")
+    print("Loading Whisper model...")
+    model = whisper.load_model("base")
 
-r = sr.Recognizer()
+    print("Select audio files to transcribe...")
+    audio_files = askopenfilenames(
+        title="Select audio files",
+       filetypes=[("Audio files", "*.mp3 *.wav *.m4a *.flac *.webm"), ("All files", "*.*")]
+    )
 
-for audio_path in audio_files:
-    print(f"Processing: {os.path.basename(audio_path)}")
-    
-    try:
-        if not audio_path.lower().endswith('.wav'):
-            sound = AudioSegment.from_file(audio_path)
-            wav_path = audio_path.rsplit('.', 1)[0] + '_temp.wav'
-            sound.export(wav_path, format="wav")
-        else:
-            wav_path = audio_path
-        
-        with sr.AudioFile(wav_path) as source:
-            audio = r.record(source)
-        
-        transcription = r.recognize_google(audio)
-        
-        filename = os.path.basename(audio_path).rsplit('.', 1)[0]
-        output_file = os.path.join(output_dir, filename + '_transcription.txt')
-        with open(output_file, 'w') as f:
-            f.write(transcription)
-        
-        print(f"✓ Transcription saved to: {output_file}")
-        print(f"  Text: {transcription[:100]}...\n")
-        
-        if wav_path != audio_path:
-            os.remove(wav_path)
-            
-    except Exception as e:
-        print(f"✗ Error processing {os.path.basename(audio_path)}: {str(e)}\n")
+    if not audio_files:
+      print("No files selected. Exiting.")
+      exit()
 
-print("All files processed!")
+    print(f"\nSelected {len(audio_files)} file(s)\n")
+
+    for audio_path in audio_files:
+        print(f"Processing: {os.path.basename(audio_path)}")
+
+        try:
+            result = model.transcribe(audio_path)
+
+            filename = os.path.basename(audio_path).rsplit('.', 1)[0]
+            output_file = os.path.join(output_dir, filename + '_transcription.txt')
+
+            with open(output_file, 'w') as f:
+                puzzle_label = get_puzzle_label(filename)
+                if puzzle_label:
+                    f.write(f"=== {puzzle_label} ===\n\n")
+                for segment in result["segments"]:
+                    start = format_timestamp(segment["start"])
+                    end = format_timestamp(segment["end"])
+                    text = segment["text"].strip()
+                    f.write(f"[{start} - {end}] {text}\n")
+
+            print(f"✓ Transcription saved to: {output_file}")
+            preview = result["text"][:100] if result["text"] else ""
+            print(f"  Preview: {preview}...\n")
+
+        except Exception as e:
+            print(f"✗ Error processing {os.path.basename(audio_path)}: {str(e)}\n")
+
+    print("All files processed!")
+
+transcription()
