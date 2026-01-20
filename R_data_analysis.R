@@ -20,8 +20,13 @@ library(pheatmap)    # Heatmaps
 output_dir <- "/Users/rachelpapirmeister/Downloads"
 setwd(output_dir)
 
-# Load data (renamed from episodes_for_lta.csv)
-df <- read.csv("NLP_features_for_LTA.csv")
+# Prompt user to select the data file
+cat("Please select the NLP_features_for_LTA.csv file...\n")
+data_file <- file.choose()
+cat(sprintf("Selected: %s\n\n", data_file))
+
+# Load data
+df <- read.csv(data_file)
 
 # Convert categorical variables
 df$speech_category <- factor(df$speech_category,
