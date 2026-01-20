@@ -6,7 +6,7 @@
 library(MASS)        # LDA
 library(nnet)        # Multinomial logistic regression
 library(lme4)        # Mixed effects models
-library(car)         # ANOVA
+library(car)         # ANOVA / Type III tests
 library(ggplot2)     # Visualizations
 library(gridExtra)   # Multiple plots
 library(corrplot)    # Correlation plots
@@ -15,6 +15,7 @@ library(caret)       # Cross-validation
 library(reshape2)    # Data reshaping
 library(scales)      # Scaling functions
 library(pheatmap)    # Heatmaps
+library(emmeans)     # Post-hoc pairwise comparisons
 
 # Set output directory
 output_dir <- "/Users/rachelpapirmeister/Downloads"
@@ -127,29 +128,24 @@ cat("\n", rep("=", 60), "\n")
 cat("2. MODEL COMPARISON (2 vs 3 categories)\n")
 cat(rep("=", 60), "\n\n")
 
-# Create 2-category version (remove confirmatory)
-df_2cat <- df[df$speech_category != "confirmatory", ]
-df_2cat$speech_category <- droplevels(df_2cat$speech_category)
+# Create 2-category version by MERGING confirmatory into exploitative
+# This keeps the same sample size for valid comparison
+df_2cat <- lda_data
+df_2cat$speech_category_2 <- as.character(df_2cat$speech_category)
+df_2cat$speech_category_2[df_2cat$speech_category_2 == "confirmatory"] <- "exploitative"
+df_2cat$speech_category_2 <- factor(df_2cat$speech_category_2,
+                                     levels = c("exploratory", "exploitative"))
 
-# Fit 2-category model
-lda_2cat <- lda(speech_category ~ movement_entropy + direction_changes +
-                repeated_sequences + unique_positions + num_moves +
-                num_revisits + prop_direction_changes,
-                data = df_2cat)
+cat(sprintf("Sample size: %d (same for both models)\n", nrow(lda_data)))
+cat("2-category approach: Confirmatory merged into Exploitative\n\n")
 
-# Fit 3-category model (full data)
-lda_3cat <- lda(speech_category ~ movement_entropy + direction_changes +
-                repeated_sequences + unique_positions + num_moves +
-                num_revisits + prop_direction_changes,
-                data = lda_data)
-
-# 2-category multinomial
-multi_2cat <- multinom(speech_category ~ movement_entropy + direction_changes +
+# Fit 2-category multinomial (on merged data)
+multi_2cat <- multinom(speech_category_2 ~ movement_entropy + direction_changes +
                        repeated_sequences + unique_positions + num_moves +
                        num_revisits + prop_direction_changes,
                        data = df_2cat, trace = FALSE)
 
-# 3-category multinomial
+# Fit 3-category multinomial (original categories)
 multi_3cat <- multinom(speech_category ~ movement_entropy + direction_changes +
                        repeated_sequences + unique_positions + num_moves +
                        num_revisits + prop_direction_changes,
@@ -161,7 +157,24 @@ bic_3cat <- BIC(multi_3cat)
 aic_2cat <- AIC(multi_2cat)
 aic_3cat <- AIC(multi_3cat)
 
-# Likelihood ratio test (chi-squared)
+# Cross-validation comparison (more robust)
+set.seed(123)
+cv_control <- trainControl(method = "cv", number = 10)
+
+cv_2cat <- train(speech_category_2 ~ movement_entropy + direction_changes +
+                 repeated_sequences + unique_positions + num_moves +
+                 num_revisits + prop_direction_changes,
+                 data = df_2cat, method = "multinom", trControl = cv_control,
+                 trace = FALSE)
+
+cv_3cat <- train(speech_category ~ movement_entropy + direction_changes +
+                 repeated_sequences + unique_positions + num_moves +
+                 num_revisits + prop_direction_changes,
+                 data = lda_data, method = "multinom", trControl = cv_control,
+                 trace = FALSE)
+
+# Likelihood ratio test (valid because same N)
+# 3-cat is nested in sense that it splits one category
 lr_test_stat <- -2 * (logLik(multi_2cat)[1] - logLik(multi_3cat)[1])
 df_diff <- attr(logLik(multi_3cat), "df") - attr(logLik(multi_2cat), "df")
 p_value <- pchisq(lr_test_stat, df_diff, lower.tail = FALSE)
@@ -171,41 +184,93 @@ sink("model_comparison.txt")
 cat("MODEL COMPARISON: 2 vs 3 CATEGORIES\n")
 cat(rep("=", 60), "\n\n")
 
-cat("2-Category Model (Exploratory + Exploitative only):\n")
-cat(sprintf("  N observations: %d\n", nrow(df_2cat)))
+cat("Approach: Compare models on SAME data (N = ", nrow(lda_data), ")\n", sep = "")
+cat("2-category: Confirmatory merged into Exploitative\n")
+cat("3-category: Exploratory, Confirmatory, Exploitative (separate)\n\n")
+
+cat("Category Distribution:\n")
+cat("  3-category:\n")
+print(table(lda_data$speech_category))
+cat("\n  2-category (merged):\n")
+print(table(df_2cat$speech_category_2))
+
+cat("\n\n", rep("-", 50), "\n", sep = "")
+cat("MODEL FIT STATISTICS\n")
+cat(rep("-", 50), "\n\n")
+
+cat("2-Category Model:\n")
 cat(sprintf("  AIC: %.2f\n", aic_2cat))
 cat(sprintf("  BIC: %.2f\n", bic_2cat))
+cat(sprintf("  CV Accuracy: %.2f%% (SD: %.2f%%)\n",
+            cv_2cat$results$Accuracy[1] * 100,
+            cv_2cat$results$AccuracySD[1] * 100))
 
-cat("\n3-Category Model (Exploratory + Confirmatory + Exploitative):\n")
-cat(sprintf("  N observations: %d\n", nrow(lda_data)))
+cat("\n3-Category Model:\n")
 cat(sprintf("  AIC: %.2f\n", aic_3cat))
 cat(sprintf("  BIC: %.2f\n", bic_3cat))
+cat(sprintf("  CV Accuracy: %.2f%% (SD: %.2f%%)\n",
+            cv_3cat$results$Accuracy[1] * 100,
+            cv_3cat$results$AccuracySD[1] * 100))
 
-cat("\n\nModel Selection:\n")
-cat(sprintf("  dAIC (3-cat - 2-cat): %.2f\n", aic_3cat - aic_2cat))
-cat(sprintf("  dBIC (3-cat - 2-cat): %.2f\n", bic_3cat - bic_2cat))
+cat("\n\n", rep("-", 50), "\n", sep = "")
+cat("MODEL COMPARISON\n")
+cat(rep("-", 50), "\n\n")
 
+cat(sprintf("Delta AIC (3-cat - 2-cat): %.2f\n", aic_3cat - aic_2cat))
+cat(sprintf("Delta BIC (3-cat - 2-cat): %.2f\n", bic_3cat - bic_2cat))
+cat(sprintf("Delta CV Accuracy: %.2f%%\n",
+            (cv_3cat$results$Accuracy[1] - cv_2cat$results$Accuracy[1]) * 100))
+
+cat("\nLikelihood Ratio Test:\n")
+cat(sprintf("  Chi-sq = %.2f, df = %d, p = %.4f\n", lr_test_stat, df_diff, p_value))
+
+cat("\n\n", rep("-", 50), "\n", sep = "")
+cat("INTERPRETATION\n")
+cat(rep("-", 50), "\n\n")
+
+cat("Information Criteria (lower = better):\n")
 if(bic_3cat < bic_2cat) {
-  cat("\n  *** 3-category model preferred (lower BIC) ***\n")
+  cat("  BIC favors 3-category model (confirmatory is distinct)\n")
 } else {
-  cat("\n  *** 2-category model preferred (lower BIC) ***\n")
+  cat("  BIC favors 2-category model (confirmatory not distinct)\n")
 }
 
-cat("\n\nLikelihood Ratio Test (Chi-squared):\n")
-cat(sprintf("  Chi-sq = %.2f\n", lr_test_stat))
-cat(sprintf("  df = %d\n", df_diff))
-cat(sprintf("  p-value = %.4f\n", p_value))
+if(aic_3cat < aic_2cat) {
+  cat("  AIC favors 3-category model\n")
+} else {
+  cat("  AIC favors 2-category model\n")
+}
 
+cat("\nCross-Validation Accuracy:\n")
+if(cv_3cat$results$Accuracy[1] > cv_2cat$results$Accuracy[1]) {
+  cat("  3-category model has better predictive accuracy\n")
+} else {
+  cat("  2-category model has equal or better predictive accuracy\n")
+}
+
+cat("\nLikelihood Ratio Test:\n")
 if(p_value < 0.05) {
-  cat("  *** 3-category model significantly better (p < 0.05) ***\n")
+  cat("  Significant (p < .05): 3-category model fits significantly better\n")
+  cat("  The 'confirmatory' category captures distinct movement patterns\n")
 } else {
-  cat("  *** No significant improvement with 3 categories ***\n")
+  cat("  Not significant (p >= .05): No significant improvement with 3 categories\n")
+  cat("  The 'confirmatory' category may not be distinct from exploitative\n")
 }
 
-cat("\n\nInterpretation:\n")
-cat("  Lower BIC/AIC = better model fit\n")
-cat("  BIC penalizes complexity more than AIC\n")
-cat("  Negative dBIC means 3-category model is better\n")
+cat("\n\nRecommendation:\n")
+# Count votes
+votes_3cat <- sum(c(bic_3cat < bic_2cat,
+                    aic_3cat < aic_2cat,
+                    cv_3cat$results$Accuracy[1] > cv_2cat$results$Accuracy[1],
+                    p_value < 0.05))
+
+if(votes_3cat >= 3) {
+  cat("  STRONG evidence for 3-category model\n")
+} else if(votes_3cat == 2) {
+  cat("  MIXED evidence - consider theoretical justification\n")
+} else {
+  cat("  Evidence favors 2-category model (parsimony)\n")
+}
 
 sink()
 
@@ -278,23 +343,46 @@ sink()
 cat("Logistic regression results saved\n")
 
 # ============================================================================
-# 4. STATISTICAL TESTS (ANOVA)
+# 4. STATISTICAL TESTS (Mixed-Effects Models)
 # ============================================================================
 
 cat("\n", rep("=", 60), "\n")
-cat("4. STATISTICAL TESTS (ANOVA & POST-HOC)\n")
+cat("4. STATISTICAL TESTS (MIXED-EFFECTS MODELS)\n")
 cat(rep("=", 60), "\n\n")
 
-sink("anova_results.txt")
-cat("ONE-WAY ANOVA & POST-HOC TESTS\n")
+# Number of tests for Bonferroni correction
+n_tests <- length(movement_features)
+bonferroni_alpha <- 0.05 / n_tests
+
+cat(sprintf("Bonferroni-corrected alpha: %.4f (for %d tests)\n\n", bonferroni_alpha, n_tests))
+
+sink("mixed_effects_results.txt")
+cat("LINEAR MIXED-EFFECTS MODELS\n")
 cat(rep("=", 60), "\n\n")
+
+cat("Model: feature ~ speech_category + (1|participant_id)\n")
+cat("This accounts for multiple observations per participant.\n\n")
+
+cat(sprintf("Bonferroni-corrected alpha: %.4f (for %d tests)\n", bonferroni_alpha, n_tests))
+cat("Note: p-values marked with * are significant at corrected alpha\n\n")
+
+# Store results for summary
+results_summary <- data.frame(
+  Feature = character(),
+  F_value = numeric(),
+  p_value = numeric(),
+  p_corrected_sig = character(),
+  eta_squared = numeric(),
+  effect_size = character(),
+  stringsAsFactors = FALSE
+)
 
 for(feature in movement_features) {
   cat("\n", rep("-", 60), "\n")
   cat(toupper(gsub("_", " ", feature)), "\n")
   cat(rep("-", 60), "\n\n")
 
-  # Get data
+  # Get data for descriptives
   exploratory <- df[df$speech_category == "exploratory", feature]
   confirmatory <- df[df$speech_category == "confirmatory", feature]
   exploitative <- df[df$speech_category == "exploitative", feature]
@@ -313,69 +401,137 @@ for(feature in movement_features) {
   cat(sprintf("  Exploitative:  M=%.3f, SD=%.3f, n=%d\n",
               mean(exploitative), sd(exploitative), length(exploitative)))
 
-  # One-way ANOVA
-  formula_str <- paste(feature, "~ speech_category")
-  anova_result <- aov(as.formula(formula_str), data = df)
-  anova_summary <- summary(anova_result)
+  # Fit mixed-effects model
+  formula_str <- paste(feature, "~ speech_category + (1|participant_id)")
 
-  # Extract F statistic and p-value (FIXED SYNTAX)
-  f_stat <- anova_summary[[1]]$"F value"[1]
-  p_val <- anova_summary[[1]]$"Pr(>F)"[1]
-  df1 <- anova_summary[[1]]$Df[1]
-  df2 <- anova_summary[[1]]$Df[2]
+  # Try to fit mixed model; fall back to standard ANOVA if it fails
+  tryCatch({
+    mixed_model <- lmer(as.formula(formula_str), data = df, REML = TRUE)
 
-  cat("\nOne-way ANOVA:\n")
-  cat(sprintf("  F(%d, %d) = %.4f\n", df1, df2, f_stat))
-  cat(sprintf("  p-value = %.4f\n", p_val))
+    # Get ANOVA-style results using car::Anova (Type III)
+    anova_result <- Anova(mixed_model, type = 3)
 
+    # Extract statistics
+    chisq_stat <- anova_result$Chisq[1]
+    p_val <- anova_result$`Pr(>Chisq)`[1]
+    df_effect <- anova_result$Df[1]
+
+    cat("\nMixed-Effects Model (Type III Wald Chi-square):\n")
+    cat(sprintf("  Chi-sq(%d) = %.4f\n", df_effect, chisq_stat))
+    cat(sprintf("  p-value = %.4f\n", p_val))
+
+    # Calculate approximate eta-squared (marginal R-squared approach)
+    # Using variance components
+    var_fixed <- var(predict(mixed_model, re.form = NA))
+    var_random <- as.numeric(VarCorr(mixed_model)$participant_id)
+    var_resid <- sigma(mixed_model)^2
+    var_total <- var_fixed + var_random + var_resid
+    eta_squared <- var_fixed / var_total
+
+  }, error = function(e) {
+    # Fall back to standard ANOVA if mixed model fails
+    cat("\nNote: Mixed model failed, using standard ANOVA\n")
+    formula_str <- paste(feature, "~ speech_category")
+    anova_result <- aov(as.formula(formula_str), data = df)
+    anova_summary <- summary(anova_result)
+
+    chisq_stat <<- anova_summary[[1]]$"F value"[1]
+    p_val <<- anova_summary[[1]]$"Pr(>F)"[1]
+    df_effect <<- anova_summary[[1]]$Df[1]
+
+    ss_between <- anova_summary[[1]]$"Sum Sq"[1]
+    ss_total <- sum(anova_summary[[1]]$"Sum Sq")
+    eta_squared <<- ss_between / ss_total
+
+    cat(sprintf("  F(%d, %d) = %.4f\n", df_effect, anova_summary[[1]]$Df[2], chisq_stat))
+    cat(sprintf("  p-value = %.4f\n", p_val))
+  })
+
+  # Significance with Bonferroni correction
   if(p_val < 0.001) {
-    cat("  Result: *** HIGHLY SIGNIFICANT (p < 0.001)\n")
+    sig_label <- "***"
   } else if(p_val < 0.01) {
-    cat("  Result: ** SIGNIFICANT (p < 0.01)\n")
+    sig_label <- "**"
   } else if(p_val < 0.05) {
-    cat("  Result: * SIGNIFICANT (p < 0.05)\n")
+    sig_label <- "*"
   } else {
-    cat("  Result: NOT SIGNIFICANT (p >= 0.05)\n")
+    sig_label <- "ns"
   }
 
-  # Effect size (eta-squared) - FIXED SYNTAX
-  ss_between <- anova_summary[[1]]$"Sum Sq"[1]
-  ss_total <- sum(anova_summary[[1]]$"Sum Sq")
-  eta_squared <- ss_between / ss_total
+  bonf_sig <- ifelse(p_val < bonferroni_alpha, "YES", "no")
+  cat(sprintf("  Uncorrected: %s | Bonferroni-corrected: %s\n", sig_label, bonf_sig))
 
+  # Effect size (eta-squared) with CORRECTED thresholds
   cat(sprintf("\nEffect Size (eta-sq): %.4f", eta_squared))
   if(eta_squared < 0.01) {
-    cat(" (small)\n")
+    effect_label <- "negligible"
+    cat(" (negligible, < .01)\n")
   } else if(eta_squared < 0.06) {
-    cat(" (medium)\n")
+    effect_label <- "small"
+    cat(" (small, .01-.06)\n")
+  } else if(eta_squared < 0.14) {
+    effect_label <- "medium"
+    cat(" (medium, .06-.14)\n")
   } else {
-    cat(" (large)\n")
+    effect_label <- "large"
+    cat(" (large, >= .14)\n")
   }
 
-  # Post-hoc Tukey HSD if significant
-  if(p_val < 0.05) {
-    cat("\nPost-hoc Tukey HSD:\n")
-    tukey_result <- TukeyHSD(anova_result)
-    print(tukey_result)
+  # Store for summary
+  results_summary <- rbind(results_summary, data.frame(
+    Feature = feature,
+    F_value = round(chisq_stat, 3),
+    p_value = round(p_val, 4),
+    p_corrected_sig = bonf_sig,
+    eta_squared = round(eta_squared, 4),
+    effect_size = effect_label,
+    stringsAsFactors = FALSE
+  ))
 
-    # Cohen's d for pairwise comparisons
-    cat("\nPairwise Effect Sizes (Cohen's d):\n")
+  # Post-hoc tests if significant at Bonferroni level
+  if(p_val < bonferroni_alpha) {
+    cat("\nPost-hoc pairwise comparisons (emmeans):\n")
 
-    d_conf_exp <- cohen.d(confirmatory, exploratory)$estimate
-    d_expl_exp <- cohen.d(exploitative, exploratory)$estimate
-    d_expl_conf <- cohen.d(exploitative, confirmatory)$estimate
+    tryCatch({
+      library(emmeans)
+      emm <- emmeans(mixed_model, ~ speech_category)
+      pairs_result <- pairs(emm, adjust = "tukey")
+      print(pairs_result)
 
-    cat(sprintf("  Confirmatory vs Exploratory: d=%.3f\n", d_conf_exp))
-    cat(sprintf("  Exploitative vs Exploratory: d=%.3f\n", d_expl_exp))
-    cat(sprintf("  Exploitative vs Confirmatory: d=%.3f\n", d_expl_conf))
+      # Effect sizes
+      cat("\nPairwise Effect Sizes (Cohen's d):\n")
+      d_conf_exp <- cohen.d(confirmatory, exploratory)$estimate
+      d_expl_exp <- cohen.d(exploitative, exploratory)$estimate
+      d_expl_conf <- cohen.d(exploitative, confirmatory)$estimate
+
+      cat(sprintf("  Confirmatory vs Exploratory: d=%.3f\n", d_conf_exp))
+      cat(sprintf("  Exploitative vs Exploratory: d=%.3f\n", d_expl_exp))
+      cat(sprintf("  Exploitative vs Confirmatory: d=%.3f\n", d_expl_conf))
+    }, error = function(e) {
+      cat("  (emmeans package required for post-hoc tests)\n")
+    })
+  } else if(p_val < 0.05) {
+    cat("\nNote: Significant at uncorrected alpha but NOT at Bonferroni-corrected level\n")
   }
 
   cat("\n")
 }
 
+# Print summary table
+cat("\n", rep("=", 60), "\n")
+cat("SUMMARY TABLE\n")
+cat(rep("=", 60), "\n\n")
+print(results_summary)
+
+cat("\n\nEffect Size Guidelines (eta-squared):\n")
+cat("  < .01  = negligible\n")
+cat("  .01-.06 = small\n")
+cat("  .06-.14 = medium\n")
+cat("  >= .14  = large\n")
+
 sink()
 
-cat("ANOVA results saved\n")
+cat("Mixed-effects results saved to mixed_effects_results.txt\n")
 
 # ============================================================================
 # 5. VISUALIZATIONS
@@ -674,7 +830,7 @@ cat("Results files:\n")
 cat("  - lda_results.txt\n")
 cat("  - model_comparison.txt\n")
 cat("  - logistic_regression.txt\n")
-cat("  - anova_results.txt\n")
+cat("  - mixed_effects_results.txt\n")
 cat("  - summary_statistics.txt\n")
 cat("  - order_effects_results.txt\n\n")
 cat("Visualization files:\n")
