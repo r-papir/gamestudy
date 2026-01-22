@@ -197,9 +197,16 @@ class ARCDataAnalyzer:
     def load_participant_tracker(self, tracker_path=None):
         """Load participant tracker CSV"""
         if tracker_path is None:
-            print("\nPlease select the PARTICIPANT TRACKER CSV file...")
+            print("\n" + "=" * 60)
+            print("FILE 1 of 4: PARTICIPANT TRACKER")
+            print("=" * 60)
+            print("Select the CSV file that maps Session IDs to game files.")
+            print("File name example: 'Participant Tracker.csv'")
+            print("Contains columns: Session ID, Game A Data, Game B Data, etc.")
+            print("=" * 60)
+            input(">>> Press ENTER to open file picker...")
             tracker_path = select_file(
-                "Select Participant Tracker CSV",
+                "FILE 1: Select Participant Tracker CSV",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
             )
         if not tracker_path:
@@ -213,9 +220,16 @@ class ARCDataAnalyzer:
     def load_demographic_data(self, demographic_path=None):
         """Load demographic/consent form data"""
         if demographic_path is None:
-            print("\nPlease select the PARTICIPANT FORM DATA (demographics) CSV file...")
+            print("\n" + "=" * 60)
+            print("FILE 2 of 4: CONSENT FORM / DEMOGRAPHIC DATA")
+            print("=" * 60)
+            print("Select the CSV with participant demographics and Likert scales.")
+            print("File name example: 'Consent Form Responses.csv'")
+            print("Contains: Age, Gender, Video Game Enjoyment, Puzzle Enjoyment, etc.")
+            print("=" * 60)
+            input(">>> Press ENTER to open file picker...")
             demographic_path = select_file(
-                "Select Participant Form Data CSV (demographics)",
+                "FILE 2: Select Consent Form / Demographics CSV",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
             )
         if not demographic_path:
@@ -230,14 +244,21 @@ class ARCDataAnalyzer:
     def load_nlp_classifications(self, nlp_path=None):
         """Load NLP classification results"""
         if nlp_path is None:
-            print("\nPlease select the NLP CLASSIFICATIONS CSV file...")
-            print("(This is the output from NLP_program.py)")
+            print("\n" + "=" * 60)
+            print("FILE 3 of 4: NLP CLASSIFICATIONS (OPTIONAL)")
+            print("=" * 60)
+            print("Select the NLP classification output from NLP_program.py")
+            print("File name example: 'classified_speech_segments.csv' or")
+            print("                   'final_classified_segments.csv'")
+            print("If you don't have this yet, press Cancel to skip.")
+            print("=" * 60)
+            input(">>> Press ENTER to open file picker (or Cancel to skip)...")
             nlp_path = select_file(
-                "Select NLP Classifications CSV",
+                "FILE 3: Select NLP Classifications CSV (Cancel to skip)",
                 filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
             )
         if not nlp_path:
-            print("No file selected.")
+            print("No file selected - skipping NLP analysis.")
             return False
 
         print(f"\nLoading NLP classifications: {nlp_path}")
@@ -265,16 +286,30 @@ class ARCDataAnalyzer:
 
         # Select Game A folder
         if game_a_dir is None:
-            print("\nPlease select the PUZZLE A GAME DATA folder (JSON files)...")
-            game_a_dir = select_folder("Select Puzzle A Game Data folder")
+            print("\n" + "=" * 60)
+            print("FOLDER 1 of 2: PUZZLE A (GAME 1) DATA")
+            print("=" * 60)
+            print("Select the FOLDER containing Puzzle A / Game 1 JSON files.")
+            print("These are the game state files with timestamps and movements.")
+            print("File names look like: 'puzzle-game1-state-2026-01-05T17-15-03.json'")
+            print("=" * 60)
+            input(">>> Press ENTER to open folder picker...")
+            game_a_dir = select_folder("FOLDER 1: Select Puzzle A Game Data folder")
         if not game_a_dir:
             print("No folder selected for Game A.")
             return False
 
         # Select Game B folder
         if game_b_dir is None:
-            print("\nPlease select the PUZZLE B GAME DATA folder (JSON files)...")
-            game_b_dir = select_folder("Select Puzzle B Game Data folder")
+            print("\n" + "=" * 60)
+            print("FOLDER 2 of 2: PUZZLE B (GAME 2) DATA")
+            print("=" * 60)
+            print("Select the FOLDER containing Puzzle B / Game 2 JSON files.")
+            print("These are the game state files with timestamps and movements.")
+            print("File names look like: 'puzzle-game2-state-2026-01-05T17-20-15.json'")
+            print("=" * 60)
+            input(">>> Press ENTER to open folder picker...")
+            game_b_dir = select_folder("FOLDER 2: Select Puzzle B Game Data folder")
         if not game_b_dir:
             print("No folder selected for Game B.")
             return False
