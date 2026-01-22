@@ -584,10 +584,12 @@ def process_all_transcripts(transcript_dir, participant_tracker=None, output_fil
 
 def create_manual_review_file(classified_df, output_file=None):
     """
-    Create a CSV file with only segments needing manual review
+    Create an Excel file with segments needing manual review.
+    Sheet 1: Review Data
+    Sheet 2: Category Definitions
     """
     if output_file is None:
-        output_file = OUTPUT_DIR / "manual_review_needed.csv"
+        output_file = OUTPUT_DIR / "manual_review_needed.xlsx"
 
     review_df = classified_df[classified_df['needs_review'] == True].copy()
 
@@ -611,30 +613,29 @@ def create_manual_review_file(classified_df, output_file=None):
     columns_order = [c for c in columns_order if c in review_df.columns]
     review_df = review_df[columns_order]
 
-    # Create simple 3-line key defining scores
-    key_lines = [
-        "EXPLORATORY (explore): what, why, how, where, which, when, maybe, might, could, perhaps, wonder, not sure, don't know, trying to figure, confused, hmm, uh, exploring, looking, checking, seeing, trying different, experimenting, random, randomly, I think maybe, kind of, sort of, seems like",
-        "CONFIRMATORY (establish): I think, my hypothesis, if...then, probably, should be, seems like, bet, wonder if, let me test, testing, checking if, see if, trying to confirm, verify, test whether, gonna try, let me see if, let me check, I'm going to test, confirm, if I, when I, if this, assuming, suppose, will, should, expect, predict, would",
-        "EXPLOITATIVE (exploit): I know, definitely, obviously, clearly, for sure, certain, figured it out, got it, understand, now I'll just, just need to, all I have to do, simply, just going to, now I can, okay now, alright now, just, easy, almost done, finish, complete, final step, last thing, done, solved"
-    ]
+    # Create definitions dataframe for second sheet
+    definitions_df = pd.DataFrame({
+        'Category': ['EXPLORATORY (explore)', 'CONFIRMATORY (establish)', 'EXPLOITATIVE (exploit)'],
+        'Markers': [
+            "what, why, how, where, which, when, maybe, might, could, perhaps, wonder, not sure, don't know, trying to figure, confused, hmm, uh, exploring, looking, checking, seeing, trying different, experimenting, random, randomly, I think maybe, kind of, sort of, seems like",
+            "I think, my hypothesis, if...then, probably, should be, seems like, bet, wonder if, let me test, testing, checking if, see if, trying to confirm, verify, test whether, gonna try, let me see if, let me check, I'm going to test, confirm, if I, when I, if this, assuming, suppose, will, should, expect, predict, would",
+            "I know, definitely, obviously, clearly, for sure, certain, figured it out, got it, understand, now I'll just, just need to, all I have to do, simply, just going to, now I can, okay now, alright now, just, easy, almost done, finish, complete, final step, last thing, done, solved"
+        ]
+    })
 
-    # Write file with key at top
-    with open(output_file, 'w') as f:
-        for line in key_lines:
-            f.write(f"{line}\n")
-        f.write("\n")
-
-    # Append the data
-    review_df.to_csv(output_file, mode='a', index=False)
+    # Write Excel file with two sheets
+    with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+        review_df.to_excel(writer, sheet_name='Review Data', index=False)
+        definitions_df.to_excel(writer, sheet_name='Category Definitions', index=False)
 
     print(f"\nCreated manual review file: {output_file}")
-    print(f"{len(review_df)} segments need review")
+    print(f"  Sheet 'Review Data': {len(review_df)} segments need review")
+    print(f"  Sheet 'Category Definitions': marker definitions")
     print("\nInstructions:")
-    print("1. Open the CSV file in Excel or Google Sheets")
+    print("1. Open the Excel file")
     print("2. Jump to 'start_time' in the audio file to hear each segment")
     print("3. Fill in 'manual_category' column with: exploratory, confirmatory, or exploitative")
-    print("4. Add any notes in 'reviewer_notes' column")
-    print("5. Save the file")
+    print("4. Save the file")
 
     return review_df
 
@@ -644,10 +645,10 @@ def merge_manual_reviews(auto_classified_df, manual_review_file=None):
     Merge manual reviews back into the main dataframe
     """
     if manual_review_file is None:
-        manual_review_file = OUTPUT_DIR / "manual_review_needed.csv"
+        manual_review_file = OUTPUT_DIR / "manual_review_needed.xlsx"
 
-    # Load manual reviews (skip the 4 header lines: 3 key lines + 1 blank)
-    manual_df = pd.read_csv(manual_review_file, skiprows=4)
+    # Load manual reviews from Excel (Sheet 1: Review Data)
+    manual_df = pd.read_excel(manual_review_file, sheet_name='Review Data')
 
     # Create final category column
     auto_classified_df = auto_classified_df.copy()
