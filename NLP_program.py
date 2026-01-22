@@ -610,15 +610,52 @@ def create_manual_review_file(classified_df, output_file=None):
     # Only include columns that exist
     columns_order = [c for c in columns_order if c in review_df.columns]
     review_df = review_df[columns_order]
-    review_df.to_csv(output_file, index=False)
+
+    # Create key/instructions header
+    key_text = """=== MANUAL REVIEW INSTRUCTIONS ===
+
+HOW TO USE THIS FILE:
+1. Find the audio file in 'audio_filename' column
+2. Jump to 'start_time' in the audio to hear the segment
+3. Read the 'text' and listen to context
+4. Enter your classification in 'manual_category': exploratory OR confirmatory OR exploitative
+5. (Optional) Add notes in 'reviewer_notes'
+
+=== SCORE DEFINITIONS ===
+
+EXPLORATORY SCORE (explore): Counts markers of uncertainty and exploration
+  Markers: what, why, how, where, which, when, maybe, might, could, perhaps, wonder, not sure, don't know, trying to figure, confused, hmm, uh, exploring, looking, checking, seeing, trying different, experimenting, random, randomly, I think maybe, kind of, sort of, seems like
+
+CONFIRMATORY SCORE (establish): Counts markers of hypothesis testing and prediction
+  Markers: I think, my hypothesis, if...then, probably, should be, seems like, bet, let me test, testing, checking if, see if, trying to confirm, verify, test whether, gonna try, let me see if, let me check, I'm going to test, confirm, if I, when I, if this, assuming, suppose, will, should, expect, predict, would
+
+EXPLOITATIVE SCORE (exploit): Counts markers of certainty and execution
+  Markers: I know, definitely, obviously, clearly, for sure, certain, figured it out, got it, understand, now I'll just, just need to, all I have to do, simply, just going to, now I can, okay now, alright now, just, easy, almost done, finish, complete, final step, last thing, done, solved
+
+=== WHY SEGMENTS NEED REVIEW ===
+- All scores are 0: No markers detected - use context to judge
+- Scores are tied: Unclear winner - use your judgment
+- Low confidence: Winner didn't have a strong lead
+
+=== DATA STARTS BELOW ==="""
+
+    # Write file with key at top
+    with open(output_file, 'w') as f:
+        for line in key_text.strip().split('\n'):
+            f.write(f"# {line}\n")
+        f.write("#\n")
+
+    # Append the data
+    review_df.to_csv(output_file, mode='a', index=False)
 
     print(f"\nCreated manual review file: {output_file}")
     print(f"{len(review_df)} segments need review")
     print("\nInstructions:")
     print("1. Open the CSV file in Excel or Google Sheets")
-    print("2. Fill in 'manual_category' column with: exploratory, confirmatory, or exploitative")
-    print("3. Add any notes in 'reviewer_notes' column")
-    print("4. Save the file")
+    print("2. Jump to 'start_time' in the audio file to hear each segment")
+    print("3. Fill in 'manual_category' column with: exploratory, confirmatory, or exploitative")
+    print("4. Add any notes in 'reviewer_notes' column")
+    print("5. Save the file")
 
     return review_df
 
@@ -630,8 +667,8 @@ def merge_manual_reviews(auto_classified_df, manual_review_file=None):
     if manual_review_file is None:
         manual_review_file = OUTPUT_DIR / "manual_review_needed.csv"
 
-    # Load manual reviews
-    manual_df = pd.read_csv(manual_review_file)
+    # Load manual reviews (skip comment lines starting with #)
+    manual_df = pd.read_csv(manual_review_file, comment='#')
 
     # Create final category column
     auto_classified_df = auto_classified_df.copy()
