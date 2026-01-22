@@ -1296,16 +1296,7 @@ def run_full_analysis():
 # =============================================================================
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("ARC Puzzle Data Analysis Program")
-    print("=" * 60)
-    print(f"\nOutput directory: {OUTPUT_DIR}")
-    print("\nUsage:")
-    print("  Run: run_full_analysis()")
-    print("\nOr use the ARCDataAnalyzer class directly:")
-    print("  analyzer = ARCDataAnalyzer()")
-    print("  analyzer.load_participant_tracker('path/to/tracker.csv')")
-    print("  analyzer.load_nlp_classifications('path/to/nlp.csv')")
-    print("  analyzer.extract_completion_times('game_a_dir', 'game_b_dir')")
+    # Automatically run the full analysis when script is executed
+    run_full_analysis()
     print("  analyzer.compute_descriptive_statistics()")
     print("  # ... etc")
