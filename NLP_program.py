@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+"""
+NLP Speech Classification Program
+==================================
+
+Classifies participant speech segments from ARC puzzle experiments into
+knowledge-search behavior categories:
+- Exploratory (explore): Uncertainty, questions, random exploration
+- Confirmatory (establish): Hypothesis testing, predictions, conditionals
+- Exploitative (exploit): Certainty, execution, completion
+
+Author: Rachel (Thesis Research)
+Date: January 2026
+"""
+
 import json
 import pandas as pd
 import numpy as np
@@ -5,29 +20,200 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from collections import Counter
-from tkinter import Tk, filedialog
+import tkinter as tk
+from tkinter import filedialog
+import warnings
+warnings.filterwarnings('ignore')
 
-# All data files read from and saved to Downloads (not in git repo)
-DATA_DIR = "/Users/rachelpapirmeister/Downloads"
-TRANSCRIPT_DIR = None  # Will be set by user via file picker
-GAME_DATA_DIR = None   # Will be set by user via file picker
-OUTPUT_DIR = DATA_DIR
+# Output directory - always Downloads
+OUTPUT_DIR = Path.home() / "Downloads"
+
+
+class FileSelector:
+    """Handles file/folder selection dialogs with a single Tk instance"""
+
+    def __init__(self):
+        self._root = None
+
+    def _get_root(self):
+        """Get or create the Tk root window"""
+        if self._root is None:
+            self._root = tk.Tk()
+            self._root.withdraw()
+        return self._root
+
+    def select_folder(self, title="Select a folder"):
+        """Open a folder selection dialog"""
+        root = self._get_root()
+        root.lift()
+        root.attributes('-topmost', True)
+        folder = filedialog.askdirectory(title=title, initialdir=str(OUTPUT_DIR))
+        root.attributes('-topmost', False)
+        return folder if folder else None
+
+    def select_file(self, title="Select a file", filetypes=None):
+        """Open a file selection dialog"""
+        if filetypes is None:
+            filetypes = [("All files", "*.*")]
+        root = self._get_root()
+        root.lift()
+        root.attributes('-topmost', True)
+        file = filedialog.askopenfilename(title=title, initialdir=str(OUTPUT_DIR), filetypes=filetypes)
+        root.attributes('-topmost', False)
+        return file if file else None
+
+    def cleanup(self):
+        """Destroy the Tk root window"""
+        if self._root is not None:
+            self._root.destroy()
+            self._root = None
+
+
+# Global file selector instance
+_file_selector = FileSelector()
 
 
 def select_folder(title="Select a folder"):
     """Open a folder selection dialog"""
-    Tk().withdraw()
-    folder = filedialog.askdirectory(title=title, initialdir=DATA_DIR)
-    return folder if folder else None
+    return _file_selector.select_folder(title)
 
 
 def select_file(title="Select a file", filetypes=None):
     """Open a file selection dialog"""
-    if filetypes is None:
-        filetypes = [("All files", "*.*")]
-    Tk().withdraw()
-    file = filedialog.askopenfilename(title=title, initialdir=DATA_DIR, filetypes=filetypes)
-    return file if file else None
+    return _file_selector.select_file(title, filetypes)
+
+
+class ParticipantTracker:
+    """
+    Loads and manages participant tracking data for mapping files to participant IDs.
+    """
+
+    def __init__(self, tracker_csv_path):
+        """Load the participant tracker CSV"""
+        self.df = pd.read_csv(tracker_csv_path)
+        self._build_lookup_tables()
+
+    def _build_lookup_tables(self):
+        """Build lookup tables for fast matching"""
+        self.game_a_lookup = {}  # timestamp -> participant_id
+        self.game_b_lookup = {}  # timestamp -> participant_id
+        self.audio_a_lookup = {}  # audio timestamp -> participant_id
+        self.audio_b_lookup = {}  # audio timestamp -> participant_id
+        self.excluded_participants = set()
+
+        for _, row in self.df.iterrows():
+            session_id = str(row.get('Session ID:', '')).strip()
+            if not session_id or session_id == 'nan':
+                continue
+
+            # Check if excluded
+            if 'exclude' in session_id.lower():
+                # Extract just the P### part
+                match = re.search(r'(P\d+)', session_id)
+                if match:
+                    self.excluded_participants.add(match.group(1))
+                continue
+
+            # Extract participant ID (P001, P002, etc.)
+            participant_id = session_id.split()[0] if ' ' in session_id else session_id
+
+            # Game A data file
+            game_a_file = str(row.get('Game A Data (file name):', '')).strip()
+            if game_a_file and game_a_file != 'nan' and game_a_file != '--':
+                timestamp = self._extract_timestamp(game_a_file)
+                if timestamp:
+                    self.game_a_lookup[timestamp] = participant_id
+                # Also extract audio timestamp
+                audio_ts = self._extract_audio_timestamp_from_game(game_a_file)
+                if audio_ts:
+                    self.audio_a_lookup[audio_ts] = participant_id
+
+            # Game B data file
+            game_b_file = str(row.get('Game B Data (file name):', '')).strip()
+            if game_b_file and game_b_file != 'nan' and game_b_file != '--':
+                timestamp = self._extract_timestamp(game_b_file)
+                if timestamp:
+                    self.game_b_lookup[timestamp] = participant_id
+                # Also extract audio timestamp
+                audio_ts = self._extract_audio_timestamp_from_game(game_b_file)
+                if audio_ts:
+                    self.audio_b_lookup[audio_ts] = participant_id
+
+        print(f"Loaded {len(self.game_a_lookup)} Game A mappings")
+        print(f"Loaded {len(self.game_b_lookup)} Game B mappings")
+        print(f"Excluded participants: {sorted(self.excluded_participants)}")
+
+    def _extract_timestamp(self, filename):
+        """
+        Extract timestamp from JSON filename.
+
+        Patterns:
+        - game-session-2025-12-30T16-51-25-570Z.json (mehdi)
+        - puzzle-game1-state-2026-01-05T17-15-03-300Z.json
+        """
+        # Match ISO-like timestamp: YYYY-MM-DDTHH-MM-SS
+        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', filename)
+        if match:
+            return match.group(1)
+        return None
+
+    def _extract_audio_timestamp_from_game(self, game_filename):
+        """
+        Extract the timestamp that would match audio files.
+        Audio files use format: puzzle-game1-audio-2025-12-30T16-51-25.webm
+        Game files use: game-session-2025-12-30T16-51-25-570Z.json
+
+        They share the same base timestamp (without milliseconds).
+        """
+        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', game_filename)
+        if match:
+            return match.group(1)
+        return None
+
+    def get_participant_id_from_audio(self, audio_filename, game_type):
+        """
+        Get participant ID from audio/transcript filename.
+
+        Args:
+            audio_filename: e.g., 'puzzle-game1-audio-2025-12-30T16-51-25_transcription.txt'
+            game_type: 'Game A' or 'Game B'
+        """
+        timestamp = self._extract_timestamp(audio_filename)
+        if not timestamp:
+            return None
+
+        if game_type == 'Game A':
+            return self.audio_a_lookup.get(timestamp)
+        elif game_type == 'Game B':
+            return self.audio_b_lookup.get(timestamp)
+        return None
+
+    def get_participant_id_from_json(self, json_filename, game_type):
+        """
+        Get participant ID from JSON game data filename.
+
+        Args:
+            json_filename: e.g., 'game-session-2025-12-30T16-51-25-570Z.json (mehdi)'
+            game_type: 'Game A' or 'Game B'
+        """
+        timestamp = self._extract_timestamp(json_filename)
+        if not timestamp:
+            return None
+
+        if game_type == 'Game A':
+            return self.game_a_lookup.get(timestamp)
+        elif game_type == 'Game B':
+            return self.game_b_lookup.get(timestamp)
+        return None
+
+    def is_excluded(self, participant_id):
+        """Check if a participant is excluded"""
+        return participant_id in self.excluded_participants
+
+    def get_valid_participants(self):
+        """Get list of valid (non-excluded) participant IDs"""
+        all_participants = set(self.game_a_lookup.values()) | set(self.game_b_lookup.values())
+        return sorted(all_participants - self.excluded_participants)
 
 
 class SpeechCategoryClassifier:
@@ -35,10 +221,11 @@ class SpeechCategoryClassifier:
 
     def __init__(self):
         # Linguistic markers for each category
+        # Exploratory = explore, Confirmatory = establish, Exploitative = exploit
         self.exploratory_markers = {
             'questions': ['what', 'why', 'how', 'where', 'which', 'when'],
             'uncertainty': ['maybe', 'might', 'could', 'perhaps', 'wonder', 'not sure',
-                           'don\'t know', 'trying to figure', 'confused', 'hmm', 'uh'],
+                           "don't know", 'trying to figure', 'confused', 'hmm', 'uh'],
             'exploration_verbs': ['exploring', 'looking', 'checking', 'seeing',
                                   'trying different', 'experimenting', 'random', 'randomly'],
             'hedges': ['I think maybe', 'kind of', 'sort of', 'seems like']
@@ -50,7 +237,7 @@ class SpeechCategoryClassifier:
             'testing_language': ['let me test', 'testing', 'checking if', 'see if',
                                 'trying to confirm', 'verify', 'test whether',
                                 'gonna try', 'let me see if', 'let me check',
-                                'I\'m going to test', 'confirm'],
+                                "I'm going to test", 'confirm'],
             'conditional': ['if I', 'when I', 'if this', 'assuming', 'suppose'],
             'prediction': ['will', 'should', 'expect', 'predict', 'would']
         }
@@ -58,7 +245,7 @@ class SpeechCategoryClassifier:
         self.exploitative_markers = {
             'certainty': ['I know', 'definitely', 'obviously', 'clearly', 'for sure',
                          'certain', 'figured it out', 'got it', 'understand'],
-            'execution': ['now I\'ll just', 'just need to', 'all I have to do',
+            'execution': ["now I'll just", 'just need to', 'all I have to do',
                          'simply', 'just going to', 'now I can', 'okay now',
                          'alright now', 'just', 'easy'],
             'completion': ['almost done', 'finish', 'complete', 'final step',
@@ -171,39 +358,24 @@ def parse_game_from_filename(filename):
     """
     filename_lower = filename.lower()
 
-    if 'game1' in filename_lower:
+    if 'game1' in filename_lower or 'puzzle-a' in filename_lower:
         return 'Game A'
-    elif 'game2' in filename_lower:
+    elif 'game2' in filename_lower or 'puzzle-b' in filename_lower:
         return 'Game B'
-    elif 'game3' in filename_lower:
+    elif 'game3' in filename_lower or 'puzzle-c' in filename_lower:
         return 'Game C'
     else:
         return 'Unknown'
 
 
-def parse_participant_from_filename(filename):
-    """
-    Extract participant ID from filename
-
-    Adjust this function to match your actual naming convention.
-    """
-    # Try to extract participant ID - adjust pattern as needed
-    # Example: if files are named P001_game1_transcription.txt
-    match = re.search(r'(P\d+)', filename, re.IGNORECASE)
-    if match:
-        return match.group(1)
-
-    # If no participant ID found, use part of filename
-    return filename.split('_')[0]
-
-
-def process_transcript_file(transcript_file, participant_id=None, game_name=None):
+def process_transcript_file(transcript_file, participant_tracker=None, participant_id=None, game_name=None):
     """
     Process one participant's transcript file
 
     Args:
         transcript_file: Path to transcript file (.txt from Whisper or .json)
-        participant_id: Participant ID (optional, will try to extract from filename)
+        participant_tracker: ParticipantTracker instance for ID lookup
+        participant_id: Participant ID (optional, will try to extract)
         game_name: 'Game A', 'Game B', or 'Game C' (optional, will try to extract)
 
     Returns:
@@ -220,18 +392,32 @@ def process_transcript_file(transcript_file, participant_id=None, game_name=None
 
         # Use puzzle label from file if available
         if transcript_data['puzzle_label'] and not game_name:
-            game_name = transcript_data['puzzle_label']
+            # Convert "Puzzle A" to "Game A"
+            puzzle_label = transcript_data['puzzle_label']
+            game_name = puzzle_label.replace('Puzzle', 'Game')
     else:
         # Parse JSON format
         with open(transcript_file, 'r') as f:
             transcript_data = json.load(f)
         segments = transcript_data.get('segments', [])
 
-    # Extract participant ID and game from filename if not provided
-    if not participant_id:
-        participant_id = parse_participant_from_filename(filename)
+    # Extract game type from filename if not provided
     if not game_name:
         game_name = parse_game_from_filename(filename)
+
+    # Extract participant ID using tracker if not provided
+    if not participant_id and participant_tracker:
+        participant_id = participant_tracker.get_participant_id_from_audio(filename, game_name)
+
+    if not participant_id:
+        # Fallback: try to extract from filename or use filename as ID
+        match = re.search(r'(P\d+)', filename, re.IGNORECASE)
+        if match:
+            participant_id = match.group(1)
+        else:
+            # Use timestamp from filename as identifier
+            ts_match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', filename)
+            participant_id = ts_match.group(1) if ts_match else filename.split('_')[0]
 
     classifier = SpeechCategoryClassifier()
     results = []
@@ -256,6 +442,7 @@ def process_transcript_file(transcript_file, participant_id=None, game_name=None
             'start_time': start_time,
             'end_time': end_time,
             'text': text,
+            'audio_filename': filename,
             'auto_category': category,
             'confidence': confidence,
             'exploratory_score': scores['exploratory'],
@@ -270,21 +457,23 @@ def process_transcript_file(transcript_file, participant_id=None, game_name=None
     return pd.DataFrame(results)
 
 
-def process_all_transcripts(transcript_dir=TRANSCRIPT_DIR, output_file=None):
+def process_all_transcripts(transcript_dir, participant_tracker=None, output_file=None):
     """
     Process all transcript files in a directory
 
     Args:
         transcript_dir: Directory containing transcript files (.txt or .json)
+        participant_tracker: ParticipantTracker instance for ID lookup
         output_file: Where to save the classified segments CSV
     """
     if output_file is None:
-        output_file = f"{OUTPUT_DIR}/classified_speech_segments.csv"
+        output_file = OUTPUT_DIR / "classified_speech_segments.csv"
 
     all_results = []
 
     # Look for both .txt (Whisper) and .json files
-    transcript_files = list(Path(transcript_dir).glob('*.txt')) + list(Path(transcript_dir).glob('*.json'))
+    transcript_path = Path(transcript_dir)
+    transcript_files = list(transcript_path.glob('*.txt')) + list(transcript_path.glob('*.json'))
 
     print(f"Found {len(transcript_files)} transcript files in {transcript_dir}")
 
@@ -297,8 +486,10 @@ def process_all_transcripts(transcript_dir=TRANSCRIPT_DIR, output_file=None):
         print(f"Processing {transcript_file.name}...")
 
         try:
-            df = process_transcript_file(transcript_file)
-            all_results.append(df)
+            df = process_transcript_file(transcript_file, participant_tracker=participant_tracker)
+            if len(df) > 0:
+                all_results.append(df)
+                print(f"  -> {len(df)} segments, participant: {df['participant_id'].iloc[0]}")
         except Exception as e:
             print(f"  Error processing {transcript_file.name}: {e}")
             continue
@@ -327,7 +518,7 @@ def create_manual_review_file(classified_df, output_file=None):
     Create a CSV file with only segments needing manual review
     """
     if output_file is None:
-        output_file = f"{OUTPUT_DIR}/manual_review_needed.csv"
+        output_file = OUTPUT_DIR / "manual_review_needed.csv"
 
     review_df = classified_df[classified_df['needs_review'] == True].copy()
 
@@ -338,20 +529,23 @@ def create_manual_review_file(classified_df, output_file=None):
     # Reorder columns for easier review
     columns_order = [
         'participant_id', 'game', 'segment_id',
-        'text',
+        'text', 'audio_filename',
         'exploratory_score', 'confirmatory_score', 'exploitative_score',
         'exploratory_markers', 'confirmatory_markers', 'exploitative_markers',
+        'confidence',
         'manual_category',  # YOU FILL THIS IN
         'reviewer_notes'    # YOU FILL THIS IN
     ]
 
+    # Only include columns that exist
+    columns_order = [c for c in columns_order if c in review_df.columns]
     review_df = review_df[columns_order]
     review_df.to_csv(output_file, index=False)
 
-    print(f"Created manual review file: {output_file}")
+    print(f"\nCreated manual review file: {output_file}")
     print(f"{len(review_df)} segments need review")
     print("\nInstructions:")
-    print("1. Open the CSV file")
+    print("1. Open the CSV file in Excel or Google Sheets")
     print("2. Fill in 'manual_category' column with: exploratory, confirmatory, or exploitative")
     print("3. Add any notes in 'reviewer_notes' column")
     print("4. Save the file")
@@ -364,7 +558,7 @@ def merge_manual_reviews(auto_classified_df, manual_review_file=None):
     Merge manual reviews back into the main dataframe
     """
     if manual_review_file is None:
-        manual_review_file = f"{OUTPUT_DIR}/manual_review_needed.csv"
+        manual_review_file = OUTPUT_DIR / "manual_review_needed.csv"
 
     # Load manual reviews
     manual_df = pd.read_csv(manual_review_file)
@@ -376,7 +570,7 @@ def merge_manual_reviews(auto_classified_df, manual_review_file=None):
 
     # Update with manual reviews
     for idx, row in manual_df.iterrows():
-        if pd.notna(row['manual_category']) and str(row['manual_category']).strip():
+        if pd.notna(row.get('manual_category')) and str(row['manual_category']).strip():
             # Find matching segment
             mask = (
                 (auto_classified_df['participant_id'] == row['participant_id']) &
@@ -384,7 +578,7 @@ def merge_manual_reviews(auto_classified_df, manual_review_file=None):
                 (auto_classified_df['game'] == row['game'])
             )
             auto_classified_df.loc[mask, 'final_category'] = str(row['manual_category']).strip().lower()
-            if 'reviewer_notes' in row and pd.notna(row['reviewer_notes']):
+            if 'reviewer_notes' in row and pd.notna(row.get('reviewer_notes')):
                 auto_classified_df.loc[mask, 'reviewer_notes'] = row['reviewer_notes']
 
     print("Merged manual reviews")
@@ -396,13 +590,16 @@ def merge_manual_reviews(auto_classified_df, manual_review_file=None):
 
 def time_str_to_seconds(time_str):
     """Convert HH:MM:SS to seconds"""
-    parts = time_str.split(':')
-    if len(parts) == 3:
-        h, m, s = map(int, parts)
-        return h * 3600 + m * 60 + s
-    elif len(parts) == 2:
-        m, s = map(int, parts)
-        return m * 60 + s
+    parts = str(time_str).split(':')
+    try:
+        if len(parts) == 3:
+            h, m, s = map(float, parts)
+            return int(h * 3600 + m * 60 + s)
+        elif len(parts) == 2:
+            m, s = map(float, parts)
+            return int(m * 60 + s)
+    except ValueError:
+        pass
     return 0
 
 
@@ -419,17 +616,19 @@ def link_speech_to_movements(speech_segment, game_data, window_seconds=10):
         List of movements
     """
     # Parse speech end time (format: HH:MM:SS or ISO)
-    end_time_str = speech_segment['end_time']
+    end_time_str = speech_segment.get('end_time', '')
     if not end_time_str:
-        end_time_str = speech_segment['start_time']
+        end_time_str = speech_segment.get('start_time', '')
 
     # Handle different time formats
     if 'T' in str(end_time_str) or 'Z' in str(end_time_str):
         # ISO format
-        speech_end_seconds = None  # Will use datetime comparison
-        speech_end = datetime.fromisoformat(str(end_time_str).replace('Z', '+00:00'))
-        window_end = speech_end + timedelta(seconds=window_seconds)
-        use_datetime = True
+        try:
+            speech_end = datetime.fromisoformat(str(end_time_str).replace('Z', '+00:00'))
+            window_end = speech_end + timedelta(seconds=window_seconds)
+            use_datetime = True
+        except:
+            return []
     else:
         # HH:MM:SS format
         speech_end_seconds = time_str_to_seconds(str(end_time_str))
@@ -547,48 +746,40 @@ def extract_movement_features(movements):
     }
 
 
-def create_final_dataset(classified_speech_df, game_data_dir=GAME_DATA_DIR, output_file=None):
+def create_final_dataset(classified_speech_df, game_data_dir, participant_tracker=None, output_file=None):
     """
     Create final dataset linking speech categories to movement features
 
     Args:
-        classified_speech_df: DataFrame with classified speech segments (must have 'final_category')
+        classified_speech_df: DataFrame with classified speech segments
         game_data_dir: Directory containing game JSON files
+        participant_tracker: ParticipantTracker instance
         output_file: Where to save final CSV
     """
     if output_file is None:
-        output_file = f"{OUTPUT_DIR}/NLP_features_for_LTA.csv"
+        output_file = OUTPUT_DIR / "NLP_features_for_analysis.csv"
 
     results = []
+    game_data_path = Path(game_data_dir)
 
     # Determine which category column to use
     category_col = 'final_category' if 'final_category' in classified_speech_df.columns else 'auto_category'
+
+    # Build a lookup from participant_id + game -> JSON file
+    json_files = list(game_data_path.glob('*.json'))
 
     for idx, speech_row in classified_speech_df.iterrows():
         participant_id = speech_row['participant_id']
         game = speech_row['game']
 
-        # Try different filename patterns to find game data
-        possible_filenames = [
-            f"{participant_id}_{game}.json",
-            f"{participant_id}_{game.replace(' ', '')}.json",
-            f"{participant_id}_game{game[-1]}.json" if game.startswith('Game') else None,
-        ]
-
+        # Find matching game data file
         game_file = None
-        for filename in possible_filenames:
-            if filename:
-                test_path = Path(game_data_dir) / filename
-                if test_path.exists():
-                    game_file = test_path
+        for jf in json_files:
+            if participant_tracker:
+                jf_participant = participant_tracker.get_participant_id_from_json(jf.name, game)
+                if jf_participant == participant_id:
+                    game_file = jf
                     break
-
-        if game_file is None:
-            # Try to find any matching file
-            pattern = f"{participant_id}*{game.replace(' ', '')}*.json"
-            matches = list(Path(game_data_dir).glob(pattern))
-            if matches:
-                game_file = matches[0]
 
         if game_file is None:
             continue
@@ -627,52 +818,63 @@ def create_final_dataset(classified_speech_df, game_data_dir=GAME_DATA_DIR, outp
 
     if len(final_df) > 0:
         final_df.to_csv(output_file, index=False)
-        print(f"Created final dataset: {output_file}")
+        print(f"\nCreated final dataset: {output_file}")
         print(f"{len(final_df)} speech-movement pairs")
     else:
-        print("Warning: No speech-movement pairs were created.")
+        print("\nWarning: No speech-movement pairs were created.")
         print("Check that your game data files exist and match the expected format.")
 
     return final_df
 
 
-# FULL PIPELINE SCRIPT
+# =============================================================================
+# MAIN PIPELINE
+# =============================================================================
+
 def run_full_pipeline():
-    """Run the complete analysis pipeline"""
-    global TRANSCRIPT_DIR, GAME_DATA_DIR
+    """Run the complete NLP classification pipeline with file picker dialogs"""
 
     print("=" * 60)
     print("NLP SPEECH CLASSIFICATION PIPELINE")
     print("=" * 60)
+    print(f"\nAll outputs will be saved to: {OUTPUT_DIR}")
 
-    # Prompt user to select folders
-    print("\nPlease select your TRANSCRIPTS folder...")
-    TRANSCRIPT_DIR = select_folder("Select folder containing transcript files (.txt)")
-    if not TRANSCRIPT_DIR:
+    # Step 1: Select Participant Tracker CSV
+    print("\n" + "-" * 40)
+    print("Please select the PARTICIPANT TRACKER CSV file...")
+    tracker_file = select_file(
+        "Select Participant Tracker CSV",
+        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+    )
+    if not tracker_file:
+        print("No file selected. Exiting.")
+        return None
+    print(f"  Participant Tracker: {tracker_file}")
+
+    # Load participant tracker
+    print("\nLoading participant tracker...")
+    participant_tracker = ParticipantTracker(tracker_file)
+
+    # Step 2: Select transcript folder
+    print("\n" + "-" * 40)
+    print("Please select the TRANSCRIPTS folder...")
+    transcript_dir = select_folder("Select folder containing transcript files (.txt)")
+    if not transcript_dir:
         print("No folder selected. Exiting.")
         return None
-    print(f"  Transcripts: {TRANSCRIPT_DIR}")
+    print(f"  Transcripts: {transcript_dir}")
 
-    print("\nPlease select your GAME DATA folder...")
-    GAME_DATA_DIR = select_folder("Select folder containing game data files (.json)")
-    if not GAME_DATA_DIR:
-        print("No folder selected. Exiting.")
-        return None
-    print(f"  Game data: {GAME_DATA_DIR}")
-
-    print(f"  Output: {OUTPUT_DIR}")
-
-    # 1. Process transcripts with NLP
+    # Step 3: Process transcripts with NLP
     print("\n" + "=" * 50)
     print("STEP 1: Classifying speech segments with NLP")
     print("=" * 50)
-    classified_df = process_all_transcripts(transcript_dir=TRANSCRIPT_DIR)
+    classified_df = process_all_transcripts(transcript_dir, participant_tracker=participant_tracker)
 
     if len(classified_df) == 0:
         print("\nPipeline stopped: No transcripts to process.")
         return None
 
-    # 2. Create manual review file
+    # Step 4: Create manual review file
     print("\n" + "=" * 50)
     print("STEP 2: Creating manual review file")
     print("=" * 50)
@@ -680,61 +882,101 @@ def run_full_pipeline():
 
     print("\n" + "=" * 50)
     print(">>> PAUSE HERE <<<")
-    print(">>> Manually review 'manual_review_needed.csv' in Downloads <<<")
+    print(f">>> Manually review 'manual_review_needed.csv' in {OUTPUT_DIR} <<<")
     print(">>> Then run: continue_pipeline_after_review() <<<")
     print("=" * 50)
+
+    # Cleanup file selector
+    _file_selector.cleanup()
 
     return classified_df
 
 
 def continue_pipeline_after_review():
     """Continue pipeline after manual review is complete"""
-    global GAME_DATA_DIR
+
+    print("\n" + "=" * 60)
+    print("CONTINUING NLP PIPELINE AFTER MANUAL REVIEW")
+    print("=" * 60)
+
+    # Select Participant Tracker CSV again
+    print("\nPlease select the PARTICIPANT TRACKER CSV file...")
+    tracker_file = select_file(
+        "Select Participant Tracker CSV",
+        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+    )
+    if not tracker_file:
+        print("No file selected. Exiting.")
+        return None
+
+    participant_tracker = ParticipantTracker(tracker_file)
 
     # Prompt for game data folder
-    print("\nPlease select your GAME DATA folder...")
-    GAME_DATA_DIR = select_folder("Select folder containing game data files (.json)")
-    if not GAME_DATA_DIR:
+    print("\nPlease select your GAME DATA folder (JSON files)...")
+    game_data_dir = select_folder("Select folder containing game data files (.json)")
+    if not game_data_dir:
         print("No folder selected. Exiting.")
         return None
-    print(f"  Game data: {GAME_DATA_DIR}")
+    print(f"  Game data: {game_data_dir}")
 
     # Load the classified data
-    classified_file = f"{OUTPUT_DIR}/classified_speech_segments.csv"
+    classified_file = OUTPUT_DIR / "classified_speech_segments.csv"
+    if not classified_file.exists():
+        print(f"Error: Could not find {classified_file}")
+        print("Please run run_full_pipeline() first.")
+        return None
+
     classified_df = pd.read_csv(classified_file)
 
-    # 3. Merge manual reviews
+    # Merge manual reviews
     print("\n" + "=" * 50)
     print("STEP 3: Merging manual reviews")
     print("=" * 50)
     final_classified_df = merge_manual_reviews(classified_df)
-    final_classified_df.to_csv(f"{OUTPUT_DIR}/final_classified_segments.csv", index=False)
+    final_classified_df.to_csv(OUTPUT_DIR / "final_classified_segments.csv", index=False)
 
-    # 4. Link to movements and create final dataset
+    # Link to movements and create final dataset
     print("\n" + "=" * 50)
     print("STEP 4: Linking speech to movements")
     print("=" * 50)
-    final_dataset = create_final_dataset(final_classified_df, game_data_dir=GAME_DATA_DIR)
+    final_dataset = create_final_dataset(
+        final_classified_df,
+        game_data_dir,
+        participant_tracker=participant_tracker
+    )
 
     print("\n" + "=" * 50)
     print("PIPELINE COMPLETE!")
     print("=" * 50)
-    print(f"Final dataset saved to: {OUTPUT_DIR}/NLP_features_for_LTA.csv")
-    print("Ready for data_viz.py analysis!")
+    print(f"\nOutput files saved to: {OUTPUT_DIR}")
+    print("  - classified_speech_segments.csv")
+    print("  - manual_review_needed.csv")
+    print("  - final_classified_segments.csv")
+    print("  - NLP_features_for_analysis.csv")
+    print("\nReady for data_analysis.py!")
+
+    # Cleanup file selector
+    _file_selector.cleanup()
 
     return final_dataset
 
 
-# Run if executed directly
+# =============================================================================
+# ENTRY POINT
+# =============================================================================
+
 if __name__ == "__main__":
-    print("NLP Audio Extraction Tool")
-    print("-" * 40)
+    print("=" * 60)
+    print("NLP Speech Classification Program")
+    print("=" * 60)
+    print(f"\nOutput directory: {OUTPUT_DIR}")
     print("\nUsage:")
     print("  1. Run run_full_pipeline() to start")
-    print("  2. Manually review the CSV file")
+    print("  2. Manually review 'manual_review_needed.csv' in Downloads")
     print("  3. Run continue_pipeline_after_review() to finish")
     print("\nOr run steps individually:")
-    print("  classified_df = process_all_transcripts()")
+    print("  tracker = ParticipantTracker('path/to/tracker.csv')")
+    print("  classified_df = process_all_transcripts('path/to/transcripts', tracker)")
     print("  create_manual_review_file(classified_df)")
     print("  final_df = merge_manual_reviews(classified_df)")
-    print("  final_dataset = create_final_dataset(final_df)")
+    print("  final_dataset = create_final_dataset(final_df, 'path/to/game_data', tracker)")
