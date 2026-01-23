@@ -483,36 +483,33 @@ class SpeechCategoryClassifier:
         max_score = max(scores.values())
         total_score = sum(scores.values())
 
-        # Flag for manual review if:
-        # 1. No markers matched
-        # 2. Tie between categories
-        # 3. Only 1 marker matched (too ambiguous)
+        # Flag for manual review ONLY if:
+        # 1. No markers matched at all
+        # 2. Tie between categories (can't decide)
         if max_score == 0:
             return 'NEEDS_MANUAL_REVIEW', 'low', scores, markers_matched
 
         max_categories = [cat for cat, score in scores.items() if score == max_score]
         if len(max_categories) > 1:
-            return 'NEEDS_MANUAL_REVIEW', 'low', scores, markers_matched
-
-        # Single marker match is ambiguous - flag for review
-        if total_score == 1:
-            category = max(scores, key=scores.get)
+            # Tie - can't decide
             return 'NEEDS_MANUAL_REVIEW', 'low', scores, markers_matched
 
         category = max(scores, key=scores.get)
 
         # Calculate confidence level
-        # High: max_score >= 3 AND dominates other categories
-        # Medium: max_score >= 2 OR clear winner
-        # Low: max_score == 1 or close competition
+        # High: max_score >= 3 AND dominates other categories (60%+)
+        # Medium: max_score >= 2 OR single marker with no competition
+        # Low: single marker with some competition
         if max_score >= 3 and max_score >= total_score * 0.6:
             confidence = 'high'
-        elif max_score >= 2 and max_score > total_score * 0.5:
+        elif max_score >= 2:
             confidence = 'medium'
-        else:
+        elif max_score == 1 and total_score == 1:
+            # Single marker, no competition - trust it with low confidence
             confidence = 'low'
-            # Low confidence should go to manual review
-            return 'NEEDS_MANUAL_REVIEW', confidence, scores, markers_matched
+        else:
+            # Single marker but has competition from other categories
+            confidence = 'low'
 
         return category, confidence, scores, markers_matched
 
@@ -596,13 +593,21 @@ def apply_sequential_context(results_df, time_window_seconds=3):
                 df.loc[idx, 'context_adjusted_category'] = dominant_category
                 df.loc[idx, 'context_source'] = f'inherited_{closest_time_diff:.1f}s'
 
-        # For already-classified segments: check if context conflicts
+        # For already-classified segments: check if context agrees or conflicts
         else:
-            # If dominant nearby category differs AND is strong pattern, flag for review
-            if dominant_category != current_category:
-                dominance_ratio = dominant_count / total_nearby if total_nearby > 0 else 0
+            dominance_ratio = dominant_count / total_nearby if total_nearby > 0 else 0
 
-                # Flag if context strongly suggests different category
+            if dominant_category == current_category:
+                # Context AGREES - boost confidence!
+                current_confidence = df.loc[idx, 'confidence']
+                if current_confidence == 'low' and dominant_count >= 1:
+                    df.loc[idx, 'confidence'] = 'medium'
+                    df.loc[idx, 'context_source'] = f'confidence_boosted_{closest_time_diff:.1f}s'
+                elif current_confidence == 'medium' and dominant_count >= 2:
+                    df.loc[idx, 'confidence'] = 'high'
+                    df.loc[idx, 'context_source'] = f'confidence_boosted_{closest_time_diff:.1f}s'
+            else:
+                # Context CONFLICTS - flag if strong pattern
                 if dominance_ratio >= 0.7 and dominant_count >= 2:
                     df.loc[idx, 'context_flag'] = f'context_suggests_{dominant_category}'
                     df.loc[idx, 'needs_review'] = True  # Flag for manual review
