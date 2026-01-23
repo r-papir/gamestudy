@@ -114,8 +114,12 @@ class ParticipantTracker:
     def _build_lookup_tables(self):
         self.game_a_lookup = {}
         self.game_b_lookup = {}
-        self.excluded_participants = set()
         self.participant_info = {}
+
+        # Hardcoded exclusion list - these participants are always excluded
+        self.excluded_participants = {
+            'P001', 'P002', 'P007', 'P013', 'P014', 'P015', 'P016', 'P020', 'P024'
+        }
 
         for _, row in self.df.iterrows():
             session_id = str(row.get('Session ID:', '')).strip()

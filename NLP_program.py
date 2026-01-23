@@ -99,7 +99,11 @@ class ParticipantTracker:
         self.game_b_lookup = {}  # timestamp -> participant_id
         self.audio_a_lookup = {}  # audio timestamp -> participant_id
         self.audio_b_lookup = {}  # audio timestamp -> participant_id
-        self.excluded_participants = set()
+
+        # Hardcoded exclusion list - these participants are always excluded
+        self.excluded_participants = {
+            'P001', 'P002', 'P007', 'P013', 'P014', 'P015', 'P016', 'P020', 'P024'
+        }
 
         for _, row in self.df.iterrows():
             session_id = str(row.get('Session ID:', '')).strip()
@@ -738,6 +742,11 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
             # Use timestamp from filename as identifier
             ts_match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', filename)
             participant_id = ts_match.group(1) if ts_match else filename.split('_')[0]
+
+    # Check if participant is excluded
+    if participant_tracker and participant_tracker.is_excluded(participant_id):
+        print(f"  -> Skipping excluded participant: {participant_id}")
+        return pd.DataFrame()
 
     classifier = SpeechCategoryClassifier()
     results = []
