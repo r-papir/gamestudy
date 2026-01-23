@@ -1466,36 +1466,47 @@ def run_full_pipeline():
     print("\nLoading participant tracker...")
     participant_tracker = ParticipantTracker(tracker_file)
 
-    # Step 2: Select Puzzle A transcript folder
+    # Step 2: Ask if user wants to include Puzzle A
     print("\n" + "=" * 60)
-    print("FOLDER 1 of 4: PUZZLE A (GAME 1) TRANSCRIPTS")
+    print("PUZZLE A (GAME 1) - OPTIONAL")
     print("=" * 60)
-    print("Select the FOLDER containing Puzzle A / Game 1 transcript files (.txt)")
-    print("These are the Whisper transcription output files.")
-    print("File names look like: 'puzzle-game1-audio-2026-01-05T17-15-03_transcription.txt'")
-    print("=" * 60)
-    input(">>> Press ENTER to open folder picker...")
-    transcript_dir_a = select_folder("FOLDER 1: Select Puzzle A Transcripts folder")
-    if not transcript_dir_a:
-        print("No folder selected. Exiting.")
-        return None
-    print(f"  Selected: {transcript_dir_a}")
+    skip_a = input(">>> Skip Puzzle A and only process Puzzle B? (y/n): ").strip().lower()
 
-    # Step 3: Select Puzzle A game-state folder
-    print("\n" + "=" * 60)
-    print("FOLDER 2 of 4: PUZZLE A (GAME 1) GAME-STATE DATA")
-    print("=" * 60)
-    print("Select the FOLDER containing Puzzle A / Game 1 game-state JSON files.")
-    print("These contain movement data and level timing information.")
-    print("File names look like: 'puzzle-game1-state-2026-01-05T17-15-03-300Z.json'")
-    print("=" * 60)
-    input(">>> Press ENTER to open folder picker...")
-    gamestate_dir_a = select_folder("FOLDER 2: Select Puzzle A Game-State folder")
-    if not gamestate_dir_a:
-        print("No folder selected - will proceed without level detection for Puzzle A.")
-        gamestate_dir_a = None
+    transcript_dir_a = None
+    gamestate_dir_a = None
+
+    if skip_a != 'y':
+        # Select Puzzle A transcript folder
+        print("\n" + "=" * 60)
+        print("FOLDER 1: PUZZLE A (GAME 1) TRANSCRIPTS")
+        print("=" * 60)
+        print("Select the FOLDER containing Puzzle A / Game 1 transcript files (.txt)")
+        print("These are the Whisper transcription output files.")
+        print("File names look like: 'puzzle-game1-audio-2026-01-05T17-15-03_transcription.txt'")
+        print("=" * 60)
+        input(">>> Press ENTER to open folder picker...")
+        transcript_dir_a = select_folder("FOLDER 1: Select Puzzle A Transcripts folder")
+        if not transcript_dir_a:
+            print("No folder selected - skipping Puzzle A.")
+        else:
+            print(f"  Selected: {transcript_dir_a}")
+
+            # Select Puzzle A game-state folder
+            print("\n" + "=" * 60)
+            print("FOLDER 2: PUZZLE A (GAME 1) GAME-STATE DATA")
+            print("=" * 60)
+            print("Select the FOLDER containing Puzzle A / Game 1 game-state JSON files.")
+            print("These contain movement data and level timing information.")
+            print("File names look like: 'puzzle-game1-state-2026-01-05T17-15-03-300Z.json'")
+            print("=" * 60)
+            input(">>> Press ENTER to open folder picker...")
+            gamestate_dir_a = select_folder("FOLDER 2: Select Puzzle A Game-State folder")
+            if not gamestate_dir_a:
+                print("No folder selected - will proceed without level detection for Puzzle A.")
+            else:
+                print(f"  Selected: {gamestate_dir_a}")
     else:
-        print(f"  Selected: {gamestate_dir_a}")
+        print("Skipping Puzzle A - will only process Puzzle B.")
 
     # Step 4: Select Puzzle B transcript folder
     print("\n" + "=" * 60)
@@ -1533,14 +1544,18 @@ def run_full_pipeline():
     print("STEP 1: Classifying speech segments with NLP")
     print("=" * 50)
 
-    # Process both folders
-    print("\nProcessing Puzzle A transcripts...")
-    classified_df_a = process_all_transcripts(
-        transcript_dir_a,
-        participant_tracker=participant_tracker,
-        gamestate_dir=gamestate_dir_a,
-        apply_context=True
-    )
+    # Process folders
+    classified_df_a = pd.DataFrame()
+    if transcript_dir_a:
+        print("\nProcessing Puzzle A transcripts...")
+        classified_df_a = process_all_transcripts(
+            transcript_dir_a,
+            participant_tracker=participant_tracker,
+            gamestate_dir=gamestate_dir_a,
+            apply_context=True
+        )
+    else:
+        print("\nSkipping Puzzle A (not selected).")
 
     print("\nProcessing Puzzle B transcripts...")
     classified_df_b = process_all_transcripts(
