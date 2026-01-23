@@ -610,6 +610,34 @@ def apply_sequential_context(results_df, time_window_seconds=3):
     # Clean up temporary column
     df = df.drop(columns=['start_seconds'], errors='ignore')
 
+    # TRANSITION RULE: No explore → exploit transitions allowed
+    # Must go through establish (confirmatory) first
+    # Sort by participant, game, and time to check sequential transitions
+    df['_start_seconds'] = df['start_time'].apply(parse_timestamp_to_seconds)
+    df = df.sort_values(['participant_id', 'game', '_start_seconds']).reset_index(drop=True)
+
+    transition_fixes = 0
+    for idx in range(1, len(df)):
+        # Check if same participant and game
+        if (df.loc[idx, 'participant_id'] != df.loc[idx-1, 'participant_id'] or
+            df.loc[idx, 'game'] != df.loc[idx-1, 'game']):
+            continue
+
+        prev_category = df.loc[idx-1, 'context_adjusted_category']
+        curr_category = df.loc[idx, 'context_adjusted_category']
+
+        # Invalid transition: explore → exploit
+        if prev_category == 'exploratory' and curr_category == 'exploitative':
+            # Reclassify as confirmatory (establish)
+            df.loc[idx, 'context_adjusted_category'] = 'confirmatory'
+            df.loc[idx, 'context_flag'] = 'transition_rule_explore_to_exploit'
+            transition_fixes += 1
+
+    if transition_fixes > 0:
+        print(f"  -> {transition_fixes} explore→exploit transitions fixed (changed to confirmatory)")
+
+    df = df.drop(columns=['_start_seconds'], errors='ignore')
+
     return df
 
 
@@ -827,12 +855,33 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
                 # Check if near level completion (within 10 seconds of solving)
                 near_completion_info = gamestate_analyzer.is_near_level_completion(start_seconds, window_seconds=10)
 
+        # GAME B LEVELS 1-2: Strong exploration bias
+        # In Game B, levels 1-2 teach different rules, so exploration is expected
+        is_game_b_early_levels = (game_name == 'Game B' and level is not None and level <= 2)
+
+        if is_game_b_early_levels:
+            # In Game B levels 1-2, classify ambiguous segments as exploration
+            if category == 'NEEDS_MANUAL_REVIEW':
+                category = 'exploratory'
+                confidence = 'medium'
+                markers['exploratory'].append('game_b_early_level')
+            elif category == 'exploitative':
+                # Can't exploit in early learning levels - reclassify
+                if scores['confirmatory'] > 0:
+                    category = 'confirmatory'
+                    confidence = 'medium'
+                else:
+                    category = 'exploratory'
+                    confidence = 'medium'
+                markers['exploratory'].append('game_b_early_level_override')
+
         # Apply level completion boost for exploit classification
         # If near level completion and not already classified as exploit, boost exploit
         near_completion = near_completion_info['near_completion']
         is_final_levels = near_completion_info['is_final_levels']
 
-        if near_completion:
+        # Only apply exploit boost for levels 3+ in Game B (or any level in Game A)
+        if near_completion and not is_game_b_early_levels:
             if category != 'exploitative':
                 # Near level completion strongly suggests exploit behavior
                 # For final levels: override to exploit if not clearly another category
