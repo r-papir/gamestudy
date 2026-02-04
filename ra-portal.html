@@ -35,21 +35,57 @@
         .links {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 1.5rem;
         }
         .links a {
-            display: block;
-            padding: 1rem 1.5rem;
-            background: #4a90d9;
-            color: white;
-            text-decoration: none;
+            align-items: center;
+            background-color: #fee6e3;
+            border: 2px solid #111;
             border-radius: 8px;
-            font-size: 1.1rem;
+            color: #111;
+            cursor: pointer;
+            display: flex;
+            font-size: 16px;
+            height: 48px;
+            justify-content: center;
+            line-height: 24px;
+            max-width: 100%;
+            padding: 0 25px;
+            position: relative;
             text-align: center;
-            transition: background 0.2s;
+            text-decoration: none;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .links a:after {
+            background-color: #111;
+            border-radius: 8px;
+            content: "";
+            display: block;
+            height: 48px;
+            left: 0;
+            width: 100%;
+            position: absolute;
+            top: -2px;
+            transform: translate(8px, 8px);
+            transition: transform .2s ease-out;
+            z-index: -1;
+        }
+        .links a:hover:after {
+            transform: translate(0, 0);
+        }
+        .links a:active {
+            background-color: #ffdeda;
+            outline: 0;
         }
         .links a:hover {
-            background: #357abd;
+            outline: 0;
+        }
+        @media (min-width: 768px) {
+            .links a {
+                padding: 0 40px;
+            }
         }
     </style>
 </head>
