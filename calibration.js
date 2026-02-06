@@ -29,12 +29,8 @@ const Calibration = (function() {
     function skipCalibration() {
         sessionStorage.setItem(CALIBRATION_SKIPPED_KEY, 'true');
 
-        // Stop WebGazer if it was started
-        if (webgazerReady && typeof webgazer !== 'undefined') {
-            webgazer.end();
-        }
-
         // Navigate to return URL or index
+        // (WebGazer cleans up naturally when page unloads)
         const params = new URLSearchParams(window.location.search);
         const returnUrl = params.get('return');
         if (returnUrl && returnUrl.startsWith('/')) {
@@ -57,10 +53,6 @@ const Calibration = (function() {
     function clearCalibration() {
         sessionStorage.removeItem(CALIBRATION_FLAG_KEY);
         sessionStorage.removeItem(CALIBRATION_SKIPPED_KEY);
-        localStorage.removeItem('webgazerGlobalData');
-        if (webgazerReady && typeof webgazer !== 'undefined') {
-            webgazer.clearData();
-        }
     }
 
     /**
@@ -86,18 +78,12 @@ const Calibration = (function() {
     /**
      * Initialize WebGazer and request camera permission
      */
-    async function initWebGazer(forceReset) {
+    async function initWebGazer() {
         if (typeof webgazer === 'undefined') {
             throw new Error('WebGazer library not loaded. Please check your internet connection.');
         }
 
         try {
-            // If forcing reset, clear WebGazer data before initializing
-            if (forceReset) {
-                webgazer.clearData();
-                localStorage.removeItem('webgazerGlobalData');
-            }
-
             await webgazer
                 .setGazeListener(function(data, timestamp) {
                     // Gaze data collected during calibration
@@ -266,7 +252,7 @@ const Calibration = (function() {
 
         // Initialize WebGazer
         try {
-            await initWebGazer(forceRecalibration);
+            await initWebGazer();
             document.getElementById('camera-status').textContent = 'Camera ready!';
             document.getElementById('camera-status').classList.remove('error');
             document.getElementById('camera-status').classList.add('success');
