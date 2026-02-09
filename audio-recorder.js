@@ -165,7 +165,12 @@ const AudioRecorder = (function() {
             state.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     state.audioChunks.push(event.data);
+                    console.log('Audio chunk added, total chunks:', state.audioChunks.length);
                 }
+            };
+
+            state.mediaRecorder.onstop = () => {
+                console.log('MediaRecorder stopped, total audio chunks:', state.audioChunks.length);
             };
 
             // Setup Web Speech API for transcription
@@ -264,6 +269,8 @@ const AudioRecorder = (function() {
         state.isRecording = false;
 
         if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+            // Request any pending data before stopping
+            state.mediaRecorder.requestData();
             state.mediaRecorder.stop();
             state.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
