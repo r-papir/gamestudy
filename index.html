@@ -85,20 +85,27 @@
             font-size: 0.85rem;
             color: #666;
         }
+        .bottom-row {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .bottom-row a {
+            width: 160px;
+            font-size: 14px;
+            height: 44px;
+        }
     </style>
 </head>
 <body>
-    <div class="credit">Puzzles designed by Rachel Papirmeister</div>
-    <div class="credit">for the Barnard Programming Language lab,</div>
-    <div class="credit">Columbia University</div>
+    <div class="credit">Puzzles designed by Rachel Papirmeister<br>
+        for the Barnard Programming Language lab, Columbia University
+    </div>
     <div class="container">
         <h1>Causal Reasoning Study</h1>
 
         <div class="links">
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSedlcz0ve-XO_Z0gXhFjRt_OI06E5O-8QeN42FtWF31Xv4jSg/viewform?usp=sharing&ouid=115986184015024353625" target="_blank">
-                Consent Form
-            </a>
-
             <a href="game.html">
                 Puzzle A
             </a>
@@ -110,9 +117,15 @@
             <a href="game3.html">
                 Puzzle C
             </a>
+        </div>
+
+        <div class="links bottom-row">
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSedlcz0ve-XO_Z0gXhFjRt_OI06E5O-8QeN42FtWF31Xv4jSg/viewform?usp=sharing&ouid=115986184015024353625" target="_blank">
+                Consent Form
+            </a>
 
             <a href="calibration.html?force=true">
-                Recalibrate Eye-Tracking
+                Recalibrate
             </a>
         </div>
     </div>
