@@ -161,8 +161,7 @@
     // Verify calibration before allowing game play
     (function() {
         var calibrated = sessionStorage.getItem('webgazerCalibrationComplete') === 'true';
-        var skipped = sessionStorage.getItem('eyeTrackingSkipped') === 'true';
-        if (!calibrated && !skipped) {
+        if (!calibrated) {
             var returnUrl = encodeURIComponent(window.location.pathname);
             window.location.href = 'calibration.html?return=' + returnUrl;
         }

@@ -8,7 +8,6 @@ const Calibration = (function() {
     const CLICKS_PER_POINT = 5;
     const TOTAL_POINTS = 9;
     const CALIBRATION_FLAG_KEY = 'webgazerCalibrationComplete';
-    const CALIBRATION_SKIPPED_KEY = 'eyeTrackingSkipped';
 
     // State
     let pointsCompleted = 0;
@@ -19,25 +18,7 @@ const Calibration = (function() {
      */
     function hasExistingCalibration() {
         const calibrationFlag = sessionStorage.getItem(CALIBRATION_FLAG_KEY);
-        const skippedFlag = sessionStorage.getItem(CALIBRATION_SKIPPED_KEY);
-        return calibrationFlag === 'true' || skippedFlag === 'true';
-    }
-
-    /**
-     * Skip calibration and proceed to games
-     */
-    function skipCalibration() {
-        sessionStorage.setItem(CALIBRATION_SKIPPED_KEY, 'true');
-
-        // Navigate to return URL or index
-        // (WebGazer cleans up naturally when page unloads)
-        const params = new URLSearchParams(window.location.search);
-        const returnUrl = params.get('return');
-        if (returnUrl && returnUrl.startsWith('/')) {
-            window.location.href = returnUrl;
-        } else {
-            window.location.href = 'index.html';
-        }
+        return calibrationFlag === 'true';
     }
 
     /**
@@ -52,7 +33,10 @@ const Calibration = (function() {
      */
     function clearCalibration() {
         sessionStorage.removeItem(CALIBRATION_FLAG_KEY);
-        sessionStorage.removeItem(CALIBRATION_SKIPPED_KEY);
+        localStorage.removeItem('webgazerGlobalData');
+        if (webgazerReady && typeof webgazer !== 'undefined') {
+            webgazer.clearData();
+        }
     }
 
     /**
@@ -84,11 +68,13 @@ const Calibration = (function() {
         }
 
         try {
+            // Initialize WebGazer - call begin() first, then configure
             await webgazer.begin();
 
             // Show video preview during calibration for user feedback
             webgazer.showVideoPreview(true);
             webgazer.showPredictionPoints(true);
+
             webgazerReady = true;
             return true;
         } catch (error) {
@@ -237,8 +223,6 @@ const Calibration = (function() {
             location.reload();
         });
 
-        document.getElementById('skip-calibration-btn').addEventListener('click', skipCalibration);
-
         // Check for camera/WebGazer support
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             document.getElementById('error-message').textContent =
@@ -273,8 +257,7 @@ const Calibration = (function() {
         init: init,
         hasExistingCalibration: hasExistingCalibration,
         clearCalibration: clearCalibration,
-        recalibrate: recalibrate,
-        skipCalibration: skipCalibration
+        recalibrate: recalibrate
     };
 })();
 
