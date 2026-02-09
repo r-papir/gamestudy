@@ -66,36 +66,36 @@ const AudioRecorder = (function() {
         }
 
         try {
-            await webgazer
-                .setGazeListener((data, timestamp) => {
-                    if (data && state.isRecording) {
-                        const relativeTimestamp = Date.now() - state.startTime;
+            webgazer.setGazeListener((data, timestamp) => {
+                if (data && state.isRecording) {
+                    const relativeTimestamp = Date.now() - state.startTime;
 
-                        // Convert to grid coordinates if screenToGrid function provided
-                        if (config.screenToGrid) {
-                            const gridPos = config.screenToGrid(data.x, data.y);
-                            if (gridPos) {
-                                // On grid: store as [gridX, gridY, timestamp]
-                                state.gazeData.push([gridPos.x, gridPos.y, relativeTimestamp]);
-                            } else {
-                                // Off grid: store as [null, null, timestamp]
-                                state.gazeData.push([null, null, relativeTimestamp]);
-                            }
+                    // Convert to grid coordinates if screenToGrid function provided
+                    if (config.screenToGrid) {
+                        const gridPos = config.screenToGrid(data.x, data.y);
+                        if (gridPos) {
+                            // On grid: store as [gridX, gridY, timestamp]
+                            state.gazeData.push([gridPos.x, gridPos.y, relativeTimestamp]);
                         } else {
-                            // No conversion function, store raw screen coords
-                            state.gazeData.push([
-                                Math.round(data.x),
-                                Math.round(data.y),
-                                relativeTimestamp
-                            ]);
+                            // Off grid: store as [null, null, timestamp]
+                            state.gazeData.push([null, null, relativeTimestamp]);
                         }
+                    } else {
+                        // No conversion function, store raw screen coords
+                        state.gazeData.push([
+                            Math.round(data.x),
+                            Math.round(data.y),
+                            relativeTimestamp
+                        ]);
                     }
-                })
-                .saveDataAcrossSessions(true)
-                .begin();
+                }
+            });
+            webgazer.saveDataAcrossSessions(true);
+            await webgazer.begin();
 
             // Hide video preview and prediction points for cleaner UI
-            webgazer.showVideoPreview(false).showPredictionPoints(false);
+            webgazer.showVideoPreview(false);
+            webgazer.showPredictionPoints(false);
             state.webgazerStarted = true;
             console.log('WebGazer initialized successfully');
             return true;

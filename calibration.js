@@ -84,16 +84,16 @@ const Calibration = (function() {
         }
 
         try {
-            await webgazer
-                .setGazeListener(function(data, timestamp) {
-                    // Gaze data collected during calibration
-                    // Clicks automatically train the model
-                })
-                .saveDataAcrossSessions(true)
-                .begin();
+            webgazer.setGazeListener(function(data, timestamp) {
+                // Gaze data collected during calibration
+                // Clicks automatically train the model
+            });
+            webgazer.saveDataAcrossSessions(true);
+            await webgazer.begin();
 
             // Show video preview during calibration for user feedback
-            webgazer.showVideoPreview(true).showPredictionPoints(true);
+            webgazer.showVideoPreview(true);
+            webgazer.showPredictionPoints(true);
             webgazerReady = true;
             return true;
         } catch (error) {
@@ -137,7 +137,8 @@ const Calibration = (function() {
     function completeCalibration() {
         // Hide video preview and prediction points for cleaner game experience
         if (webgazerReady && typeof webgazer !== 'undefined') {
-            webgazer.showVideoPreview(false).showPredictionPoints(false);
+            webgazer.showVideoPreview(false);
+            webgazer.showPredictionPoints(false);
         }
 
         // Mark calibration complete
@@ -166,7 +167,8 @@ const Calibration = (function() {
 
         // Show video preview again
         if (webgazerReady && typeof webgazer !== 'undefined') {
-            webgazer.showVideoPreview(true).showPredictionPoints(true);
+            webgazer.showVideoPreview(true);
+            webgazer.showPredictionPoints(true);
         }
 
         showPhase('calibration-phase');
