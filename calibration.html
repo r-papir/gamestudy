@@ -15,6 +15,7 @@
             <p class="instructions">Please allow camera access when prompted.</p>
             <div id="camera-status">Waiting for camera permission...</div>
             <button id="start-calibration-btn" disabled>Begin Calibration</button>
+            <p class="skip-link"><a href="#" onclick="Calibration.skipCalibration(); return false;">Continue without eye tracking</a></p>
         </div>
     </div>
 
@@ -60,6 +61,7 @@
             <p class="instructions">Eye tracking requires camera access to function.</p>
             <div id="error-message"></div>
             <button id="retry-btn">Try Again</button>
+            <p class="skip-link"><a href="#" onclick="Calibration.skipCalibration(); return false;">Continue without eye tracking</a></p>
         </div>
     </div>
 

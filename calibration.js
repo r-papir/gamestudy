@@ -8,6 +8,7 @@ const Calibration = (function() {
     const CLICKS_PER_POINT = 5;
     const TOTAL_POINTS = 9;
     const CALIBRATION_FLAG_KEY = 'webgazerCalibrationComplete';
+    const CALIBRATION_SKIPPED_KEY = 'eyeTrackingSkipped';
 
     // State
     let pointsCompleted = 0;
@@ -33,10 +34,19 @@ const Calibration = (function() {
      */
     function clearCalibration() {
         sessionStorage.removeItem(CALIBRATION_FLAG_KEY);
+        sessionStorage.removeItem(CALIBRATION_SKIPPED_KEY);
         localStorage.removeItem('webgazerGlobalData');
         if (webgazerReady && typeof webgazer !== 'undefined') {
             webgazer.clearData();
         }
+    }
+
+    /**
+     * Skip calibration and continue without eye tracking
+     */
+    function skipCalibration() {
+        sessionStorage.setItem(CALIBRATION_SKIPPED_KEY, 'true');
+        window.location.href = 'index.html';
     }
 
     /**
@@ -265,7 +275,8 @@ const Calibration = (function() {
         init: init,
         hasExistingCalibration: hasExistingCalibration,
         clearCalibration: clearCalibration,
-        recalibrate: recalibrate
+        recalibrate: recalibrate,
+        skipCalibration: skipCalibration
     };
 })();
 
