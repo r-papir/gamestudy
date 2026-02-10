@@ -1006,7 +1006,13 @@
 
                 return { x: Math.min(gridX, 4), y: Math.min(gridY, 4) };
             },
-            insertBeforeSelector: '#download-button'
+            insertBeforeSelector: '#download-button',
+            onRecordingStart: () => {
+                S3Uploader.startBackups(sessionCode, 'Game B', () => AudioRecorder.getState().audioChunks);
+            },
+            onRecordingStop: () => {
+                S3Uploader.stopBackups();
+            }
         });
     </script>
 </body>

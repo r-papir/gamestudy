@@ -20,6 +20,10 @@ const S3Uploader = (function() {
     let uploadInProgress = false;
     let uploadStatus = 'idle'; // 'idle', 'uploading', 'success', 'error'
 
+    // Backup state
+    let backupInterval = null;
+    let backupSession = null; // { sessionCode, gameName, basePath, audioUploadUrl, audioKey, getAudioChunks }
+
     /**
      * Initialize upload session - gets presigned URLs from Lambda
      */
@@ -39,20 +43,37 @@ const S3Uploader = (function() {
     }
 
     /**
-     * Upload audio directly to S3 via presigned URL
+     * Upload audio directly to S3 via presigned URL (XHR for progress)
+     * @param {string} presignedUrl - S3 presigned PUT URL
+     * @param {Blob} audioBlob - Audio data to upload
+     * @param {function} onProgress - Optional callback: (percent) => void
      */
-    async function uploadAudio(presignedUrl, audioBlob) {
-        const response = await fetch(presignedUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'audio/webm' },
-            body: audioBlob
+    function uploadAudio(presignedUrl, audioBlob, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', presignedUrl);
+            xhr.setRequestHeader('Content-Type', 'audio/webm');
+
+            if (onProgress) {
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        onProgress(pct);
+                    }
+                };
+            }
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(true);
+                } else {
+                    reject(new Error(`Audio upload failed: ${xhr.status}`));
+                }
+            };
+
+            xhr.onerror = () => reject(new Error('Audio upload network error'));
+            xhr.send(audioBlob);
         });
-
-        if (!response.ok) {
-            throw new Error(`Audio upload failed: ${response.status}`);
-        }
-
-        return true;
     }
 
     /**
@@ -102,16 +123,28 @@ const S3Uploader = (function() {
         uploadStatus = 'uploading';
 
         try {
-            // Step 1: Initialize upload session
-            onProgress && onProgress('Initializing upload...');
-            const initResult = await initUpload(sessionCode, gameName);
-            const { basePath, audioUploadUrl, audioKey } = initResult;
+            // Step 1: Initialize upload session (reuse backup session if active)
+            let basePath, audioUploadUrl, audioKey;
+            if (backupSession) {
+                basePath = backupSession.basePath;
+                audioUploadUrl = backupSession.audioUploadUrl;
+                audioKey = backupSession.audioKey;
+                onProgress && onProgress('Reusing backup session...');
+            } else {
+                onProgress && onProgress('Initializing upload...');
+                const initResult = await initUpload(sessionCode, gameName);
+                basePath = initResult.basePath;
+                audioUploadUrl = initResult.audioUploadUrl;
+                audioKey = initResult.audioKey;
+            }
 
             // Step 2: Upload audio if available
             if (audioChunks && audioChunks.length > 0) {
-                onProgress && onProgress('Uploading audio...');
+                onProgress && onProgress('Uploading audio (0%)...');
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                await uploadAudio(audioUploadUrl, audioBlob);
+                await uploadAudio(audioUploadUrl, audioBlob, (pct) => {
+                    onProgress && onProgress(`Uploading audio (${pct}%)...`);
+                });
             }
 
             // Step 3: Submit session data
@@ -162,6 +195,58 @@ const S3Uploader = (function() {
         return { success: false, error: lastError?.message || 'Upload failed after retries' };
     }
 
+    /**
+     * Start periodic audio backups during recording
+     * @param {string} sessionCode - The session code
+     * @param {string} gameName - The game name
+     * @param {function} getAudioChunks - Function that returns current audio chunks array
+     * @param {number} intervalMs - Backup interval in ms (default 5 min)
+     */
+    async function startBackups(sessionCode, gameName, getAudioChunks, intervalMs = 300000) {
+        if (!config.apiBaseUrl) {
+            console.warn('S3Uploader: API URL not configured, skipping backups.');
+            return;
+        }
+
+        try {
+            const initResult = await initUpload(sessionCode, gameName);
+            backupSession = {
+                sessionCode,
+                gameName,
+                basePath: initResult.basePath,
+                audioUploadUrl: initResult.audioUploadUrl,
+                audioKey: initResult.audioKey,
+                getAudioChunks
+            };
+            console.log('S3Uploader: Backup session initialized', backupSession.basePath);
+
+            backupInterval = setInterval(async () => {
+                const chunks = backupSession.getAudioChunks();
+                if (!chunks || chunks.length === 0) return;
+
+                try {
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
+                    await uploadAudio(backupSession.audioUploadUrl, blob);
+                    console.log(`S3Uploader: Backup uploaded (${(blob.size / 1024 / 1024).toFixed(1)} MB)`);
+                } catch (err) {
+                    console.warn('S3Uploader: Backup upload failed:', err.message);
+                }
+            }, intervalMs);
+        } catch (err) {
+            console.warn('S3Uploader: Failed to init backup session:', err.message);
+        }
+    }
+
+    /**
+     * Stop periodic audio backups
+     */
+    function stopBackups() {
+        if (backupInterval) {
+            clearInterval(backupInterval);
+            backupInterval = null;
+        }
+    }
+
     // Public API
     return {
         /**
@@ -190,6 +275,16 @@ const S3Uploader = (function() {
         /**
          * Get the configured API URL
          */
-        getApiUrl: () => config.apiBaseUrl
+        getApiUrl: () => config.apiBaseUrl,
+
+        /**
+         * Start periodic audio backups during recording
+         */
+        startBackups,
+
+        /**
+         * Stop periodic audio backups
+         */
+        stopBackups
     };
 })();

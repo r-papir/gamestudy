@@ -31,6 +31,8 @@ const AudioRecorder = (function() {
         gamePrefix: 'game',
         getGameState: () => ({}),  // Function to capture current game state
         onKeystroke: null,         // Optional callback when keystroke is recorded
+        onRecordingStart: null,    // Optional callback when recording starts
+        onRecordingStop: null,     // Optional callback when recording stops
         screenToGrid: null,        // Function to convert screen (x,y) to grid coords, returns {x, y} or null if off-grid
         keyActionMap: {},          // Map of key names to semantic action names (e.g., {'ArrowUp': 'move_chunk_up'})
         insertBeforeSelector: null, // CSS selector - insert UI before this element (e.g., '#download-button')
@@ -165,8 +167,12 @@ const AudioRecorder = (function() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-            // Setup MediaRecorder for audio
-            state.mediaRecorder = new MediaRecorder(stream);
+            // Setup MediaRecorder for audio (32kbps Opus for smaller files)
+            const mimeType = 'audio/webm;codecs=opus';
+            const recorderOptions = MediaRecorder.isTypeSupported(mimeType)
+                ? { mimeType, audioBitsPerSecond: 32000 }
+                : {};
+            state.mediaRecorder = new MediaRecorder(stream, recorderOptions);
             state.audioChunks = [];
 
             state.mediaRecorder.ondataavailable = (event) => {
@@ -251,6 +257,8 @@ const AudioRecorder = (function() {
             setWebGazerActive(true);
 
             updateRecordingUI();
+
+            if (config.onRecordingStart) config.onRecordingStart();
         } catch (error) {
             console.error('Error starting recording:', error);
             alert('Could not access microphone. Recording will only capture keystrokes.');
@@ -268,6 +276,8 @@ const AudioRecorder = (function() {
             setWebGazerActive(true);
 
             updateRecordingUI();
+
+            if (config.onRecordingStart) config.onRecordingStart();
         }
     }
 
@@ -290,6 +300,8 @@ const AudioRecorder = (function() {
         setWebGazerActive(false);
 
         updateRecordingUI();
+
+        if (config.onRecordingStop) config.onRecordingStop();
     }
 
     // Toggle recording

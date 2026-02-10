@@ -902,7 +902,13 @@
 
                 return { x: Math.min(gridX, 5), y: Math.min(gridY, 5) };
             },
-            insertBeforeSelector: '#download-button'
+            insertBeforeSelector: '#download-button',
+            onRecordingStart: () => {
+                S3Uploader.startBackups(sessionCode, 'Game A', () => AudioRecorder.getState().audioChunks);
+            },
+            onRecordingStop: () => {
+                S3Uploader.stopBackups();
+            }
         });
     </script>
 </body>

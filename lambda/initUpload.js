@@ -12,7 +12,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 const BUCKET_NAME = process.env.BUCKET_NAME || 'gamestudy-data';
-const EXPIRATION_SECONDS = 300; // 5 minutes
+const EXPIRATION_SECONDS = 10800; // 3 hours
 
 const ALLOWED_ORIGINS = [
     'https://marksantolucito.com',

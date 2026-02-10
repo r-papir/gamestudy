@@ -981,7 +981,13 @@
                 'r': 'restart_level',
                 'R': 'restart_level'
             },
-            insertBeforeSelector: '#download-button'
+            insertBeforeSelector: '#download-button',
+            onRecordingStart: () => {
+                S3Uploader.startBackups(sessionCode, 'Game C', () => AudioRecorder.getState().audioChunks);
+            },
+            onRecordingStop: () => {
+                S3Uploader.stopBackups();
+            }
         });
     </script>
 </body>
