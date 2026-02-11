@@ -123,15 +123,17 @@ const S3Uploader = (function() {
         uploadStatus = 'uploading';
 
         try {
-            // Step 1: Initialize upload session (reuse backup session if active)
+            // Step 1: Initialize upload session (reuse backup session if available and valid)
             let basePath, audioUploadUrl, audioKey;
-            if (backupSession) {
+            if (backupSession && backupSession.basePath && backupSession.audioUploadUrl) {
                 basePath = backupSession.basePath;
                 audioUploadUrl = backupSession.audioUploadUrl;
                 audioKey = backupSession.audioKey;
                 onProgress && onProgress('Reusing backup session...');
+                console.log('S3Uploader: Reusing backup session', basePath);
             } else {
                 onProgress && onProgress('Initializing upload...');
+                console.log('S3Uploader: Creating new upload session');
                 const initResult = await initUpload(sessionCode, gameName);
                 basePath = initResult.basePath;
                 audioUploadUrl = initResult.audioUploadUrl;
@@ -245,6 +247,7 @@ const S3Uploader = (function() {
             clearInterval(backupInterval);
             backupInterval = null;
         }
+        // Don't clear backupSession — uploadSession() will reuse it for the final upload
     }
 
     // Public API
