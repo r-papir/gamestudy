@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Stats Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Trebuchet MS', sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 8px;
+            font-weight: normal;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 40px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            border: 2px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 24px 16px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: normal;
+            margin: 32px 0 16px;
+            text-align: left;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 32px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            font-weight: bold;
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            font-size: 15px;
+        }
+
+        .error {
+            color: #c0392b;
+            padding: 20px;
+            border: 1px solid #c0392b;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .loading {
+            color: #999;
+            font-size: 16px;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Study Stats Dashboard</h1>
+        <div class="subtitle" id="refresh-info">Loading...</div>
+
+        <div id="content">
+            <div class="loading">Fetching stats...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod/stats';
+        const REFRESH_INTERVAL = 30000;
+
+        async function fetchStats() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                renderStats(data);
+                document.getElementById('refresh-info').textContent =
+                    'Last updated: ' + new Date().toLocaleTimeString() + ' (auto-refreshes every 30s)';
+            } catch (err) {
+                document.getElementById('content').innerHTML =
+                    '<div class="error">Failed to load stats: ' + escapeHtml(err.message) + '</div>';
+                document.getElementById('refresh-info').textContent =
+                    'Error — retrying in 30s';
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function renderStats(data) {
+            const recentDate = data.mostRecentUpload
+                ? new Date(data.mostRecentUpload).toLocaleString()
+                : 'None';
+
+            let html = '<div class="stats-grid">';
+            html += statCard(data.totalSessions, 'Total Sessions');
+            html += statCard(data.totalFiles, 'Total Files');
+            html += statCard(Object.keys(data.sessionsByGame).length, 'Games');
+            html += statCard(Object.keys(data.sessionsByDate).length, 'Active Days');
+            html += '</div>';
+
+            html += '<div class="stats-grid">';
+            html += statCard(recentDate, 'Most Recent Upload');
+            html += '</div>';
+
+            // Sessions by game
+            const gameEntries = Object.entries(data.sessionsByGame).sort((a, b) => b[1] - a[1]);
+            if (gameEntries.length > 0) {
+                html += '<h2>Sessions by Game</h2>';
+                html += '<table><tr><th>Game</th><th>Sessions</th></tr>';
+                for (const [game, count] of gameEntries) {
+                    html += '<tr><td>' + escapeHtml(game) + '</td><td>' + count + '</td></tr>';
+                }
+                html += '</table>';
+            }
+
+            // Sessions by date
+            const dateEntries = Object.entries(data.sessionsByDate).sort((a, b) => b[0].localeCompare(a[0]));
+            if (dateEntries.length > 0) {
+                html += '<h2>Sessions by Date</h2>';
+                html += '<table><tr><th>Date</th><th>Sessions</th></tr>';
+                for (const [date, count] of dateEntries) {
+                    html += '<tr><td>' + escapeHtml(date) + '</td><td>' + count + '</td></tr>';
+                }
+                html += '</table>';
+            }
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function statCard(value, label) {
+            return '<div class="stat-card">' +
+                '<div class="stat-value">' + escapeHtml(String(value)) + '</div>' +
+                '<div class="stat-label">' + escapeHtml(label) + '</div>' +
+                '</div>';
+        }
+
+        fetchStats();
+        setInterval(fetchStats, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>
