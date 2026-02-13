@@ -705,21 +705,22 @@ const AudioRecorder = (function() {
             }
             .audio-recorder-pause-btn {
                 display: none;
-                background: none;
-                border: none;
+                background-color: #333;
+                border: 2px solid #555;
+                border-radius: 5px;
                 cursor: pointer;
-                padding: 4px;
+                padding: 6px 10px;
                 margin-left: 8px;
                 vertical-align: middle;
             }
+            .audio-recorder-pause-btn:hover {
+                background-color: #555;
+            }
             .audio-recorder-pause-btn svg {
-                width: 28px;
-                height: 28px;
+                width: 22px;
+                height: 22px;
                 fill: white;
                 vertical-align: middle;
-            }
-            .audio-recorder-pause-btn:hover svg {
-                fill: #ccc;
             }
         `;
         document.head.appendChild(style);
