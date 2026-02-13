@@ -477,7 +477,7 @@ const AudioRecorder = (function() {
 
     // Export recording
     function exportRecording(participantId, gameLabel) {
-        if (state.keystrokes.length === 0 && state.gazeData.length === 0) {
+        if (state.keystrokes.length === 0 && state.gazeData.length === 0 && state.audioChunks.length === 0) {
             alert('No recording data to export');
             return;
         }
