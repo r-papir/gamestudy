@@ -636,6 +636,9 @@
 
         // Handle download button click
         document.getElementById('download-button').addEventListener('click', () => {
+            const participantId = AudioRecorder.promptParticipantId();
+            if (participantId === null) return;
+
             sessionData.sessionEnd = new Date().toISOString();
 
             // Include transcription data from audio recorder (with safety check)
@@ -661,19 +664,20 @@
                 }
             );
 
+            const dateStr = AudioRecorder.formatDateMMDDYYYY();
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `puzzle-game2-state-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+            a.download = `${participantId}_gB_gamestate_${dateStr}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Export eye-tracking and audio files (with safety check)
+            // Export eye-tracking and audio files
             if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
-                AudioRecorder.exportRecording();
+                AudioRecorder.exportRecording(participantId, 'gB');
             }
         });
 

@@ -446,14 +446,44 @@ const AudioRecorder = (function() {
         }
     }
 
+    // Format date as MMDDYYYY
+    function formatDateMMDDYYYY() {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        return `${mm}${dd}${yyyy}`;
+    }
+
+    // Prompt for participant ID with validation (P + 3 digits)
+    function promptParticipantId() {
+        while (true) {
+            const input = prompt('Please enter the Participant ID:');
+            if (input === null) return null; // cancelled
+
+            const trimmed = input.trim();
+
+            // Accept "P001" or "001" format
+            if (/^P\d{3}$/i.test(trimmed)) {
+                return 'P' + trimmed.slice(1);
+            }
+            if (/^\d{3}$/.test(trimmed)) {
+                return 'P' + trimmed;
+            }
+
+            alert('Invalid Participant ID. Please enter P followed by a 3-digit number (e.g., P001 or 001).');
+        }
+    }
+
     // Export recording
-    function exportRecording() {
+    function exportRecording(participantId, gameLabel) {
         if (state.keystrokes.length === 0 && state.gazeData.length === 0) {
             alert('No recording data to export');
             return;
         }
 
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const dateStr = formatDateMMDDYYYY();
+        const prefix = participantId && gameLabel ? `${participantId}_${gameLabel}` : config.gamePrefix;
 
         // Create export object for game states, speech, and movement data (no gaze)
         const exportData = {
@@ -591,7 +621,7 @@ const AudioRecorder = (function() {
             const eyeTrackingUrl = URL.createObjectURL(eyeTrackingBlob);
             const eyeTrackingLink = document.createElement('a');
             eyeTrackingLink.href = eyeTrackingUrl;
-            eyeTrackingLink.download = `${config.gamePrefix}-eye-tracking-${timestamp}.json`;
+            eyeTrackingLink.download = `${prefix}_eyetracking_${dateStr}.json`;
             document.body.appendChild(eyeTrackingLink);
             eyeTrackingLink.click();
             document.body.removeChild(eyeTrackingLink);
@@ -604,7 +634,7 @@ const AudioRecorder = (function() {
             const audioUrl = URL.createObjectURL(audioBlob);
             const audioLink = document.createElement('a');
             audioLink.href = audioUrl;
-            audioLink.download = `${config.gamePrefix}-audio-${timestamp}.webm`;
+            audioLink.download = `${prefix}_audio_${dateStr}.webm`;
             document.body.appendChild(audioLink);
             audioLink.click();
             document.body.removeChild(audioLink);
@@ -857,6 +887,8 @@ const AudioRecorder = (function() {
         isPaused: () => state.isPaused,
         getState: () => ({ ...state }),
         getTranscription,
+        promptParticipantId,
+        formatDateMMDDYYYY,
         pauseRecording,
         resumeRecording,
         exportRecording
