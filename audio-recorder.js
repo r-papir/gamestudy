@@ -802,9 +802,14 @@ const AudioRecorder = (function() {
         // Initialize WebGazer (async, non-blocking)
         initWebGazer().then(success => {
             if (success) {
+                if (state.isRecording && !state.isPaused) {
+                    // Recording already started before WebGazer was ready — keep it active
+                    setWebGazerActive(true);
+                } else {
+                    // Pause until recording starts
+                    setWebGazerActive(false);
+                }
                 updateStatusMessage('Ready to record (eye tracking enabled)');
-                // Pause until recording starts
-                setWebGazerActive(false);
             }
         });
 
