@@ -178,6 +178,55 @@
         #webgazerGazeDot {
             display: none !important;
         }
+
+        .completion-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            cursor: pointer;
+        }
+        .completion-overlay.visible { opacity: 1; }
+        .completion-card {
+            background: white;
+            border-radius: 16px;
+            padding: 48px 56px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-family: "Trebuchet MS", sans-serif;
+        }
+        .completion-overlay.visible .completion-card { transform: scale(1); }
+        .completion-card h2 {
+            margin: 0 0 12px;
+            font-size: 28px;
+            color: #333;
+        }
+        .completion-card p {
+            margin: 0;
+            font-size: 16px;
+            color: #888;
+        }
+        .confetti-piece {
+            position: fixed;
+            top: -10px;
+            width: 10px;
+            height: 14px;
+            z-index: 10000;
+            opacity: 1;
+            animation: confetti-fall linear forwards;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            85% { opacity: 1; }
+            100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -526,9 +575,43 @@
                         instructionsElement.classList.remove('fade-out');
                         document.getElementById('restart-button').style.display = 'block';
                         handleGameComplete();
+                        showCompletionMessage('B');
                     }
                 }, 800);
             }
+        }
+
+        function showCompletionMessage(puzzleLetter) {
+            const overlay = document.createElement('div');
+            overlay.className = 'completion-overlay';
+            overlay.innerHTML = '<div class="completion-card">' +
+                '<h2>Congratulations!</h2>' +
+                '<p>You completed all levels of Puzzle ' + puzzleLetter + '.</p>' +
+                '</div>';
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+
+            const colors = ['#e53935','#1e88e5','#43a047','#fdd835','#8e24aa','#fb8c00','#00acc1'];
+            for (let i = 0; i < 80; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+                piece.style.animationDelay = Math.random() * 1.5 + 's';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.width = (6 + Math.random() * 8) + 'px';
+                piece.style.height = (8 + Math.random() * 10) + 'px';
+                document.body.appendChild(piece);
+            }
+
+            overlay.addEventListener('click', () => {
+                overlay.classList.remove('visible');
+                setTimeout(() => {
+                    overlay.remove();
+                    document.querySelectorAll('.confetti-piece').forEach(p => p.remove());
+                }, 500);
+            });
         }
 
         // Create ripple effect on win
