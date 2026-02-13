@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Stats Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Trebuchet MS', sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 900px;
+            padding: 40px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 8px;
+            font-weight: normal;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 40px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            border: 2px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 24px 16px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .stat-value.small {
+            font-size: 22px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: normal;
+            margin: 32px 0 16px;
+            text-align: left;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 32px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            font-weight: bold;
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            font-size: 15px;
+        }
+
+        .error {
+            color: #c0392b;
+            padding: 20px;
+            border: 1px solid #c0392b;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .loading {
+            color: #999;
+            font-size: 16px;
+            padding: 40px;
+        }
+
+        .muted {
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Study Stats Dashboard</h1>
+        <div class="subtitle" id="refresh-info">Loading...</div>
+
+        <div id="content">
+            <div class="loading">Fetching stats...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod/stats';
+        const REFRESH_INTERVAL = 30000;
+
+        async function fetchStats() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                renderStats(data);
+                document.getElementById('refresh-info').textContent =
+                    'Last updated: ' + new Date().toLocaleTimeString() + ' (auto-refreshes every 30s)';
+            } catch (err) {
+                document.getElementById('content').innerHTML =
+                    '<div class="error">Failed to load stats: ' + escapeHtml(err.message) + '</div>';
+                document.getElementById('refresh-info').textContent =
+                    'Error — retrying in 30s';
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatDuration(ms) {
+            if (ms == null) return '—';
+            const totalSec = Math.round(ms / 1000);
+            const min = Math.floor(totalSec / 60);
+            const sec = totalSec % 60;
+            return min + ':' + String(sec).padStart(2, '0');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes == null || bytes === 0) return '—';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function formatNumber(n) {
+            if (n == null) return '—';
+            return n.toLocaleString();
+        }
+
+        function renderStats(data) {
+            const recentDate = data.mostRecentUpload
+                ? new Date(data.mostRecentUpload).toLocaleString()
+                : 'None';
+
+            const avg = data.averages || {};
+
+            let html = '<div class="stats-grid">';
+            html += statCard(data.totalSessions, 'Total Sessions');
+            html += statCard(data.totalFiles, 'Total Files');
+            html += statCard(Object.keys(data.sessionsByGame).length, 'Games');
+            html += statCard(Object.keys(data.sessionsByDate).length, 'Active Days');
+            html += '</div>';
+
+            html += '<div class="stats-grid">';
+            html += statCard(recentDate, 'Most Recent Upload', true);
+            html += '</div>';
+
+            // Averages
+            html += '<h2>Averages per Session</h2>';
+            html += '<div class="stats-grid">';
+            html += statCard(formatDuration(avg.durationMs), 'Avg Recording Length');
+            html += statCard(formatNumber(avg.actionCount), 'Avg Game Actions');
+            html += statCard(formatNumber(avg.gazePointCount), 'Avg Gaze Points');
+            html += statCard(formatBytes(avg.audioSizeBytes), 'Avg Audio Size');
+            html += '</div>';
+
+            // Sessions by game
+            const gameEntries = Object.entries(data.sessionsByGame).sort((a, b) => b[1] - a[1]);
+            if (gameEntries.length > 0) {
+                html += '<h2>Sessions by Game</h2>';
+                html += '<table><tr><th>Game</th><th>Sessions</th></tr>';
+                for (const [game, count] of gameEntries) {
+                    html += '<tr><td>' + escapeHtml(game) + '</td><td>' + count + '</td></tr>';
+                }
+                html += '</table>';
+            }
+
+            // Sessions by date
+            const dateEntries = Object.entries(data.sessionsByDate).sort((a, b) => b[0].localeCompare(a[0]));
+            if (dateEntries.length > 0) {
+                html += '<h2>Sessions by Date</h2>';
+                html += '<table><tr><th>Date</th><th>Sessions</th></tr>';
+                for (const [date, count] of dateEntries) {
+                    html += '<tr><td>' + escapeHtml(date) + '</td><td>' + count + '</td></tr>';
+                }
+                html += '</table>';
+            }
+
+            // Session details table
+            const details = data.sessionDetails || [];
+            if (details.length > 0) {
+                // Sort by date descending, then sessionId
+                details.sort((a, b) => {
+                    const dc = b.date.localeCompare(a.date);
+                    return dc !== 0 ? dc : a.sessionId.localeCompare(b.sessionId);
+                });
+
+                html += '<h2>Session Details</h2>';
+                html += '<table>';
+                html += '<tr><th>Date</th><th>Session</th><th>Game</th><th>Duration</th><th>Actions</th><th>Gaze Pts</th><th>Audio Size</th></tr>';
+                for (const d of details) {
+                    html += '<tr>';
+                    html += '<td>' + escapeHtml(d.date) + '</td>';
+                    html += '<td>' + escapeHtml(d.sessionId) + '</td>';
+                    html += '<td>' + escapeHtml(d.game) + '</td>';
+                    html += '<td>' + formatDuration(d.durationMs) + '</td>';
+                    html += '<td>' + formatNumber(d.actionCount) + '</td>';
+                    html += '<td>' + formatNumber(d.gazePointCount) + '</td>';
+                    html += '<td>' + formatBytes(d.audioSizeBytes) + '</td>';
+                    html += '</tr>';
+                }
+                html += '</table>';
+            }
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function statCard(value, label, small) {
+            const cls = small ? ' small' : '';
+            return '<div class="stat-card">' +
+                '<div class="stat-value' + cls + '">' + escapeHtml(String(value)) + '</div>' +
+                '<div class="stat-label">' + escapeHtml(label) + '</div>' +
+                '</div>';
+        }
+
+        fetchStats();
+        setInterval(fetchStats, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>

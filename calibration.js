@@ -82,12 +82,12 @@ const Calibration = (function() {
             // This prevents "t is not a function" errors from loading bad data
             localStorage.removeItem('webgazerGlobalData');
 
-            // Configure WebGazer BEFORE calling begin() - this is critical
-            // Disable saving across sessions to prevent loading corrupted data
-            webgazer.saveDataAcrossSessions(false);
-
             // Initialize WebGazer
             await webgazer.begin();
+
+            // Configure AFTER begin() to avoid "t is not a function" errors
+            // from calling methods before internal state is initialized
+            webgazer.saveDataAcrossSessions(false);
 
             // Show video preview during calibration for user feedback
             webgazer.showVideoPreview(true);

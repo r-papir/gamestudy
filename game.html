@@ -202,8 +202,10 @@
     <button id="restart-button">Start Over</button>
     <button id="download-button">Download Data</button>
 
-    <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+    <script src="webgazer.js"></script>
     <script src="audio-recorder.js"></script>
+    <script src="s3-uploader.js"></script>
+    <script>S3Uploader.setApiUrl('https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod');</script>
     <script>
         // Get or generate shared 4-digit session code (persists across all games in same session)
         let sessionCode = sessionStorage.getItem('gameSessionCode');
@@ -495,10 +497,11 @@
                         if (currentLevelIndex < levels.length) {
                             loadLevel(currentLevelIndex);
                         } else {
-                            // Game complete - show restart button
+                            // Game complete - show restart button and upload data
                             gridElement.classList.remove('fade-out');
                             instructionsElement.classList.remove('fade-out');
                             document.getElementById('restart-button').style.display = 'block';
+                            handleGameComplete();
                         }
                     }, 1200);
                 }, 800);
@@ -658,6 +661,68 @@
                 AudioRecorder.exportRecording();
             }
         });
+
+        // S3 Upload Functions
+        function showUploadStatus(message, type) {
+            let statusEl = document.getElementById('upload-status');
+            if (!statusEl) {
+                statusEl = document.createElement('div');
+                statusEl.id = 'upload-status';
+                statusEl.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #333; color: white; border-radius: 8px; z-index: 1000; font-family: sans-serif; font-size: 14px; transition: opacity 0.3s;';
+                document.body.appendChild(statusEl);
+            }
+            statusEl.textContent = message;
+            statusEl.style.background = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#1565c0';
+        }
+
+        async function handleGameComplete() {
+            // Prepare session data
+            sessionData.sessionEnd = new Date().toISOString();
+            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+                ? AudioRecorder.getTranscription()
+                : [];
+
+            // Get eye tracking and audio data from AudioRecorder
+            const recorderState = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getState)
+                ? AudioRecorder.getState()
+                : { gazeData: [], audioChunks: [] };
+
+            const eyeTrackingData = {
+                game: sessionData.game,
+                dataType: 'eye-tracking',
+                sessionStart: sessionData.sessionStart,
+                sessionEnd: sessionData.sessionEnd,
+                gaze: recorderState.gazeData || []
+            };
+
+            // Check if S3Uploader is configured
+            if (typeof S3Uploader === 'undefined' || !S3Uploader.getApiUrl()) {
+                console.log('S3Uploader not configured. Skipping upload.');
+                return;
+            }
+
+            // Upload to S3
+            showUploadStatus('Uploading session data...', 'uploading');
+
+            const result = await S3Uploader.upload(
+                sessionCode,
+                sessionData.game,
+                sessionData,
+                eyeTrackingData,
+                recorderState.audioChunks,
+                (status) => showUploadStatus(status, 'uploading')
+            );
+
+            if (result.success) {
+                showUploadStatus('Data uploaded successfully!', 'success');
+                setTimeout(() => {
+                    const statusEl = document.getElementById('upload-status');
+                    if (statusEl) statusEl.style.opacity = '0';
+                }, 3000);
+            } else {
+                showUploadStatus('Upload failed. Use Download button as backup.', 'error');
+            }
+        }
 
         // Level functions
         function level1() {
@@ -837,7 +902,13 @@
 
                 return { x: Math.min(gridX, 5), y: Math.min(gridY, 5) };
             },
-            insertBeforeSelector: '#download-button'
+            insertBeforeSelector: '#download-button',
+            onRecordingStart: () => {
+                S3Uploader.startBackups(sessionCode, 'Game A', () => AudioRecorder.getState().audioChunks);
+            },
+            onRecordingStop: () => {
+                S3Uploader.stopBackups();
+            }
         });
     </script>
 </body>
