@@ -810,6 +810,11 @@ const AudioRecorder = (function() {
                     setWebGazerActive(false);
                 }
                 updateStatusMessage('Ready to record (eye tracking enabled)');
+            } else {
+                if (elements.statusDiv) {
+                    elements.statusDiv.textContent = '⚠ Eye tracking unavailable — try reloading the page';
+                    elements.statusDiv.style.color = '#c62828';
+                }
             }
         });
 
