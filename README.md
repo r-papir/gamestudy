@@ -1,26 +1,3 @@
-# Game Study
+# Research Study: Mechanisms of Causal Reasoning
 
-## Running Locally
-
-Audio recording requires HTTPS. Generate a certificate and start the server:
-
-```bash
-openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
-
-python3 https_server.py
-```
-
-Then visit https://localhost:8443/game.html (accept the certificate warning).
-
-## Data Format
-
-Exported JSON contains:
-- `session`: gameId, startTime, duration
-- `frames`: keystroke actions with game state
-- `gaze`: array of `[gridX, gridY, timestamp]` tuples (null values = off-grid)
-
-## Known Inconsistencies
-
-### game2.html
-- Uses 1-indexed grid coordinates (1-5) while game.html (0-5) and game3.html (0-6) use 0-indexed
-- Does not have a `generateGameStateMatrix()` function like the other games; grid state is captured differently in `getGameState()`
+Neurosymbolic approaches to artificial intelligence (AI) move beyond traditional deep learning by integrating neural networks and symbolic systems, yielding enhancements in the interpretability, robustness, and efficiency of AI. This hybrid paradigm enables models to not only recognize patterns, but also manipulate abstract rules and reason over novel combinations of learned concepts, more closely mirroring the flexibility of human cognition. Although neurosymbolic AI appears to outperform earlier machine learning approaches, and multi-level optimization approaches and agentic reasoning paradigms (like ReAct's *think-act-observe* loop) have achieved remarkable performance across many domains, AI systems overall continue to struggle with tasks requiring causal inference, generalization from sparse data, and flexible problem-solving in novel environments, all areas where human cognition excels. To investigate these disparities, I developed three original, instructionless grid-games with four to five levels each, wherein 100+ participants solve puzzles through real-time hypothesis testing and environment-driven exploration. Multimodal data was collected while participants navigated the puzzles; their verbal reasoning traces were elicited using a think-aloud protocol while quantitative data was automatically obtained, including eye-tracking, keystroke logs, timestamps, and game states of each participant. Data was evaluated using a three-pronged analytical approach; first through grounded theory analysis, verbal learning markers were tracked across concurrent trajectories of mechanic-based and objective-based exploration, and then classified into a taxonomy of knowledge acquisition using natural language processing for feature extraction. Subsequent dynamic programming algorithms were used to evaluate Hidden Markov Models of knowledge acquisition in binary and ternary frameworks. Finally, (3) mixed-effects regression analysis was used to determine whether relative puzzle performance could be predicted from verbal reasoning traces. Preliminary findings support a proposed update to the traditional explore-exploit framework by introducing a third, intermediary mechanism, ‘establish’, which encompasses the hypothesis-testing and confirmatory behaviors that bridge exploration and exploitation in human learning from sparse data. My broader objective is to leverage this insight in fine-tuned machine learning architectures, with implications for the design of human-centric, neurosymbolic systems, innovations in zero- and few-shot learning, and improving world models. Full results will be reported in the final paper, anticipated May 2026.
