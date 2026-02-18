@@ -1,5 +1,5 @@
 # Research Study: Mechanisms of Causal Reasoning
-<img src="CogSciLogo.png" alt="CogSci Logo" width="400" align="right">
+<img src="CogSciLogo.png" alt="CogSci Logo" width="350" align="right">
 
 **By Rachel Papirmeister**
 
