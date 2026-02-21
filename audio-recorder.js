@@ -13,7 +13,10 @@ const AudioRecorder = (function() {
     // Recording state
     const state = {
         isRecording: false,
+        isPaused: false,
         startTime: null,
+        pausedElapsed: 0,       // Total time spent paused (ms)
+        pauseStartTime: null,   // When the current pause began
         keystrokes: [],
         audioData: null,
         transcription: [],
@@ -41,6 +44,7 @@ const AudioRecorder = (function() {
     // DOM elements
     let elements = {
         recordBtn: null,
+        pauseBtn: null,
         statusDiv: null,
         container: null
     };
@@ -78,8 +82,8 @@ const AudioRecorder = (function() {
             await webgazer.begin();
 
             webgazer.setGazeListener((data, timestamp) => {
-                if (data && state.isRecording) {
-                    const relativeTimestamp = Date.now() - state.startTime;
+                if (data && state.isRecording && !state.isPaused) {
+                    const relativeTimestamp = getElapsedTime();
 
                     // Convert to grid coordinates if screenToGrid function provided
                     if (config.screenToGrid) {
@@ -145,7 +149,7 @@ const AudioRecorder = (function() {
 
     // Record a keystroke event
     function recordKeystroke(key, action, timestamp) {
-        if (!state.isRecording) return;
+        if (!state.isRecording || state.isPaused) return;
 
         const frame = config.getGameState();
 
@@ -201,7 +205,7 @@ const AudioRecorder = (function() {
                 state.recognition.onresult = (event) => {
                     for (let i = event.resultIndex; i < event.results.length; i++) {
                         const transcript = event.results[i][0].transcript;
-                        const timestamp = Date.now() - state.startTime;
+                        const timestamp = getElapsedTime();
                         const isFinal = event.results[i].isFinal;
                         const confidence = event.results[i][0].confidence;
 
@@ -222,7 +226,7 @@ const AudioRecorder = (function() {
                 };
 
                 state.recognition.onend = () => {
-                    if (state.isRecording) {
+                    if (state.isRecording && !state.isPaused) {
                         setTimeout(() => {
                             try {
                                 state.recognition.start();
@@ -246,6 +250,9 @@ const AudioRecorder = (function() {
             // Start recording
             state.mediaRecorder.start(1000);
             state.isRecording = true;
+            state.isPaused = false;
+            state.pausedElapsed = 0;
+            state.pauseStartTime = null;
             state.startTime = Date.now();
             state.keystrokes = [];
             state.transcription = [];
@@ -265,6 +272,9 @@ const AudioRecorder = (function() {
 
             // Start keystroke-only recording
             state.isRecording = true;
+            state.isPaused = false;
+            state.pausedElapsed = 0;
+            state.pauseStartTime = null;
             state.startTime = Date.now();
             state.keystrokes = [];
             state.transcription = [];
@@ -284,8 +294,13 @@ const AudioRecorder = (function() {
     // Stop recording
     function stopRecording() {
         state.isRecording = false;
+        state.isPaused = false;
 
         if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+            // Resume first if paused, so pending data is flushed
+            if (state.mediaRecorder.state === 'paused') {
+                state.mediaRecorder.resume();
+            }
             // Request any pending data before stopping
             state.mediaRecorder.requestData();
             state.mediaRecorder.stop();
@@ -302,6 +317,71 @@ const AudioRecorder = (function() {
         updateRecordingUI();
 
         if (config.onRecordingStop) config.onRecordingStop();
+    }
+
+    // Get effective elapsed time, excluding paused durations
+    function getElapsedTime() {
+        if (!state.startTime) return 0;
+        const now = Date.now();
+        const totalElapsed = now - state.startTime;
+        const currentPauseDuration = state.isPaused ? (now - state.pauseStartTime) : 0;
+        return totalElapsed - state.pausedElapsed - currentPauseDuration;
+    }
+
+    // Pause recording
+    function pauseRecording() {
+        if (!state.isRecording || state.isPaused) return;
+
+        state.isPaused = true;
+        state.pauseStartTime = Date.now();
+
+        // Pause MediaRecorder (audio won't include paused time)
+        if (state.mediaRecorder && state.mediaRecorder.state === 'recording') {
+            state.mediaRecorder.pause();
+        }
+
+        // Stop speech recognition during pause
+        if (state.recognition) {
+            try {
+                state.recognition.stop();
+            } catch (e) {
+                console.error('Failed to stop speech recognition on pause:', e);
+            }
+        }
+
+        // Pause eye tracking
+        setWebGazerActive(false);
+
+        updateRecordingUI();
+    }
+
+    // Resume recording
+    function resumeRecording() {
+        if (!state.isRecording || !state.isPaused) return;
+
+        // Accumulate paused duration
+        state.pausedElapsed += Date.now() - state.pauseStartTime;
+        state.pauseStartTime = null;
+        state.isPaused = false;
+
+        // Resume MediaRecorder
+        if (state.mediaRecorder && state.mediaRecorder.state === 'paused') {
+            state.mediaRecorder.resume();
+        }
+
+        // Restart speech recognition
+        if (state.recognition) {
+            try {
+                state.recognition.start();
+            } catch (e) {
+                console.error('Failed to restart speech recognition on resume:', e);
+            }
+        }
+
+        // Resume eye tracking
+        setWebGazerActive(true);
+
+        updateRecordingUI();
     }
 
     // Toggle recording
@@ -323,11 +403,29 @@ const AudioRecorder = (function() {
         if (state.isRecording) {
             elements.recordBtn.textContent = 'Stop Recording';
             elements.recordBtn.classList.add('recording');
-            elements.statusDiv.textContent = 'Recording gameplay and audio...';
-            elements.statusDiv.classList.add('active');
+
+            if (state.isPaused) {
+                elements.recordBtn.classList.remove('recording');
+                // Show play (resume) icon
+                elements.pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5,3 21,12 5,21"/></svg>';
+                elements.pauseBtn.title = 'Resume recording';
+                elements.pauseBtn.style.display = 'inline-block';
+                elements.statusDiv.textContent = 'Recording paused';
+                elements.statusDiv.classList.remove('active');
+                elements.statusDiv.classList.add('paused');
+            } else {
+                // Show pause icon
+                elements.pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18"/><rect x="14" y="3" width="5" height="18"/></svg>';
+                elements.pauseBtn.title = 'Pause recording';
+                elements.pauseBtn.style.display = 'inline-block';
+                elements.statusDiv.textContent = 'Recording gameplay and audio...';
+                elements.statusDiv.classList.add('active');
+                elements.statusDiv.classList.remove('paused');
+            }
         } else {
             elements.recordBtn.textContent = 'Start Recording';
             elements.recordBtn.classList.remove('recording');
+            elements.pauseBtn.style.display = 'none';
 
             if (state.keystrokes.length > 0 || state.gazeData.length > 0) {
                 const transcriptCount = state.transcription.length;
@@ -337,6 +435,7 @@ const AudioRecorder = (function() {
                 elements.statusDiv.textContent = 'Ready to record gameplay and audio';
             }
             elements.statusDiv.classList.remove('active');
+            elements.statusDiv.classList.remove('paused');
         }
     }
 
@@ -347,14 +446,44 @@ const AudioRecorder = (function() {
         }
     }
 
+    // Format date as MMDDYYYY
+    function formatDateMMDDYYYY() {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        return `${mm}${dd}${yyyy}`;
+    }
+
+    // Prompt for participant ID with validation (P + 3 digits)
+    function promptParticipantId() {
+        while (true) {
+            const input = prompt('Please enter the Participant ID:');
+            if (input === null) return null; // cancelled
+
+            const trimmed = input.trim();
+
+            // Accept "P001" or "001" format
+            if (/^P\d{3}$/i.test(trimmed)) {
+                return 'P' + trimmed.slice(1);
+            }
+            if (/^\d{3}$/.test(trimmed)) {
+                return 'P' + trimmed;
+            }
+
+            alert('Invalid Participant ID. Please enter P followed by a 3-digit number (e.g., P001 or 001).');
+        }
+    }
+
     // Export recording
-    function exportRecording() {
-        if (state.keystrokes.length === 0 && state.gazeData.length === 0) {
+    function exportRecording(participantId, gameLabel) {
+        if (state.keystrokes.length === 0 && state.gazeData.length === 0 && state.audioChunks.length === 0) {
             alert('No recording data to export');
             return;
         }
 
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const dateStr = formatDateMMDDYYYY();
+        const prefix = participantId && gameLabel ? `${participantId}_${gameLabel}` : config.gamePrefix;
 
         // Create export object for game states, speech, and movement data (no gaze)
         const exportData = {
@@ -492,7 +621,7 @@ const AudioRecorder = (function() {
             const eyeTrackingUrl = URL.createObjectURL(eyeTrackingBlob);
             const eyeTrackingLink = document.createElement('a');
             eyeTrackingLink.href = eyeTrackingUrl;
-            eyeTrackingLink.download = `${config.gamePrefix}-eye-tracking-${timestamp}.json`;
+            eyeTrackingLink.download = `${prefix}_eyetracking_${dateStr}.json`;
             document.body.appendChild(eyeTrackingLink);
             eyeTrackingLink.click();
             document.body.removeChild(eyeTrackingLink);
@@ -505,7 +634,7 @@ const AudioRecorder = (function() {
             const audioUrl = URL.createObjectURL(audioBlob);
             const audioLink = document.createElement('a');
             audioLink.href = audioUrl;
-            audioLink.download = `${config.gamePrefix}-audio-${timestamp}.webm`;
+            audioLink.download = `${prefix}_audio_${dateStr}.webm`;
             document.body.appendChild(audioLink);
             audioLink.click();
             document.body.removeChild(audioLink);
@@ -571,6 +700,28 @@ const AudioRecorder = (function() {
             .audio-recorder-status.active {
                 color: #ff6666;
             }
+            .audio-recorder-status.paused {
+                color: #ffaa00;
+            }
+            .audio-recorder-pause-btn {
+                display: none;
+                background-color: #333;
+                border: 2px solid #555;
+                border-radius: 5px;
+                cursor: pointer;
+                padding: 6px 10px;
+                margin-left: 8px;
+                vertical-align: middle;
+            }
+            .audio-recorder-pause-btn:hover {
+                background-color: #555;
+            }
+            .audio-recorder-pause-btn svg {
+                width: 22px;
+                height: 22px;
+                fill: white;
+                vertical-align: middle;
+            }
         `;
         document.head.appendChild(style);
 
@@ -591,6 +742,25 @@ const AudioRecorder = (function() {
             }
         };
 
+        // Create pause/resume button with SVG icons
+        elements.pauseBtn = document.createElement('button');
+        elements.pauseBtn.className = 'audio-recorder-pause-btn';
+        elements.pauseBtn.title = 'Pause recording';
+        elements.pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18"/><rect x="14" y="3" width="5" height="18"/></svg>';
+        elements.pauseBtn.onclick = function() {
+            if (state.isPaused) {
+                resumeRecording();
+            } else {
+                pauseRecording();
+            }
+        };
+        // Prevent spacebar/enter from triggering the button
+        elements.pauseBtn.onkeydown = function(e) {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+            }
+        };
+
         // Create status div
         elements.statusDiv = document.createElement('div');
         elements.statusDiv.className = 'audio-recorder-status';
@@ -598,17 +768,18 @@ const AudioRecorder = (function() {
 
         // Assemble container
         elements.container.appendChild(elements.recordBtn);
+        elements.container.appendChild(elements.pauseBtn);
         elements.container.appendChild(elements.statusDiv);
     }
 
     // Setup keyboard event listeners
     function setupKeyboardListeners() {
         document.addEventListener('keydown', (e) => {
-            if (state.isRecording) {
+            if (state.isRecording && !state.isPaused) {
                 // Only log keys that have a mapped action
                 const action = config.keyActionMap[e.key];
                 if (action) {
-                    const timestamp = Date.now() - state.startTime;
+                    const timestamp = getElapsedTime();
                     recordKeystroke(e.key, action, timestamp);
                 }
             }
@@ -631,9 +802,19 @@ const AudioRecorder = (function() {
         // Initialize WebGazer (async, non-blocking)
         initWebGazer().then(success => {
             if (success) {
+                if (state.isRecording && !state.isPaused) {
+                    // Recording already started before WebGazer was ready — keep it active
+                    setWebGazerActive(true);
+                } else {
+                    // Pause until recording starts
+                    setWebGazerActive(false);
+                }
                 updateStatusMessage('Ready to record (eye tracking enabled)');
-                // Pause until recording starts
-                setWebGazerActive(false);
+            } else {
+                if (elements.statusDiv) {
+                    elements.statusDiv.textContent = '⚠ Eye tracking unavailable — try reloading the page';
+                    elements.statusDiv.style.color = '#c62828';
+                }
             }
         });
 
@@ -686,8 +867,11 @@ const AudioRecorder = (function() {
             recordKeystroke,
             startRecording,
             stopRecording,
+            pauseRecording,
+            resumeRecording,
             exportRecording,
             isRecording: () => state.isRecording,
+            isPaused: () => state.isPaused,
             getContainer: () => elements.container
         };
     }
@@ -705,14 +889,19 @@ const AudioRecorder = (function() {
     return {
         init,
         recordKeystroke: (key, action) => {
-            if (state.isRecording) {
-                const timestamp = Date.now() - state.startTime;
+            if (state.isRecording && !state.isPaused) {
+                const timestamp = getElapsedTime();
                 recordKeystroke(key, action, timestamp);
             }
         },
         isRecording: () => state.isRecording,
+        isPaused: () => state.isPaused,
         getState: () => ({ ...state }),
         getTranscription,
+        promptParticipantId,
+        formatDateMMDDYYYY,
+        pauseRecording,
+        resumeRecording,
         exportRecording
     };
 })();
