@@ -16,8 +16,44 @@
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             padding: 2rem;
+        }
+        .page-layout {
+            display: flex;
+            gap: 2rem;
+            max-width: 1200px;
+            width: 100%;
+            align-items: flex-start;
+        }
+        .instructions-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 1.5rem 2rem;
+        }
+        .instructions-panel h2 {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            border-bottom: 2px solid #fee6e3;
+            padding-bottom: 0.5rem;
+        }
+        .instructions-panel ol,
+        .instructions-panel ul {
+            padding-left: 1.2rem;
+            color: #444;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+        .instructions-panel li {
+            margin-bottom: 0.4rem;
+        }
+        .instructions-panel p {
+            color: #444;
+            line-height: 1.7;
+            font-size: 0.95rem;
         }
         .container {
             background: white;
@@ -26,6 +62,17 @@
             padding: 1.5rem 2.5rem 3rem 2.5rem;
             max-width: 500px;
             width: 100%;
+            flex-shrink: 0;
+        }
+        @media (max-width: 900px) {
+            .page-layout {
+                flex-direction: column;
+                align-items: center;
+            }
+            .instructions-panel {
+                width: 100%;
+                max-width: 500px;
+            }
         }
         h1 {
             text-align: center;
@@ -80,34 +127,59 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Data Collection Portal</h1>
+    <div class="page-layout">
 
-        <div class="links">
-           
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSedlcz0ve-XO_Z0gXhFjRt_OI06E5O-8QeN42FtWF31Xv4jSg/viewform">
-                📑 Consent Form
-            </a>
-            
-           <a href="https://www.coolmathgames.com/0-just-hit-the-button">
-                👾 TAP Demo
-            </a>
-           
-            <a href="https://r-papir.github.io/gamestudy/">
-                🧩 Puzzles
-            </a>
-
-            <a href="https://drive.google.com/drive/folders/1RPdA-F2wqTCro347O5gCDNSj13udEj-q">
-                📂 Data Folder
-            </a>
-
-            <!-- NEW BUTTON: Participant Files -->
-            <!-- Change the href="#" to your actual URL -->
-            <!-- Change the emoji and label text as needed -->
-            <a href="#">
-                📁 Participant Files
-            </a>
+        <!-- LEFT INSTRUCTIONS PANEL -->
+        <div class="instructions-panel">
+            <h2>Before the Session</h2>
+            <ol>
+                <li>Your instructions here...</li>
+                <li>Your instructions here...</li>
+                <li>Your instructions here...</li>
+            </ol>
         </div>
+
+        <!-- CENTER: BUTTON MENU -->
+        <div class="container">
+            <h1>Data Collection Portal</h1>
+
+            <div class="links">
+
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSedlcz0ve-XO_Z0gXhFjRt_OI06E5O-8QeN42FtWF31Xv4jSg/viewform">
+                    📑 Consent Form
+                </a>
+
+               <a href="https://www.coolmathgames.com/0-just-hit-the-button">
+                    👾 TAP Demo
+                </a>
+
+                <a href="https://r-papir.github.io/gamestudy/">
+                    🧩 Puzzles
+                </a>
+
+                <a href="https://drive.google.com/drive/folders/1RPdA-F2wqTCro347O5gCDNSj13udEj-q">
+                    📂 Data Folder
+                </a>
+
+                <!-- NEW BUTTON: Participant Files -->
+                <!-- Change the href="#" to your actual URL -->
+                <!-- Change the emoji and label text as needed -->
+                <a href="#">
+                    📁 Participant Files
+                </a>
+            </div>
+        </div>
+
+        <!-- RIGHT INSTRUCTIONS PANEL -->
+        <div class="instructions-panel">
+            <h2>During the Session</h2>
+            <ol>
+                <li>Your instructions here...</li>
+                <li>Your instructions here...</li>
+                <li>Your instructions here...</li>
+            </ol>
+        </div>
+
     </div>
 </body>
 </html>
