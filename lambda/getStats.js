@@ -14,16 +14,26 @@ const { getCorsHeaders } = require('./cors');
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 const BUCKET_NAME = process.env.BUCKET_NAME || 'gamestudy-data';
 
+// Skip reading files larger than this (bytes) to stay within Lambda limits
+const MAX_JSON_SIZE = 2 * 1024 * 1024; // 2 MB
+
 /**
- * Read and parse a JSON object from S3. Returns null on any error.
+ * Read and parse a JSON object from S3. Returns null on any error or if
+ * the file exceeds MAX_JSON_SIZE.
  */
-async function readJsonFromS3(key) {
+async function readJsonFromS3(key, sizeBytes) {
+    if (sizeBytes && sizeBytes > MAX_JSON_SIZE) return null;
     try {
         const response = await s3Client.send(new GetObjectCommand({
             Bucket: BUCKET_NAME,
             Key: key
         }));
-        const body = await response.Body.transformToString();
+        // Consume stream manually — transformToString() can hang in some runtimes
+        const chunks = [];
+        for await (const chunk of response.Body) {
+            chunks.push(chunk);
+        }
+        const body = Buffer.concat(chunks).toString('utf-8');
         return JSON.parse(body);
     } catch {
         return null;
@@ -85,11 +95,11 @@ exports.handler = async (event) => {
                 sessionMap[sessionKey] = { date, sessionId, gameName, files: {}, audioSize: 0 };
             }
 
-            // Track which files exist for this session
+            // Track which files exist for this session (key + size)
             if (filename === 'session-data.json') {
-                sessionMap[sessionKey].files.sessionData = obj.Key;
+                sessionMap[sessionKey].files.sessionData = { key: obj.Key, size: obj.Size || 0 };
             } else if (filename === 'eye-tracking.json') {
-                sessionMap[sessionKey].files.eyeTracking = obj.Key;
+                sessionMap[sessionKey].files.eyeTracking = { key: obj.Key, size: obj.Size || 0 };
             } else if (filename === 'audio.webm') {
                 sessionMap[sessionKey].audioSize = obj.Size || 0;
             }
@@ -127,7 +137,7 @@ exports.handler = async (event) => {
 
                 // Read session-data.json for action (movement) count
                 if (info.files.sessionData) {
-                    const sessionData = await readJsonFromS3(info.files.sessionData);
+                    const sessionData = await readJsonFromS3(info.files.sessionData.key, info.files.sessionData.size);
                     if (sessionData) {
                         detail.actionCount = Array.isArray(sessionData.movements)
                             ? sessionData.movements.length : 0;
@@ -144,7 +154,7 @@ exports.handler = async (event) => {
 
                 // Read eye-tracking.json for gaze count and duration
                 if (info.files.eyeTracking) {
-                    const etData = await readJsonFromS3(info.files.eyeTracking);
+                    const etData = await readJsonFromS3(info.files.eyeTracking.key, info.files.eyeTracking.size);
                     if (etData) {
                         detail.gazePointCount = Array.isArray(etData.gaze)
                             ? etData.gaze.length : 0;
