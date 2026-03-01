@@ -12,8 +12,7 @@ class MechanicsA:
     
     on_avatar_enter(tile):
         if FX_tile.type == 'color_changing':
-            avatar_color_history.append(tile.color)  # avatar takes on peripheral tile's fixed color
-    
+            avatar_color_history.append(tile.color)  # avatar takes on peripheral tile's fixed color    
 
 def WinCondition: 
     adjacent_tiles = [above(goal_tile), below(goal_tile), left_of(goal_tile), right_of(goal_tile)]
