@@ -14,16 +14,16 @@ class MechanicsA:
         if FX_tile.type == 'color_changing':
             avatar_color_history.append(tile.color)  # avatar takes on that peripheral tile's fixed color
     
-    def WinCondition:
-    
-        adjacent_tiles = [above(goal_tile), below(goal_tile), left_of(goal_tile), right_of(goal_tile)]
+
+def WinCondition: 
+    adjacent_tiles = [above(goal_tile), below(goal_tile), left_of(goal_tile), right_of(goal_tile)]
         
-        if avatar in adjacent_tiles:
-            if avatar_color_history[-1] == goal_tile.color:
-                if avatar_color_history[-2] == GRAY:
-                    return level_complete()
-                else:
-                    return
+    if avatar in adjacent_tiles:
+        if avatar_color_history[-1] == goal_tile.color:
+            if avatar_color_history[-2] == GRAY:
+                return level_complete()
+            else:
+                return
 ```
 
 <br>
