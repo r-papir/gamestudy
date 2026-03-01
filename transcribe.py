@@ -25,7 +25,7 @@ def transcription():
     os.makedirs(output_dir, exist_ok=True)
 
     print("Loading Whisper model...")
-    model = whisper.load_model("base")
+    model = whisper.load_model("large-v3")
 
     print("Select audio files to transcribe...")
     audio_files = askopenfilenames(
@@ -43,7 +43,7 @@ def transcription():
         print(f"Processing: {os.path.basename(audio_path)}")
 
         try:
-            result = model.transcribe(audio_path)
+            result = model.transcribe(audio_path, language="en")
 
             filename = os.path.basename(audio_path).rsplit('.', 1)[0]
             output_file = os.path.join(output_dir, filename + '_transcription.txt')
