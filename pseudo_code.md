@@ -11,7 +11,7 @@ class MechanicsA:
             move(avatar, direction)  # no movement restraints
     
     on_avatar_enter(tile):
-        if tile.type == 'color_changing':
+        if FX_tile.type == 'color_changing':
             avatar_color_history.append(tile.color)  # avatar takes on that peripheral tile's fixed color
     
     def WinCondition:
@@ -51,18 +51,18 @@ class MechanicsB:
                     ignore_input()
         
         on_FX_tile_enter(tile):
-            if tile.type == 'dotted_frame':
+            if FX_tile.type == 'dotted_frame':
 
-                if tile.current_function == 'direction_change':
+                if FX_tile.current_function == 'direction_change':
                     if allowed_axes == 'horizontal':
                         allowed_axes = 'vertical'
                     elif allowed_axes == 'vertical':
                         allowed_axes = 'horizontal'
                 
-                elif tile.current_function == 'color_change':
-                    avatar.color = tile.current_color
-                    tile.current_color_index = (tile.current_color_index + 1) % len(tile.color_cycle)
-                    tile.current_color = tile.color_cycle[tile.current_color_index]
+                elif FX_tile.current_function == 'color_change':
+                    avatar.color = FX_tile.current_color
+                    FX_tile.current_color_index = (FX_tile.current_color_index + 1) % len(FX_tile.color_cycle)
+                    FX_tile.current_color = FX_tile.color_cycle[FX_tile.current_color_index]
     
     while piece_moving:     # WIN CONDITION
         if entering_goal_box:
