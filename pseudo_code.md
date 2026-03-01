@@ -3,7 +3,7 @@
 ```python
 class MechanicsA:
     def __init__(level):
-        avatar_color_history = [level.starting_color]  # pre-determined starting color per level
+        avatar_color_history = [level.starting_color]  # predetermined starting color per level
         goal_tile = level.goal_tile  # fixed, does NOT change avatar color
     
     on_input(direction):
@@ -12,7 +12,7 @@ class MechanicsA:
     
     on_avatar_enter(tile):
         if FX_tile.type == 'color_changing':
-            avatar_color_history.append(tile.color)  # avatar takes on that peripheral tile's fixed color
+            avatar_color_history.append(tile.color)  # avatar takes on peripheral tile's fixed color
     
 
 def WinCondition: 
@@ -33,7 +33,7 @@ def WinCondition:
 ```python
 class MechanicsB:
     def __init__(level):
-        allowed_axes = level.starting_axes  # 'horizontal' or 'vertical', pre-determined per level
+        allowed_axes = level.starting_axes  # horizontal or vertical, predetermined per level
     
     while avatar_moving:
         on_input(direction):
