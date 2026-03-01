@@ -33,7 +33,8 @@ def WinCondition:
 ```python
 class MechanicsB:
     def __init__(level):
-        allowed_axes = level.starting_axes  # horizontal or vertical, predetermined per level
+        allowed_axes = level.starting_axes          # horizontal or vertical, predetermined per level
+        current_dimension = level.starting_dimension  # D1 or D2, predetermined per level
     
     while avatar_moving:
         on_input(direction):
@@ -51,7 +52,14 @@ class MechanicsB:
                     ignore_input()
         
         on_FX_tile_enter(tile):
-            if FX_tile.type == 'dotted_frame':
+            if FX_tile.type == 'dimension_toggle':
+                if current_dimension == 'D1':
+                    current_dimension = 'D2'
+                elif current_dimension == 'D2':
+                    current_dimension = 'D1'
+            
+            elif FX_tile.type == 'dotted_frame':
+                FX_tile.current_function = FX_tile.get_function(current_dimension)  # lookup function in current dimension
 
                 if FX_tile.current_function == 'direction_change':
                     if allowed_axes == 'horizontal':
@@ -63,7 +71,10 @@ class MechanicsB:
                     avatar.color = FX_tile.current_color
                     FX_tile.current_color_index = (FX_tile.current_color_index + 1) % len(FX_tile.color_cycle)
                     FX_tile.current_color = FX_tile.color_cycle[FX_tile.current_color_index]
-    
+                
+                elif FX_tile.current_function == 'empty':
+                    return  # tile does not exist in this dimension; not visible to player
+
 def WinCondition:
     while piece_moving:
         if entering_goal_box:
