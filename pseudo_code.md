@@ -1,4 +1,4 @@
-##Game A Pseudo Code:##
+## Game A Pseudo Code:
 
 ```python
 def Win_Condition:
@@ -11,7 +11,7 @@ def Win_Condition:
 
 <br>
 
-##Game B Pseudo Code:##
+## Game B Pseudo Code:
 
 while avatar_moving:
         on_input(direction):
