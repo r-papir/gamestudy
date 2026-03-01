@@ -15,6 +15,5 @@ Neurosymbolic approaches to artificial intelligence (AI) move beyond traditional
 *My broader objective is to leverage this insight in constructing domain-specific machine learning architectures specialized for few-shot learning and long-horizon planning, with implications for the design of human-centric, neurosymbolic systems and improving world models.*
 
 ### For research inquiries, please email r.papirmeister@columbia.edu.
-<br>
 
 #### To see the mechanics and win conditons for my puzzles, check out my [Pseudo Code](https://github.com/r-papir/gamestudy/blob/main/pseudo_code.md).
