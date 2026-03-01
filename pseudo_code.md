@@ -1,12 +1,29 @@
 ## Game A Pseudo Code:
 
 ```python
-def WinCondition:
-    if avatar_color_history[-1] == goal_color:
-    if avatar_color_history[-2] == GRAY:
-	    return level_complete()
-    else:
-	    return
+class GameA_Mechanics:
+    def __init__(level):
+        avatar_color_history = [level.starting_color]  # pre-determined starting color per level
+        goal_tile = level.goal_tile  # fixed, does NOT change avatar color
+    
+    on_input(direction):
+        if direction in (UP, DOWN, LEFT, RIGHT):
+            move(avatar, direction)  # no movement restraints
+    
+    on_avatar_enter(tile):
+        if tile.type == 'color_changing':
+            avatar_color_history.append(tile.color)  # avatar takes on that peripheral tile's fixed color
+    
+    def WinCondition:
+    
+        adjacent_tiles = [above(goal_tile), below(goal_tile), left_of(goal_tile), right_of(goal_tile)]
+        
+        if avatar in adjacent_tiles:
+            if avatar_color_history[-1] == goal_tile.color:
+                if avatar_color_history[-2] == GRAY:
+                    return level_complete()
+                else:
+                    return
 ```
 
 <br>
