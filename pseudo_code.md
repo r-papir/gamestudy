@@ -1,7 +1,7 @@
 ## Game A Pseudo Code:
 
 ```python
-class GameA_Mechanics:
+class MechanicsA:
     def __init__(level):
         avatar_color_history = [level.starting_color]  # pre-determined starting color per level
         goal_tile = level.goal_tile  # fixed, does NOT change avatar color
@@ -31,7 +31,7 @@ class GameA_Mechanics:
 ## Game B Pseudo Code:
 
 ```python
-class Mechanics:
+class MechanicsB:
     def __init__(level):
         allowed_axes = level.starting_axes  # 'horizontal' or 'vertical', pre-determined per level
     
