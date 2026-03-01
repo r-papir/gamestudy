@@ -64,7 +64,8 @@ class MechanicsB:
                     FX_tile.current_color_index = (FX_tile.current_color_index + 1) % len(FX_tile.color_cycle)
                     FX_tile.current_color = FX_tile.color_cycle[FX_tile.current_color_index]
     
-    while piece_moving:     # WIN CONDITION
+def WinCondition:
+    while piece_moving:
         if entering_goal_box:
             if avatar_color == goal_frame_color:
                 return level_complete()
