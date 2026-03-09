@@ -45,15 +45,18 @@ def file_naming():
             print("Error - invalid entry. Please refer back to data legend.")
             modality = input("In the given file, select the type of data extracted:  ")
         if modality.lower() == "u":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gA_audio_{date}.webm")
             print(" ")
         elif modality.lower() == "e":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gA_eyetracking_{date}.json")
             print(" ")
         elif modality.lower() == "g":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gA_gamestate_{date}.json")
             print(" ")
 
@@ -62,15 +65,18 @@ def file_naming():
             print("Error - invalid entry. Please refer back to data legend.")
             modality = input("In the given file, select the type of data extracted:  ")
         if modality.lower() == "u":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gB_audio_{date}.webm")
             print(" ")
         elif modality.lower() == "e":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gB_eyetracking_{date}.json")
             print(" ")
         elif modality.lower() == "g":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gB_gamestate_{date}.json")
             print(" ")
 
@@ -79,15 +85,18 @@ def file_naming():
             print("Error - invalid entry. Please refer back to data legend.")
             modality = input("In the given file, select the type of data extracted:  ")
         if modality.lower() == "u":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gC_audio_{date}.webm")
             print(" ")
         elif modality.lower() == "e":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gC_eyetracking_{date}.json")
             print(" ")
         elif modality.lower() == "g":
-            print("[bold]FILE NAME:[/bold]")
+            print(" ")
+            print("[bold]COPY FILE NAME:[/bold]")
             print(f"P{PID}_gC_gamestate_{date}.json")
             print(" ")
 
