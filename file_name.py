@@ -1,13 +1,13 @@
 from rich import print
 
 def file_naming():
-    
-    while True:
-        print(" ")
-        print("FILE NAMING PROGRAM: Puzzle Data")
-        print(" ")
 
-        print("[bold][underline]DATA LEGEND:[/underline][/bold]")
+    print(" ")
+    print("[bold]FILE NAMING PROGRAM: Puzzle Data[/bold]")
+    print(" ")
+
+    while True:
+        print("[bold][underline]LEGEND:[/underline][/bold]")
         print("Puzzles: (A), (B), or (C)")
         print("Modalities: audio (U), eye tracking (E), or gamestate (G)")
         print("")
