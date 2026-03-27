@@ -35,7 +35,7 @@ warnings.filterwarnings('ignore')
 from scipy import stats
 from scipy.stats import (
     mannwhitneyu, chi2_contingency, spearmanr, pearsonr,
-    shapiro, f_oneway, kruskal
+    shapiro, f_oneway, kruskal, wilcoxon
 )
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
@@ -104,67 +104,39 @@ def select_file(title="Select a file", filetypes=None):
     return _file_selector.select_file(title, filetypes)
 
 
-def read_spreadsheet(path):
+def read_spreadsheet(path, sheet_name=0):
     """Read a CSV or Excel file into a DataFrame"""
     if str(path).endswith(('.xlsx', '.xls')):
-        return pd.read_excel(path)
+        return pd.read_excel(path, sheet_name=sheet_name)
     return pd.read_csv(path)
 
 
 class ParticipantTracker:
     """Loads participant tracking data for mapping files to participant IDs"""
 
-    def __init__(self, tracker_csv_path):
-        self.df = read_spreadsheet(tracker_csv_path)
+    def __init__(self, tracker_path):
+        self.df = read_spreadsheet(tracker_path, sheet_name=0)
         self._build_lookup_tables()
 
     def _build_lookup_tables(self):
-        self.game_a_lookup = {}
-        self.game_b_lookup = {}
+        self.valid_pids = set()
         self.participant_info = {}
 
-        # Hardcoded exclusion list - these participants are always excluded
-        self.excluded_participants = {
-            'P001', 'P002', 'P004', 'P007', 'P013', 'P014', 'P015', 'P016', 'P020', 'P024'
-        }
+        notes_col = next((c for c in self.df.columns if str(c).startswith('Notes')), None)
 
         for _, row in self.df.iterrows():
-            session_id = str(row.get('Session ID:', '')).strip()
-            if not session_id or session_id == 'nan':
+            pid = str(row.get('PID:', '')).strip()
+            if not pid or pid == 'nan':
                 continue
 
-            if 'exclude' in session_id.lower():
-                match = re.search(r'(P\d+)', session_id)
-                if match:
-                    self.excluded_participants.add(match.group(1))
-                continue
-
-            participant_id = session_id.split()[0] if ' ' in session_id else session_id
-
-            # Store participant info
-            self.participant_info[participant_id] = {
-                'game_order': row.get('Game Order:', ''),
-                'games_quit': row.get('Games Quit:', ''),
-                'notes': row.get('Notes:', '')
+            self.valid_pids.add(pid)
+            self.participant_info[pid] = {
+                'puzzle_order': row.get('Puz. Order:', ''),
+                'puzzles_quit': row.get('Puz. Quit:', ''),
+                'notes': row.get(notes_col, '') if notes_col else ''
             }
 
-            # Game A data file
-            game_a_file = str(row.get('Game A Data (file name):', '')).strip()
-            if game_a_file and game_a_file != 'nan' and game_a_file != '--' and not game_a_file.startswith('GameState'):
-                pid = self._extract_pid(game_a_file)
-                if pid:
-                    self.game_a_lookup[pid] = participant_id
-
-            # Game B data file
-            game_b_file = str(row.get('Game B Data (file name):', '')).strip()
-            if game_b_file and game_b_file != 'nan' and game_b_file != '--' and not game_b_file.startswith('GameState'):
-                pid = self._extract_pid(game_b_file)
-                if pid:
-                    self.game_b_lookup[pid] = participant_id
-
-        print(f"  Loaded {len(self.game_a_lookup)} Game A mappings")
-        print(f"  Loaded {len(self.game_b_lookup)} Game B mappings")
-        print(f"  Excluded participants: {sorted(self.excluded_participants)}")
+        print(f"  Loaded {len(self.valid_pids)} participants from tracker")
 
     def _extract_pid(self, filename):
         match = re.search(r'(P\d{3})', filename)
@@ -174,18 +146,10 @@ class ParticipantTracker:
         pid = self._extract_pid(json_filename)
         if not pid:
             return None
-        if game_type == 'Game A':
-            return self.game_a_lookup.get(pid)
-        elif game_type == 'Game B':
-            return self.game_b_lookup.get(pid)
-        return None
-
-    def is_excluded(self, participant_id):
-        return participant_id in self.excluded_participants
+        return pid if pid in self.valid_pids else None
 
     def get_valid_participants(self):
-        all_participants = set(self.game_a_lookup.values()) | set(self.game_b_lookup.values())
-        return sorted(all_participants - self.excluded_participants)
+        return sorted(self.valid_pids)
 
 
 class ARCDataAnalyzer:
@@ -209,7 +173,7 @@ class ARCDataAnalyzer:
         """Load participant tracker CSV"""
         if tracker_path is None:
             print("\n" + "=" * 60)
-            print("FILE 1 of 4: PARTICIPANT TRACKER")
+            print("FILE 1 of 3: PARTICIPANT TRACKER")
             print("=" * 60)
             print("Select the CSV file that maps Session IDs to game files.")
             print("File name example: 'Participant Tracker.xlsx'")
@@ -232,15 +196,15 @@ class ARCDataAnalyzer:
         """Load demographic/consent form data"""
         if demographic_path is None:
             print("\n" + "=" * 60)
-            print("FILE 2 of 4: CONSENT FORM / DEMOGRAPHIC DATA")
+            print("FILE 2 of 3: SURVEY DATA")
             print("=" * 60)
-            print("Select the CSV with participant demographics and Likert scales.")
-            print("File name example: 'Consent Form Responses.xlsx'")
+            print("Select the Survey Data Excel file (separate from Participant Tracker).")
+            print("File name example: 'Survey Data.xlsx'")
             print("Contains: Age, Gender, Video Game Enjoyment, Puzzle Enjoyment, etc.")
             print("=" * 60)
             input(">>> Press ENTER to open file picker...")
             demographic_path = select_file(
-                "FILE 2: Select Consent Form / Demographics",
+                "FILE 2: Select Survey Data",
                 filetypes=[("Excel/CSV files", "*.xlsx *.xls *.csv"), ("All files", "*.*")]
             )
         if not demographic_path:
@@ -256,7 +220,7 @@ class ARCDataAnalyzer:
         """Load NLP classification results"""
         if nlp_path is None:
             print("\n" + "=" * 60)
-            print("FILE 3 of 4: NLP CLASSIFICATIONS (OPTIONAL)")
+            print("FILE 3 of 3: NLP CLASSIFICATIONS (OPTIONAL)")
             print("=" * 60)
             print("Select the NLP classification output from NLP_program.py")
             print("File name example: 'classified_speech_segments.xlsx' or")
@@ -289,63 +253,49 @@ class ARCDataAnalyzer:
         print(self.nlp_df[self.category_col].value_counts())
         return True
 
-    def extract_completion_times(self, game_a_dir=None, game_b_dir=None):
-        """Extract completion times from JSON game data files"""
+    def extract_completion_times(self, data_dir=None):
+        """Extract completion times from gamestate JSON files in a single data folder"""
         print("\n" + "=" * 50)
         print("EXTRACTING COMPLETION TIMES FROM JSON FILES")
         print("=" * 50)
 
-        # Select Game A folder
-        if game_a_dir is None:
+        if data_dir is None:
             print("\n" + "=" * 60)
-            print("FOLDER 1 of 2: PUZZLE A (GAME 1) DATA")
+            print("DATA FOLDER")
             print("=" * 60)
-            print("Select the FOLDER containing Puzzle A / Game 1 JSON files.")
-            print("These are the game state files with timestamps and movements.")
+            print("Select the 'Data' folder containing all gamestate JSON files.")
+            print("Eyetracking and audio files will be ignored automatically.")
             print("File names look like: 'P001_gA_gamestate_03272026.json'")
             print("=" * 60)
             input(">>> Press ENTER to open folder picker...")
-            game_a_dir = select_folder("FOLDER 1: Select Puzzle A Game Data folder")
-        if not game_a_dir:
-            print("No folder selected for Game A.")
+            data_dir = select_folder("Select Data folder")
+        if not data_dir:
+            print("No folder selected.")
             return False
 
-        # Select Game B folder
-        if game_b_dir is None:
-            print("\n" + "=" * 60)
-            print("FOLDER 2 of 2: PUZZLE B (GAME 2) DATA")
-            print("=" * 60)
-            print("Select the FOLDER containing Puzzle B / Game 2 JSON files.")
-            print("These are the game state files with timestamps and movements.")
-            print("File names look like: 'P001_gB_gamestate_03272026.json'")
-            print("=" * 60)
-            input(">>> Press ENTER to open folder picker...")
-            game_b_dir = select_folder("FOLDER 2: Select Puzzle B Game Data folder")
-        if not game_b_dir:
-            print("No folder selected for Game B.")
-            return False
+        data_path = Path(data_dir)
+        gamestate_files = [f for f in data_path.glob("*.json") if 'gamestate' in f.name.lower()]
+        print(f"\nFound {len(gamestate_files)} gamestate files...")
 
-        # Process Game A
-        game_a_path = Path(game_a_dir)
-        game_a_files = list(game_a_path.glob("*.json"))
-        print(f"\nProcessing {len(game_a_files)} Game A files...")
-        for json_file in game_a_files:
-            self._process_json_file(json_file, 'Game A')
-
-        # Process Game B
-        game_b_path = Path(game_b_dir)
-        game_b_files = list(game_b_path.glob("*.json"))
-        print(f"Processing {len(game_b_files)} Game B files...")
-        for json_file in game_b_files:
-            self._process_json_file(json_file, 'Game B')
+        for json_file in gamestate_files:
+            self._process_json_file(json_file)
 
         print(f"\n  Extracted {len(self.completion_times['Game A'])} Game A completion times")
         print(f"  Extracted {len(self.completion_times['Game B'])} Game B completion times")
         return True
 
-    def _process_json_file(self, json_path, game):
-        """Process a single JSON file to extract completion time"""
+    def _process_json_file(self, json_path):
+        """Process a single gamestate JSON file to extract completion time"""
         try:
+            # Determine game type from filename
+            name_lower = json_path.name.lower()
+            if '_ga_' in name_lower:
+                game = 'Game A'
+            elif '_gb_' in name_lower:
+                game = 'Game B'
+            else:
+                return
+
             with open(json_path, 'r') as f:
                 data = json.load(f)
 
@@ -368,12 +318,10 @@ class ARCDataAnalyzer:
             if self.participant_tracker:
                 participant_id = self.participant_tracker.get_participant_id_from_json(json_path.name, game)
             else:
-                participant_id = json_path.stem
+                match = re.search(r'(P\d{3})', json_path.name)
+                participant_id = match.group(1) if match else None
 
             if participant_id:
-                # Skip excluded participants
-                if self.participant_tracker and self.participant_tracker.is_excluded(participant_id):
-                    return
                 self.completion_times[game][participant_id] = completion_time
 
         except Exception as e:
@@ -901,6 +849,144 @@ class ARCDataAnalyzer:
         self.results['nlp_anova'] = results
         return results
 
+    def game_a_vs_game_b_comparison(self):
+        """Wilcoxon signed-rank test comparing Game A and Game B completion times (paired)"""
+        print("\n  Game A vs Game B Completion Time Comparison (Wilcoxon signed-rank)")
+
+        both_pids = sorted(set(self.completion_times['Game A'].keys()) & set(self.completion_times['Game B'].keys()))
+
+        if len(both_pids) < 5:
+            print(f"    Insufficient paired data (n={len(both_pids)})")
+            return None
+
+        times_a = [self.completion_times['Game A'][pid].total_seconds() for pid in both_pids]
+        times_b = [self.completion_times['Game B'][pid].total_seconds() for pid in both_pids]
+
+        statistic, p_value = wilcoxon(times_a, times_b)
+
+        results = {
+            'n_paired': len(both_pids),
+            'median_a': np.median(times_a),
+            'median_b': np.median(times_b),
+            'statistic': statistic,
+            'p_value': p_value,
+            'significant': p_value < 0.05
+        }
+
+        sig = '***' if p_value < 0.001 else '**' if p_value < 0.01 else '*' if p_value < 0.05 else 'ns'
+        print(f"    n={len(both_pids)}, W={statistic:.2f}, p={p_value:.4f} {sig}")
+        print(f"    Median Game A: {timedelta(seconds=results['median_a'])}")
+        print(f"    Median Game B: {timedelta(seconds=results['median_b'])}")
+
+        self.results['game_comparison'] = results
+        return results
+
+    def order_effects_analysis(self):
+        """Mann-Whitney U test: did puzzle order affect completion time?"""
+        if self.participant_tracker is None:
+            print("  Participant tracker not loaded - skipping order effects analysis")
+            return None
+
+        print("\n  Order Effects Analysis (Mann-Whitney U)")
+
+        # Split participants by whether they did Game A before Game B
+        a_before_b = []
+        b_before_a = []
+
+        for pid, info in self.participant_tracker.participant_info.items():
+            order = str(info.get('puzzle_order', '')).strip()
+            if not order or order == 'nan':
+                continue
+            puzzles = [p.strip().upper() for p in order.split(',')]
+            if 'A' in puzzles and 'B' in puzzles:
+                if puzzles.index('A') < puzzles.index('B'):
+                    a_before_b.append(pid)
+                else:
+                    b_before_a.append(pid)
+
+        print(f"    A before B: n={len(a_before_b)}, B before A: n={len(b_before_a)}")
+
+        results = {}
+        for game in ['Game A', 'Game B']:
+            group1 = [self.completion_times[game][pid].total_seconds()
+                      for pid in a_before_b if pid in self.completion_times[game]]
+            group2 = [self.completion_times[game][pid].total_seconds()
+                      for pid in b_before_a if pid in self.completion_times[game]]
+
+            if len(group1) < 3 or len(group2) < 3:
+                print(f"    {game}: Insufficient data")
+                continue
+
+            statistic, p_value = mannwhitneyu(group1, group2, alternative='two-sided')
+
+            results[game] = {
+                'n_a_before_b': len(group1),
+                'n_b_before_a': len(group2),
+                'median_a_before_b': np.median(group1),
+                'median_b_before_a': np.median(group2),
+                'U_statistic': statistic,
+                'p_value': p_value,
+                'significant': p_value < 0.05
+            }
+
+            sig = '***' if p_value < 0.001 else '**' if p_value < 0.01 else '*' if p_value < 0.05 else 'ns'
+            print(f"    {game}: U={statistic:.2f}, p={p_value:.4f} {sig}")
+
+        self.results['order_effects'] = results
+        return results
+
+    def completion_time_by_speech_category(self):
+        """Kruskal-Wallis test: mean completion time by dominant speech category"""
+        if self.nlp_df is None:
+            print("  NLP data not loaded - skipping completion time by speech category")
+            return None
+
+        print("\n  Completion Time by Dominant Speech Category (Kruskal-Wallis)")
+
+        # Get dominant category per participant
+        dominant_category = self.nlp_df.groupby('participant_id')[self.category_col].agg(
+            lambda x: x.value_counts().index[0] if len(x) > 0 else None
+        )
+
+        # Get mean completion time per participant across both games
+        all_times = {}
+        for game in ['Game A', 'Game B']:
+            for pid, time in self.completion_times[game].items():
+                if pid not in all_times:
+                    all_times[pid] = []
+                all_times[pid].append(time.total_seconds())
+        mean_times = {pid: np.mean(times) for pid, times in all_times.items()}
+
+        # Group by dominant category
+        groups = {}
+        for pid in set(mean_times.keys()) & set(dominant_category.index):
+            cat = dominant_category[pid]
+            if cat and cat != 'NEEDS_MANUAL_REVIEW':
+                groups.setdefault(cat, []).append(mean_times[pid])
+
+        if len(groups) < 2:
+            print("    Insufficient category data")
+            return None
+
+        for cat, times in sorted(groups.items()):
+            print(f"    {cat}: n={len(times)}, median={timedelta(seconds=int(np.median(times)))}")
+
+        h_stat, p_value = kruskal(*groups.values())
+
+        results = {
+            'groups': {k: {'n': len(v), 'median': np.median(v), 'mean': np.mean(v), 'data': v}
+                       for k, v in groups.items()},
+            'H_statistic': h_stat,
+            'p_value': p_value,
+            'significant': p_value < 0.05
+        }
+
+        sig = '***' if p_value < 0.001 else '**' if p_value < 0.01 else '*' if p_value < 0.05 else 'ns'
+        print(f"    Kruskal-Wallis: H={h_stat:.3f}, p={p_value:.4f} {sig}")
+
+        self.results['speech_category_completion'] = results
+        return results
+
     # =========================================================================
     # VISUALIZATION METHODS
     # =========================================================================
@@ -931,6 +1017,104 @@ class ARCDataAnalyzer:
 
         plt.tight_layout()
         output_path = OUTPUT_DIR / f'completion_time_histograms_{self.timestamp}.png'
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {output_path.name}")
+        plt.close()
+
+    def create_game_comparison_plot(self):
+        """Paired plot and boxplot comparing Game A vs Game B completion times"""
+        both_pids = sorted(set(self.completion_times['Game A'].keys()) & set(self.completion_times['Game B'].keys()))
+        if len(both_pids) < 2:
+            return
+
+        print("  Creating Game A vs Game B comparison plot...")
+
+        times_a = [self.completion_times['Game A'][pid].total_seconds() / 60 for pid in both_pids]
+        times_b = [self.completion_times['Game B'][pid].total_seconds() / 60 for pid in both_pids]
+
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+        # Paired line plot
+        ax = axes[0]
+        for i in range(len(both_pids)):
+            ax.plot([0, 1], [times_a[i], times_b[i]], 'o-', color='steelblue', alpha=0.4, linewidth=1)
+        ax.plot([0, 1], [np.median(times_a), np.median(times_b)], 'o-', color='red',
+                linewidth=3, label='Median', zorder=5)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(['Game A', 'Game B'])
+        ax.set_ylabel('Completion Time (minutes)')
+        ax.set_title('Paired Completion Times', fontsize=13, fontweight='bold')
+        ax.legend()
+
+        # Boxplot
+        axes[1].boxplot([times_a, times_b], labels=['Game A', 'Game B'])
+        axes[1].set_ylabel('Completion Time (minutes)')
+        axes[1].set_title('Completion Time Distribution by Game', fontsize=13, fontweight='bold')
+
+        plt.suptitle('Game A vs Game B Completion Time', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        output_path = OUTPUT_DIR / f'game_comparison_{self.timestamp}.png'
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {output_path.name}")
+        plt.close()
+
+    def create_order_effects_plot(self):
+        """Boxplot comparing completion times by puzzle order group"""
+        if not self.results.get('order_effects'):
+            return
+
+        print("  Creating order effects plot...")
+
+        a_before_b = []
+        b_before_a = []
+        for pid, info in self.participant_tracker.participant_info.items():
+            order = str(info.get('puzzle_order', '')).strip()
+            if not order or order == 'nan':
+                continue
+            puzzles = [p.strip().upper() for p in order.split(',')]
+            if 'A' in puzzles and 'B' in puzzles:
+                if puzzles.index('A') < puzzles.index('B'):
+                    a_before_b.append(pid)
+                else:
+                    b_before_a.append(pid)
+
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+        for idx, game in enumerate(['Game A', 'Game B']):
+            group1 = [self.completion_times[game][pid].total_seconds() / 60
+                      for pid in a_before_b if pid in self.completion_times[game]]
+            group2 = [self.completion_times[game][pid].total_seconds() / 60
+                      for pid in b_before_a if pid in self.completion_times[game]]
+            if group1 and group2:
+                axes[idx].boxplot([group1, group2], labels=['A before B', 'B before A'])
+            axes[idx].set_ylabel('Completion Time (minutes)')
+            axes[idx].set_title(f'{game}: Completion Time by Puzzle Order', fontsize=13, fontweight='bold')
+
+        plt.suptitle('Order Effects on Completion Time', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        output_path = OUTPUT_DIR / f'order_effects_{self.timestamp}.png'
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {output_path.name}")
+        plt.close()
+
+    def create_speech_category_completion_plot(self):
+        """Boxplot of mean completion time by dominant speech category"""
+        if self.nlp_df is None or not self.results.get('speech_category_completion'):
+            return
+
+        print("  Creating speech category completion time plot...")
+
+        groups = self.results['speech_category_completion']['groups']
+        categories = sorted(groups.keys())
+        data = [np.array(groups[cat]['data']) / 60 for cat in categories]
+
+        plt.figure(figsize=(10, 6))
+        plt.boxplot(data, labels=categories)
+        plt.ylabel('Mean Completion Time (minutes)')
+        plt.xlabel('Dominant Speech Category')
+        plt.title('Completion Time by Dominant Speech Category', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        output_path = OUTPUT_DIR / f'speech_category_completion_{self.timestamp}.png'
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"    Saved: {output_path.name}")
         plt.close()
@@ -1236,7 +1420,6 @@ class ARCDataAnalyzer:
             if self.participant_tracker:
                 valid = self.participant_tracker.get_valid_participants()
                 f.write(f"Valid Participants: N = {len(valid)}\n")
-                f.write(f"Excluded: {sorted(self.participant_tracker.excluded_participants)}\n")
 
             # Descriptive Statistics
             f.write("\n" + "=" * 80 + "\n")
@@ -1355,12 +1538,15 @@ def run_full_analysis():
     print("=" * 50)
 
     analyzer.compute_descriptive_statistics()
+    analyzer.game_a_vs_game_b_comparison()
+    analyzer.order_effects_analysis()
     analyzer.chi_squared_test()
     analyzer.spearman_correlation()
     analyzer.linear_regression_analysis()
     analyzer.age_correlation_analysis()
     analyzer.enjoyment_correlation_analysis()
     analyzer.analyze_nlp_by_category()
+    analyzer.completion_time_by_speech_category()
 
     # Create visualizations
     print("\n" + "=" * 50)
@@ -1368,8 +1554,11 @@ def run_full_analysis():
     print("=" * 50)
 
     analyzer.create_completion_time_histograms()
+    analyzer.create_game_comparison_plot()
+    analyzer.create_order_effects_plot()
     analyzer.create_completion_time_line_graph()
     analyzer.create_nlp_boxplots()
+    analyzer.create_speech_category_completion_plot()
     analyzer.create_feature_heatmap()
     analyzer.create_age_scatter_plots()
     analyzer.create_enjoyment_scatter_plots()
