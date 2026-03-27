@@ -104,11 +104,18 @@ def select_file(title="Select a file", filetypes=None):
     return _file_selector.select_file(title, filetypes)
 
 
+def read_spreadsheet(path):
+    """Read a CSV or Excel file into a DataFrame"""
+    if str(path).endswith(('.xlsx', '.xls')):
+        return pd.read_excel(path)
+    return pd.read_csv(path)
+
+
 class ParticipantTracker:
     """Loads participant tracking data for mapping files to participant IDs"""
 
     def __init__(self, tracker_csv_path):
-        self.df = pd.read_csv(tracker_csv_path)
+        self.df = read_spreadsheet(tracker_csv_path)
         self._build_lookup_tables()
 
     def _build_lookup_tables(self):
@@ -205,13 +212,13 @@ class ARCDataAnalyzer:
             print("FILE 1 of 4: PARTICIPANT TRACKER")
             print("=" * 60)
             print("Select the CSV file that maps Session IDs to game files.")
-            print("File name example: 'Participant Tracker.csv'")
+            print("File name example: 'Participant Tracker.xlsx'")
             print("Contains columns: Session ID, Game A Data, Game B Data, etc.")
             print("=" * 60)
             input(">>> Press ENTER to open file picker...")
             tracker_path = select_file(
-                "FILE 1: Select Participant Tracker CSV",
-                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+                "FILE 1: Select Participant Tracker",
+                filetypes=[("Excel/CSV files", "*.xlsx *.xls *.csv"), ("All files", "*.*")]
             )
         if not tracker_path:
             print("No file selected.")
@@ -228,20 +235,20 @@ class ARCDataAnalyzer:
             print("FILE 2 of 4: CONSENT FORM / DEMOGRAPHIC DATA")
             print("=" * 60)
             print("Select the CSV with participant demographics and Likert scales.")
-            print("File name example: 'Consent Form Responses.csv'")
+            print("File name example: 'Consent Form Responses.xlsx'")
             print("Contains: Age, Gender, Video Game Enjoyment, Puzzle Enjoyment, etc.")
             print("=" * 60)
             input(">>> Press ENTER to open file picker...")
             demographic_path = select_file(
-                "FILE 2: Select Consent Form / Demographics CSV",
-                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+                "FILE 2: Select Consent Form / Demographics",
+                filetypes=[("Excel/CSV files", "*.xlsx *.xls *.csv"), ("All files", "*.*")]
             )
         if not demographic_path:
             print("No file selected.")
             return False
 
         print(f"\nLoading demographic data: {demographic_path}")
-        self.demographic_df = pd.read_csv(demographic_path)
+        self.demographic_df = read_spreadsheet(demographic_path)
         print(f"  Loaded {len(self.demographic_df)} demographic records")
         return True
 
@@ -252,21 +259,21 @@ class ARCDataAnalyzer:
             print("FILE 3 of 4: NLP CLASSIFICATIONS (OPTIONAL)")
             print("=" * 60)
             print("Select the NLP classification output from NLP_program.py")
-            print("File name example: 'classified_speech_segments.csv' or")
-            print("                   'final_classified_segments.csv'")
+            print("File name example: 'classified_speech_segments.xlsx' or")
+            print("                   'final_classified_segments.xlsx'")
             print("If you don't have this yet, press Cancel to skip.")
             print("=" * 60)
             input(">>> Press ENTER to open file picker (or Cancel to skip)...")
             nlp_path = select_file(
-                "FILE 3: Select NLP Classifications CSV (Cancel to skip)",
-                filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+                "FILE 3: Select NLP Classifications (Cancel to skip)",
+                filetypes=[("Excel/CSV files", "*.xlsx *.xls *.csv"), ("All files", "*.*")]
             )
         if not nlp_path:
             print("No file selected - skipping NLP analysis.")
             return False
 
         print(f"\nLoading NLP classifications: {nlp_path}")
-        self.nlp_df = pd.read_csv(nlp_path)
+        self.nlp_df = read_spreadsheet(nlp_path)
         print(f"  Loaded {len(self.nlp_df)} classified segments")
 
         # Determine category column
