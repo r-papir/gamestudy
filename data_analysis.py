@@ -144,33 +144,33 @@ class ParticipantTracker:
             # Game A data file
             game_a_file = str(row.get('Game A Data (file name):', '')).strip()
             if game_a_file and game_a_file != 'nan' and game_a_file != '--' and not game_a_file.startswith('GameState'):
-                timestamp = self._extract_timestamp(game_a_file)
-                if timestamp:
-                    self.game_a_lookup[timestamp] = participant_id
+                pid = self._extract_pid(game_a_file)
+                if pid:
+                    self.game_a_lookup[pid] = participant_id
 
             # Game B data file
             game_b_file = str(row.get('Game B Data (file name):', '')).strip()
             if game_b_file and game_b_file != 'nan' and game_b_file != '--' and not game_b_file.startswith('GameState'):
-                timestamp = self._extract_timestamp(game_b_file)
-                if timestamp:
-                    self.game_b_lookup[timestamp] = participant_id
+                pid = self._extract_pid(game_b_file)
+                if pid:
+                    self.game_b_lookup[pid] = participant_id
 
         print(f"  Loaded {len(self.game_a_lookup)} Game A mappings")
         print(f"  Loaded {len(self.game_b_lookup)} Game B mappings")
         print(f"  Excluded participants: {sorted(self.excluded_participants)}")
 
-    def _extract_timestamp(self, filename):
-        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', filename)
+    def _extract_pid(self, filename):
+        match = re.search(r'(P\d{3})', filename)
         return match.group(1) if match else None
 
     def get_participant_id_from_json(self, json_filename, game_type):
-        timestamp = self._extract_timestamp(json_filename)
-        if not timestamp:
+        pid = self._extract_pid(json_filename)
+        if not pid:
             return None
         if game_type == 'Game A':
-            return self.game_a_lookup.get(timestamp)
+            return self.game_a_lookup.get(pid)
         elif game_type == 'Game B':
-            return self.game_b_lookup.get(timestamp)
+            return self.game_b_lookup.get(pid)
         return None
 
     def is_excluded(self, participant_id):
@@ -295,7 +295,7 @@ class ARCDataAnalyzer:
             print("=" * 60)
             print("Select the FOLDER containing Puzzle A / Game 1 JSON files.")
             print("These are the game state files with timestamps and movements.")
-            print("File names look like: 'puzzle-game1-state-2026-01-05T17-15-03.json'")
+            print("File names look like: 'P001_gA_gamestate_03272026.json'")
             print("=" * 60)
             input(">>> Press ENTER to open folder picker...")
             game_a_dir = select_folder("FOLDER 1: Select Puzzle A Game Data folder")
@@ -310,7 +310,7 @@ class ARCDataAnalyzer:
             print("=" * 60)
             print("Select the FOLDER containing Puzzle B / Game 2 JSON files.")
             print("These are the game state files with timestamps and movements.")
-            print("File names look like: 'puzzle-game2-state-2026-01-05T17-20-15.json'")
+            print("File names look like: 'P001_gB_gamestate_03272026.json'")
             print("=" * 60)
             input(">>> Press ENTER to open folder picker...")
             game_b_dir = select_folder("FOLDER 2: Select Puzzle B Game Data folder")
