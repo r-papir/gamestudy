@@ -121,6 +121,7 @@ class ParticipantTracker:
     def _build_lookup_tables(self):
         self.valid_pids = set()
         self.participant_info = {}
+        self.quit_games = {}  # pid -> set of game letters quit, e.g. {'C'} or {'B', 'C'}
 
         notes_col = next((c for c in self.df.columns if str(c).startswith('Notes')), None)
 
@@ -130,13 +131,25 @@ class ParticipantTracker:
                 continue
 
             self.valid_pids.add(pid)
+            quit_val = row.get('Puz. Quit:', '')
             self.participant_info[pid] = {
                 'puzzle_order': row.get('Puz. Order:', ''),
-                'puzzles_quit': row.get('Puz. Quit:', ''),
+                'puzzles_quit': quit_val,
                 'notes': row.get(notes_col, '') if notes_col else ''
             }
+            self.quit_games[pid] = self._parse_quit_games(str(quit_val))
 
         print(f"  Loaded {len(self.valid_pids)} participants from tracker")
+
+    def _parse_quit_games(self, quit_val):
+        """Parse 'Puz. Quit:' value into a set of game letters, e.g. {'C'} or {'B', 'C'}"""
+        if not quit_val or quit_val.lower() in ('nan', 'none', '--', ''):
+            return set()
+        return set(re.findall(r'\b([ABC])\b', quit_val))
+
+    def get_quit_games(self, pid):
+        """Return set of game letters (A/B/C) that this participant quit"""
+        return self.quit_games.get(pid, set())
 
     def _extract_pid(self, filename):
         match = re.search(r'(P\d{3})', filename)
@@ -161,6 +174,8 @@ class ARCDataAnalyzer:
         self.demographic_df = None
         self.nlp_df = None
         self.completion_times = {'Game A': {}, 'Game B': {}}
+        self.quit_levels = {'Game A': {}, 'Game B': {}}        # pid -> last level reached
+        self.completion_status = {'Game A': {}, 'Game B': {}}  # pid -> 'completed' or 'withdrawn'
         self.results = {}
 
         print("=" * 70)
@@ -282,7 +297,37 @@ class ARCDataAnalyzer:
 
         print(f"\n  Extracted {len(self.completion_times['Game A'])} Game A completion times")
         print(f"  Extracted {len(self.completion_times['Game B'])} Game B completion times")
+        self._determine_completion_status()
         return True
+
+    def _determine_completion_status(self):
+        """Cross-reference gamestate max levels with tracker quit data to determine completion status"""
+        print("\n" + "=" * 50)
+        print("COMPLETION STATUS")
+        print("=" * 50)
+
+        game_letter_map = {'Game A': 'A', 'Game B': 'B'}
+
+        for game in ['Game A', 'Game B']:
+            game_letter = game_letter_map[game]
+            for pid in self.quit_levels[game]:
+                quit_games = set()
+                if self.participant_tracker:
+                    # Also try stripping trailing asterisk (e.g. P009*)
+                    quit_games = (self.participant_tracker.get_quit_games(pid) |
+                                  self.participant_tracker.get_quit_games(pid.rstrip('*')))
+                if game_letter in quit_games:
+                    self.completion_status[game][pid] = 'withdrawn'
+                else:
+                    self.completion_status[game][pid] = 'completed'
+
+            completed = [p for p, s in self.completion_status[game].items() if s == 'completed']
+            withdrawn = [p for p, s in self.completion_status[game].items() if s == 'withdrawn']
+            print(f"\n  {game}: {len(completed)} completed, {len(withdrawn)} withdrawn")
+            for pid in withdrawn:
+                level = self.quit_levels[game].get(pid)
+                level_str = f" (quit at level {level})" if level is not None else ""
+                print(f"    - {pid} withdrew{level_str}")
 
     def _process_json_file(self, json_path):
         """Process a single gamestate JSON file to extract completion time"""
@@ -323,6 +368,16 @@ class ARCDataAnalyzer:
 
             if participant_id:
                 self.completion_times[game][participant_id] = completion_time
+
+                # Extract the highest level reached from movement data
+                max_level = None
+                for movement in movements:
+                    lvl = movement.get('level')
+                    if lvl is not None:
+                        if max_level is None or lvl > max_level:
+                            max_level = lvl
+                if max_level is not None:
+                    self.quit_levels[game][participant_id] = max_level
 
         except Exception as e:
             print(f"  Warning: Could not process {json_path.name}: {e}")
@@ -1364,9 +1419,9 @@ class ARCDataAnalyzer:
         x = np.arange(len(all_participants))
 
         # Plot both lines
-        ax.plot(x, game_a_times, 'o-', color='#2E86AB', linewidth=2, markersize=8,
+        ax.plot(x, game_a_times, 'o', color='#2E86AB', markersize=8,
                label='Puzzle A', alpha=0.8)
-        ax.plot(x, game_b_times, 's-', color='#A23B72', linewidth=2, markersize=8,
+        ax.plot(x, game_b_times, 's', color='#A23B72', markersize=8,
                label='Puzzle B', alpha=0.8)
 
         # Customize the plot

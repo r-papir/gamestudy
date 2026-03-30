@@ -1,6 +1,6 @@
 import whisper
 from tkinter import Tk
-from tkinter.filedialog import askopenfilenames
+from tkinter.filedialog import askdirectory
 import os
 import re
 
@@ -12,11 +12,9 @@ def transcription():
         return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
     def get_puzzle_label(filename):
-        game_map = {'1': 'A', '2': 'B', '3': 'C'}
-        match = re.search(r'game(\d)', filename, re.IGNORECASE)
+        match = re.search(r'_g([ABC])_', filename, re.IGNORECASE)
         if match:
-            game_num = match.group(1)
-            return f"Puzzle {game_map.get(game_num, game_num)}"
+            return f"Puzzle {match.group(1).upper()}"
         return None
 
     Tk().withdraw()
@@ -27,15 +25,22 @@ def transcription():
     print("Loading Whisper model...")
     model = whisper.load_model("large-v3")
 
-    print("Select audio files to transcribe...")
-    audio_files = askopenfilenames(
-        title="Select audio files",
-       filetypes=[("Audio files", "*.mp3 *.wav *.m4a *.flac *.webm"), ("All files", "*.*")]
-    )
+    print("Select folder containing audio files...")
+    folder = askdirectory(title="Select folder containing audio files")
+
+    if not folder:
+        print("No folder selected. Exiting.")
+        exit()
+
+    audio_extensions = ('.mp3', '.wav', '.m4a', '.flac', '.webm')
+    audio_files = [
+        os.path.join(folder, f) for f in os.listdir(folder)
+        if f.lower().endswith(audio_extensions)
+    ]
 
     if not audio_files:
-      print("No files selected. Exiting.")
-      exit()
+        print("No audio files found in selected folder. Exiting.")
+        exit()
 
     print(f"\nSelected {len(audio_files)} file(s)\n")
 

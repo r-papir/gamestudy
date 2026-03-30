@@ -766,11 +766,11 @@ def parse_game_from_filename(filename):
     """
     filename_lower = filename.lower()
 
-    if 'game1' in filename_lower or 'puzzle-a' in filename_lower:
+    if 'game1' in filename_lower or 'puzzle-a' in filename_lower or '_ga_' in filename_lower:
         return 'Game A'
-    elif 'game2' in filename_lower or 'puzzle-b' in filename_lower:
+    elif 'game2' in filename_lower or 'puzzle-b' in filename_lower or '_gb_' in filename_lower:
         return 'Game B'
-    elif 'game3' in filename_lower or 'puzzle-c' in filename_lower:
+    elif 'game3' in filename_lower or 'puzzle-c' in filename_lower or '_gc_' in filename_lower:
         return 'Game C'
     else:
         return 'Unknown'
