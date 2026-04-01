@@ -654,7 +654,14 @@ class ARCDataAnalyzer:
         return results
 
     def age_correlation_analysis(self):
-        """Analyze correlation between age and completion time"""
+        """
+        Analyze relationship between age and completion time.
+
+        Per game:
+          - Pearson or Spearman correlation (chosen by Shapiro-Wilk normality test)
+          - Linear regression: completion time ~ age (R², coefficient, p-value)
+          - Descriptive statistics broken down by age group (<25, 25-34, 35-44, 45+)
+        """
         if self.demographic_df is None:
             print("  Demographic data not loaded - skipping age correlation")
             return None
@@ -672,6 +679,9 @@ class ARCDataAnalyzer:
         # Try to find session ID column
         id_cols = [c for c in self.demographic_df.columns if 'session' in c.lower() or 'id' in c.lower()]
         id_col = id_cols[0] if id_cols else self.demographic_df.columns[0]
+
+        age_bins = [0, 25, 35, 45, 200]
+        age_labels = ['<25', '25-34', '35-44', '45+']
 
         results = {}
         for game in ['Game A', 'Game B']:
@@ -697,9 +707,8 @@ class ARCDataAnalyzer:
 
             df_age = pd.DataFrame(age_time_data)
 
-            # Test normality
+            # --- Correlation (Pearson or Spearman) ---
             _, normality_p = shapiro(df_age['completion_time'])
-
             if normality_p > 0.05:
                 corr, p_value = pearsonr(df_age['age'], df_age['completion_time'])
                 method = "Pearson"
@@ -707,16 +716,72 @@ class ARCDataAnalyzer:
                 corr, p_value = spearmanr(df_age['age'], df_age['completion_time'])
                 method = "Spearman"
 
+            sig = '***' if p_value < 0.001 else '**' if p_value < 0.01 else '*' if p_value < 0.05 else 'ns'
+            print(f"    {game}: {method} r={corr:.3f}, p={p_value:.4f} {sig}, n={len(df_age)}")
+
+            # --- Linear regression: age → completion time ---
+            X_reg = df_age['age'].values.reshape(-1, 1)
+            y_reg = df_age['completion_time'].values
+            reg_model = LinearRegression()
+            reg_model.fit(X_reg, y_reg)
+            y_reg_pred = reg_model.predict(X_reg)
+            r2 = r2_score(y_reg, y_reg_pred)
+            coef = reg_model.coef_[0]
+            intercept = reg_model.intercept_
+            n_reg = len(y_reg)
+            residuals = y_reg - y_reg_pred
+            mse = np.sum(residuals ** 2) / (n_reg - 2) if n_reg > 2 else 0
+            x_var = np.sum((X_reg.flatten() - X_reg.mean()) ** 2)
+            se = np.sqrt(mse / x_var) if x_var > 0 and mse > 0 else 0
+            t_stat = coef / se if se > 0 else 0
+            p_reg = 2 * (1 - stats.t.cdf(abs(t_stat), n_reg - 2)) if n_reg > 2 else 1
+
+            sig_reg = '***' if p_reg < 0.001 else '**' if p_reg < 0.01 else '*' if p_reg < 0.05 else 'ns'
+            print(f"      Linear regression: R²={r2:.3f}, coef={coef:.1f} sec/year, "
+                  f"p={p_reg:.4f} {sig_reg}")
+            direction = 'longer' if coef > 0 else 'shorter'
+            print(f"      Interpretation: Each additional year of age associated with "
+                  f"{abs(coef):.1f} sec {direction} completion time")
+
+            regression = {
+                'r2': r2,
+                'coefficient': coef,
+                'intercept': float(intercept),
+                'p_value': p_reg,
+                'n': n_reg,
+                'y_pred': y_reg_pred,
+            }
+
+            # --- Age group descriptive statistics ---
+            df_age['age_group'] = pd.cut(
+                df_age['age'], bins=age_bins, labels=age_labels, right=False
+            )
+            age_group_stats = {}
+            print(f"      Completion time by age group ({game}):")
+            for grp_label in age_labels:
+                grp_df = df_age[df_age['age_group'] == grp_label]
+                if len(grp_df) == 0:
+                    continue
+                times = grp_df['completion_time'].values
+                age_group_stats[grp_label] = {
+                    'n': len(times),
+                    'mean_sec': float(np.mean(times)),
+                    'median_sec': float(np.median(times)),
+                    'std_sec': float(np.std(times)),
+                }
+                print(f"        {grp_label}: n={len(times)}, "
+                      f"mean={timedelta(seconds=int(np.mean(times)))}, "
+                      f"median={timedelta(seconds=int(np.median(times)))}")
+
             results[game] = {
                 'method': method,
                 'correlation': corr,
                 'p_value': p_value,
                 'n': len(df_age),
-                'data': df_age
+                'data': df_age,
+                'regression': regression,
+                'age_group_stats': age_group_stats,
             }
-
-            sig = '*' if p_value < 0.05 else 'ns'
-            print(f"    {game}: {method} r={corr:.3f}, p={p_value:.4f} {sig}, n={len(df_age)}")
 
         self.results['age_correlation'] = results
         return results
@@ -1267,14 +1332,87 @@ class ARCDataAnalyzer:
 
             plt.xlabel('Age (years)', fontsize=12)
             plt.ylabel('Completion Time (minutes)', fontsize=12)
-            plt.title(f'{game}: Age vs Completion Time\n{data["method"]} r = {data["correlation"]:.3f}, p = {data["p_value"]:.4f}',
-                     fontsize=14, fontweight='bold')
+            reg = data.get('regression', {})
+            reg_str = (f"  |  Linear regression R²={reg['r2']:.3f}, p={reg['p_value']:.4f}"
+                       if reg else "")
+            plt.title(
+                f'{game}: Age vs Completion Time\n'
+                f'{data["method"]} r={data["correlation"]:.3f}, p={data["p_value"]:.4f}'
+                f'{reg_str}',
+                fontsize=13, fontweight='bold'
+            )
             plt.grid(alpha=0.3)
 
             output_path = OUTPUT_DIR / f'age_correlation_{game.replace(" ", "_")}_{self.timestamp}.png'
             plt.savefig(output_path, dpi=300, bbox_inches='tight')
             print(f"    Saved: {output_path.name}")
             plt.close()
+
+    def create_age_group_boxplot(self):
+        """
+        Boxplot of completion time by age group (<25, 25-34, 35-44, 45+) for each game.
+
+        Shows median, IQR, and individual data points (strip plot overlay) so that
+        small-N groups remain interpretable. Saved to Downloads.
+        """
+        if 'age_correlation' not in self.results or not self.results['age_correlation']:
+            return
+
+        print("  Creating age group completion time boxplot...")
+
+        age_labels = ['<25', '25-34', '35-44', '45+']
+        games_with_data = [g for g, d in self.results['age_correlation'].items()
+                           if d.get('age_group_stats')]
+
+        if not games_with_data:
+            return
+
+        fig, axes = plt.subplots(1, len(games_with_data), figsize=(7 * len(games_with_data), 6))
+        if len(games_with_data) == 1:
+            axes = [axes]
+
+        for ax, game in zip(axes, games_with_data):
+            data = self.results['age_correlation'][game]
+            df_age = data['data'].copy()
+
+            # Keep only age groups that have at least one participant
+            present_groups = [g for g in age_labels if g in data['age_group_stats']]
+            df_plot = df_age[df_age['age_group'].isin(present_groups)].copy()
+            df_plot['completion_time_min'] = df_plot['completion_time'] / 60
+            df_plot['age_group'] = pd.Categorical(df_plot['age_group'],
+                                                   categories=present_groups, ordered=True)
+
+            sns.boxplot(
+                data=df_plot, x='age_group', y='completion_time_min',
+                order=present_groups, ax=ax, color='steelblue', width=0.5,
+                flierprops=dict(marker='', linestyle='none')
+            )
+            sns.stripplot(
+                data=df_plot, x='age_group', y='completion_time_min',
+                order=present_groups, ax=ax, color='black', alpha=0.5,
+                size=6, jitter=True
+            )
+
+            # Annotate n per group
+            for i, grp in enumerate(present_groups):
+                n = data['age_group_stats'][grp]['n']
+                ax.text(i, ax.get_ylim()[0] - 0.03 * (ax.get_ylim()[1] - ax.get_ylim()[0]),
+                        f'n={n}', ha='center', va='top', fontsize=9, color='dimgray')
+
+            reg = data.get('regression', {})
+            subtitle = (f"Linear regression: R²={reg['r2']:.3f}, "
+                        f"coef={reg['coefficient']:.1f} sec/yr, p={reg['p_value']:.4f}"
+                        if reg else "")
+            ax.set_title(f'{game}: Completion Time by Age Group\n{subtitle}',
+                         fontsize=12, fontweight='bold')
+            ax.set_xlabel('Age Group', fontsize=11)
+            ax.set_ylabel('Completion Time (minutes)', fontsize=11)
+
+        plt.tight_layout()
+        output_path = OUTPUT_DIR / f'age_group_completion_time_{self.timestamp}.png'
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {output_path.name}")
+        plt.close()
 
     def create_participant_distribution_chart(self):
         """Create stacked bar chart of category distribution by participant"""
@@ -1528,9 +1666,31 @@ class ARCDataAnalyzer:
                 f.write(f"  N = {res['n']}\n")
 
             if 'age_correlation' in self.results and self.results['age_correlation']:
-                f.write(f"\nAge Correlations:\n")
+                f.write(f"\nAge vs Completion Time:\n")
                 for game, res in self.results['age_correlation'].items():
-                    f.write(f"  {game}: {res['method']} r={res['correlation']:.3f}, p={res['p_value']:.4f}, n={res['n']}\n")
+                    sig = ('***' if res['p_value'] < 0.001 else '**' if res['p_value'] < 0.01
+                           else '*' if res['p_value'] < 0.05 else 'ns')
+                    f.write(f"\n  {game} (N={res['n']}):\n")
+                    f.write(f"    Correlation: {res['method']} r={res['correlation']:.3f}, "
+                            f"p={res['p_value']:.4f} {sig}\n")
+                    reg = res.get('regression', {})
+                    if reg:
+                        sig_reg = ('***' if reg['p_value'] < 0.001 else '**' if reg['p_value'] < 0.01
+                                   else '*' if reg['p_value'] < 0.05 else 'ns')
+                        direction = 'longer' if reg['coefficient'] > 0 else 'shorter'
+                        f.write(f"    Linear Regression: R²={reg['r2']:.3f}, "
+                                f"coef={reg['coefficient']:.1f} sec/year, "
+                                f"p={reg['p_value']:.4f} {sig_reg}\n")
+                        f.write(f"    Interpretation: Each year of age associated with "
+                                f"{abs(reg['coefficient']):.1f} sec {direction} completion time\n")
+                    age_groups = res.get('age_group_stats', {})
+                    if age_groups:
+                        f.write(f"    Completion time by age group:\n")
+                        for grp, gstats in age_groups.items():
+                            f.write(f"      {grp}: n={gstats['n']}, "
+                                    f"mean={timedelta(seconds=int(gstats['mean_sec']))}, "
+                                    f"median={timedelta(seconds=int(gstats['median_sec']))}, "
+                                    f"SD={timedelta(seconds=int(gstats['std_sec']))}\n")
 
             if 'enjoyment_correlation' in self.results and self.results['enjoyment_correlation']:
                 f.write(f"\nEnjoyment vs Completion Time Correlations:\n")
@@ -1616,6 +1776,7 @@ def run_full_analysis():
     analyzer.create_speech_category_completion_plot()
     analyzer.create_feature_heatmap()
     analyzer.create_age_scatter_plots()
+    analyzer.create_age_group_boxplot()
     analyzer.create_enjoyment_scatter_plots()
     analyzer.create_participant_distribution_chart()
     analyzer.create_regression_plot()
