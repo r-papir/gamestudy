@@ -1,4 +1,4 @@
-import pandas as pd
+]import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -13,27 +13,29 @@ warnings.filterwarnings('ignore')
 OUTPUT_DIR = Path.home() / "Downloads"
 # ─────────────────────────────────────────────────────────────────────────────
 
-# EEE color palette
 COLORS = {
     'Explore':   '#2E86AB',
     'Establish': '#A23B72',
     'Exploit':   '#F18F01',
 }
 
-# Label normalization maps
 MANUAL_LABEL_MAP = {
-    'explore':    'Explore',
-    'Explore':    'Explore',
-    'establish':  'Establish',
-    'Establish':  'Establish',
-    'exploit':    'Exploit',
-    'Exploit':    'Exploit',
+    'explore':   'Explore',   'Explore':   'Explore',
+    'establish': 'Establish', 'Establish': 'Establish',
+    'exploit':   'Exploit',   'Exploit':   'Exploit',
 }
 
 NLP_LABEL_MAP = {
-    'exploratory':  'Explore',
+    'exploratory': 'Explore',
     'confirmatory': 'Establish',
     'exploitative': 'Exploit',
+}
+
+TRAJECTORY_MAP = {
+    'mechanic':   'Mechanic',   'Mechanic':   'Mechanic',
+    'objective':  'Objective',  'Objective':  'Objective',
+    'unclear':    None,         'Unclear':    None,
+    '--':         None,
 }
 
 def select_file(title, filetypes):
@@ -56,6 +58,11 @@ def normalize_nlp(label):
         if k in s:
             return v
     return None
+
+def normalize_trajectory(label):
+    if pd.isna(label):
+        return None
+    return TRAJECTORY_MAP.get(str(label).strip(), None)
 
 def load_data():
     print("Select your COMPLETED CODING SPREADSHEET (EEE_coding_sheet.xlsx)...")
@@ -82,7 +89,19 @@ def load_data():
 def prepare_manual(manual_df):
     df = manual_df.copy()
     df['manual_label'] = df['Manual Category'].apply(normalize_manual)
-    # Keep only EEE categories (exclude RA Speech, Unrelated, blanks)
+
+    # Handle Learning Trajectory column — may be named differently
+    traj_col = None
+    for col in ['Learning Trajectory', 'Trajectory', 'trajectory', 'learning_trajectory']:
+        if col in df.columns:
+            traj_col = col
+            break
+    if traj_col:
+        df['trajectory'] = df[traj_col].apply(normalize_trajectory)
+    else:
+        df['trajectory'] = None
+        print("Warning: No 'Learning Trajectory' column found. Figure 4 will be skipped.")
+
     df = df[df['manual_label'].isin(['Explore', 'Establish', 'Exploit'])].copy()
     df['Participant ID'] = df['Participant ID'].astype(str).str.strip()
     df['Timestamp'] = df['Timestamp'].astype(str).str.strip()
@@ -90,7 +109,6 @@ def prepare_manual(manual_df):
 
 def prepare_nlp(nlp_df):
     df = nlp_df.copy()
-    # Try to find the right column name for the NLP category
     cat_col = None
     for col in ['context_adjusted_category', 'auto_category', 'category']:
         if col in df.columns:
@@ -98,11 +116,10 @@ def prepare_nlp(nlp_df):
             break
     if cat_col is None:
         raise ValueError(f"Could not find category column. Available: {list(df.columns)}")
-    
+
     df['nlp_label'] = df[cat_col].apply(normalize_nlp)
     df = df[df['nlp_label'].isin(['Explore', 'Establish', 'Exploit'])].copy()
 
-    # Normalize participant ID
     pid_col = None
     for col in ['participant_id', 'Participant ID', 'participant']:
         if col in df.columns:
@@ -111,7 +128,6 @@ def prepare_nlp(nlp_df):
     if pid_col:
         df['Participant ID'] = df[pid_col].astype(str).str.strip()
 
-    # Normalize timestamp
     ts_col = None
     for col in ['start_time', 'Timestamp', 'timestamp']:
         if col in df.columns:
@@ -123,7 +139,6 @@ def prepare_nlp(nlp_df):
     return df
 
 def compute_agreement(manual_df, nlp_df):
-    """Match manual and NLP labels by participant + timestamp, compute kappa."""
     merged = pd.merge(
         manual_df[['Participant ID', 'Timestamp', 'manual_label']],
         nlp_df[['Participant ID', 'Timestamp', 'nlp_label']],
@@ -143,13 +158,12 @@ def compute_agreement(manual_df, nlp_df):
     y_manual = merged['manual_label'].tolist()
     y_nlp    = merged['nlp_label'].tolist()
 
-    kappa   = cohen_kappa_score(y_manual, y_nlp)
+    kappa     = cohen_kappa_score(y_manual, y_nlp)
     pct_agree = np.mean([m == n for m, n in zip(y_manual, y_nlp)])
 
     print(f"\nOverall Cohen's Kappa: {kappa:.3f}")
     print(f"Overall Percent Agreement: {pct_agree:.1%}")
 
-    # Per-category breakdown
     cats = ['Explore', 'Establish', 'Exploit']
     print("\nPer-category agreement:")
     cat_stats = {}
@@ -163,7 +177,6 @@ def compute_agreement(manual_df, nlp_df):
         cat_stats[cat] = cat_agree
         print(f"  {cat}: {cat_agree:.1%} agreement (n={len(indices)})")
 
-    # Confusion matrix
     cm = confusion_matrix(y_manual, y_nlp, labels=cats)
     print("\nConfusion matrix (rows=manual, cols=NLP):")
     print(pd.DataFrame(cm, index=cats, columns=cats))
@@ -171,7 +184,6 @@ def compute_agreement(manual_df, nlp_df):
     return merged, kappa, pct_agree, cat_stats
 
 def plot_eee_distribution(manual_df):
-    """Figure 1: Overall EEE distribution."""
     counts = manual_df['manual_label'].value_counts()
     cats   = ['Explore', 'Establish', 'Exploit']
     values = [counts.get(c, 0) for c in cats]
@@ -179,14 +191,17 @@ def plot_eee_distribution(manual_df):
     pcts   = [v / total * 100 for v in values]
 
     fig, ax = plt.subplots(figsize=(7, 5))
-    bars = ax.bar(cats, pcts, color=[COLORS[c] for c in cats], width=0.5, edgecolor='white', linewidth=1.5)
+    bars = ax.bar(cats, pcts, color=[COLORS[c] for c in cats],
+                  width=0.5, edgecolor='white', linewidth=1.5)
 
     for bar, pct, val in zip(bars, pcts, values):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                f'{pct:.1f}%\n(n={val})', ha='center', va='bottom', fontsize=11, fontweight='bold')
+                f'{pct:.1f}%\n(n={val})', ha='center', va='bottom',
+                fontsize=11, fontweight='bold')
 
     ax.set_ylabel('Proportion of Utterances (%)', fontsize=12)
-    ax.set_title('Distribution of EEE Reasoning States\nAcross Participants (Games A & B)', fontsize=13, fontweight='bold')
+    ax.set_title('Distribution of EEE Reasoning States\nAcross Participants (Games A & B)',
+                 fontsize=13, fontweight='bold')
     ax.set_ylim(0, max(pcts) * 1.25)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -199,10 +214,8 @@ def plot_eee_distribution(manual_df):
     plt.show()
 
 def plot_sequential_pattern(manual_df):
-    """Figure 2: EEE proportions across early/middle/late transcript thirds."""
     df = manual_df.copy()
 
-    # Parse timestamps to seconds
     def ts_to_seconds(ts):
         try:
             parts = str(ts).strip().split(':')
@@ -217,7 +230,6 @@ def plot_sequential_pattern(manual_df):
     df['seconds'] = df['Timestamp'].apply(ts_to_seconds)
     df = df.dropna(subset=['seconds'])
 
-    # Assign thirds per participant
     def assign_third(group):
         mn, mx = group['seconds'].min(), group['seconds'].max()
         if mx == mn:
@@ -235,7 +247,6 @@ def plot_sequential_pattern(manual_df):
     thirds = ['Early', 'Middle', 'Late']
     cats   = ['Explore', 'Establish', 'Exploit']
 
-    # Compute proportions per third
     props = {}
     for third in thirds:
         sub    = df[df['third'] == third]
@@ -243,17 +254,15 @@ def plot_sequential_pattern(manual_df):
         total  = len(sub)
         props[third] = {c: counts.get(c, 0) / total * 100 if total > 0 else 0 for c in cats}
 
-    # Stacked bar chart
     fig, ax = plt.subplots(figsize=(8, 5))
-    x    = np.arange(len(thirds))
-    width = 0.5
+    x      = np.arange(len(thirds))
+    width  = 0.5
     bottom = np.zeros(len(thirds))
 
     for cat in cats:
         values = [props[t][cat] for t in thirds]
         bars = ax.bar(x, values, width, bottom=bottom,
                       label=cat, color=COLORS[cat], edgecolor='white', linewidth=1)
-        # Add percentage labels inside bars
         for i, (bar, val) in enumerate(zip(bars, values)):
             if val > 5:
                 ax.text(bar.get_x() + bar.get_width()/2,
@@ -263,9 +272,11 @@ def plot_sequential_pattern(manual_df):
         bottom += np.array(values)
 
     ax.set_xticks(x)
-    ax.set_xticklabels(['Early\n(first third)', 'Middle\n(second third)', 'Late\n(final third)'], fontsize=11)
+    ax.set_xticklabels(['Early\n(first third)', 'Middle\n(second third)', 'Late\n(final third)'],
+                       fontsize=11)
     ax.set_ylabel('Proportion of Utterances (%)', fontsize=12)
-    ax.set_title('EEE Reasoning States Across Transcript Thirds\n(Sequential Pattern)', fontsize=13, fontweight='bold')
+    ax.set_title('EEE Reasoning States Across Transcript Thirds\n(Sequential Pattern)',
+                 fontsize=13, fontweight='bold')
     ax.set_ylim(0, 105)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -278,7 +289,6 @@ def plot_sequential_pattern(manual_df):
     plt.show()
 
 def plot_agreement_by_category(cat_stats):
-    """Figure 3: NLP agreement rate by category."""
     cats   = list(cat_stats.keys())
     values = [cat_stats[c] * 100 for c in cats]
 
@@ -292,7 +302,8 @@ def plot_agreement_by_category(cat_stats):
 
     ax.axhline(y=100, color='gray', linestyle='--', alpha=0.3)
     ax.set_ylabel('Agreement with Manual Coding (%)', fontsize=12)
-    ax.set_title('NLP Classifier Agreement by EEE Category\n(vs. Manual Ground Truth)', fontsize=13, fontweight='bold')
+    ax.set_title('NLP Classifier Agreement by EEE Category\n(vs. Manual Ground Truth)',
+                 fontsize=13, fontweight='bold')
     ax.set_ylim(0, 115)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -304,15 +315,73 @@ def plot_agreement_by_category(cat_stats):
     print(f"Saved Figure 3: {out}")
     plt.show()
 
+def plot_trajectory_breakdown(manual_df):
+    """Figure 4: EEE distribution broken down by learning trajectory."""
+    if 'trajectory' not in manual_df.columns:
+        print("Skipping Figure 4: no trajectory column found.")
+        return
+
+    df = manual_df[manual_df['trajectory'].isin(['Mechanic', 'Objective'])].copy()
+
+    if len(df) == 0:
+        print("Skipping Figure 4: no trajectory-coded utterances found.")
+        return
+
+    trajectories = ['Mechanic', 'Objective']
+    cats         = ['Explore', 'Establish', 'Exploit']
+
+    props = {}
+    ns    = {}
+    for traj in trajectories:
+        sub    = df[df['trajectory'] == traj]
+        counts = sub['manual_label'].value_counts()
+        total  = len(sub)
+        ns[traj]    = total
+        props[traj] = {c: counts.get(c, 0) / total * 100 if total > 0 else 0 for c in cats}
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x      = np.arange(len(trajectories))
+    width  = 0.5
+    bottom = np.zeros(len(trajectories))
+
+    for cat in cats:
+        values = [props[t][cat] for t in trajectories]
+        bars = ax.bar(x, values, width, bottom=bottom,
+                      label=cat, color=COLORS[cat], edgecolor='white', linewidth=1)
+        for i, (bar, val) in enumerate(zip(bars, values)):
+            if val > 5:
+                ax.text(bar.get_x() + bar.get_width()/2,
+                        bottom[i] + val/2,
+                        f'{val:.0f}%', ha='center', va='center',
+                        fontsize=10, color='white', fontweight='bold')
+        bottom += np.array(values)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(
+        [f'Mechanic-Based\n(n={ns["Mechanic"]})', f'Objective-Based\n(n={ns["Objective"]})'],
+        fontsize=11
+    )
+    ax.set_ylabel('Proportion of Utterances (%)', fontsize=12)
+    ax.set_title('EEE Reasoning States by Learning Trajectory\n(Mechanic-Based vs. Objective-Based)',
+                 fontsize=13, fontweight='bold')
+    ax.set_ylim(0, 105)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.legend(loc='upper right', framealpha=0.9, fontsize=10)
+
+    plt.tight_layout()
+    out = OUTPUT_DIR / "figure4_trajectory_breakdown.png"
+    plt.savefig(out, dpi=300, bbox_inches='tight')
+    print(f"Saved Figure 4: {out}")
+    plt.show()
+
 def main():
     print("=" * 60)
     print("EEE ANALYSIS PIPELINE")
     print("=" * 60)
 
-    # Load data
     manual_df, nlp_df = load_data()
 
-    # Prepare
     manual_clean = prepare_manual(manual_df)
     nlp_clean    = prepare_nlp(nlp_df)
 
@@ -321,17 +390,24 @@ def main():
     print(f"\nManual category breakdown:")
     print(manual_clean['manual_label'].value_counts())
 
-    # Figure 1: EEE distribution
+    if 'trajectory' in manual_clean.columns and manual_clean['trajectory'].notna().any():
+        print(f"\nLearning trajectory breakdown:")
+        print(manual_clean['trajectory'].value_counts())
+
+    # Figure 1: Overall EEE distribution
     plot_eee_distribution(manual_clean)
 
-    # Figure 2: Sequential pattern
+    # Figure 2: Sequential pattern across transcript thirds
     plot_sequential_pattern(manual_clean)
 
-    # Agreement analysis + Figure 3
+    # Figure 3: NLP agreement by category
     result = compute_agreement(manual_clean, nlp_clean)
     if result is not None:
         merged, kappa, pct_agree, cat_stats = result
         plot_agreement_by_category(cat_stats)
+
+    # Figure 4: EEE by learning trajectory
+    plot_trajectory_breakdown(manual_clean)
 
     print("\n" + "=" * 60)
     print("ANALYSIS COMPLETE")
