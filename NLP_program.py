@@ -99,27 +99,19 @@ class ParticipantTracker:
         self.game_b_lookup = {}  # timestamp -> participant_id
         self.audio_a_lookup = {}  # audio timestamp -> participant_id
         self.audio_b_lookup = {}  # audio timestamp -> participant_id
-
-        # Hardcoded exclusion list - these participants are always excluded
-        self.excluded_participants = {
-            'P001', 'P002', 'P004', 'P007', 'P013', 'P014', 'P015', 'P016', 'P020', 'P024'
-        }
+        self.quit_games = {}  # participant_id -> set of game letters they quit, e.g. {'B'} or {'A', 'C'}
 
         for _, row in self.df.iterrows():
             session_id = str(row.get('Session ID:', '')).strip()
             if not session_id or session_id == 'nan':
                 continue
 
-            # Check if excluded
-            if 'exclude' in session_id.lower():
-                # Extract just the P### part
-                match = re.search(r'(P\d+)', session_id)
-                if match:
-                    self.excluded_participants.add(match.group(1))
-                continue
-
             # Extract participant ID (P001, P002, etc.)
             participant_id = session_id.split()[0] if ' ' in session_id else session_id
+
+            # Parse which games this participant quit
+            quit_val = str(row.get('Puz. Quit:', '')).strip()
+            self.quit_games[participant_id] = self._parse_quit_games(quit_val)
 
             # Game A data file
             game_a_file = str(row.get('Game A Data (file name):', '')).strip()
@@ -145,7 +137,10 @@ class ParticipantTracker:
 
         print(f"Loaded {len(self.game_a_lookup)} Game A mappings")
         print(f"Loaded {len(self.game_b_lookup)} Game B mappings")
-        print(f"Excluded participants: {sorted(self.excluded_participants)}")
+        quit_any = {pid: games for pid, games in self.quit_games.items() if games}
+        if quit_any:
+            for pid, games in sorted(quit_any.items()):
+                print(f"  {pid} quit: Game {', Game '.join(sorted(games))}")
 
     def _extract_timestamp(self, filename):
         """
@@ -210,14 +205,20 @@ class ParticipantTracker:
             return self.game_b_lookup.get(timestamp)
         return None
 
-    def is_excluded(self, participant_id):
-        """Check if a participant is excluded"""
-        return participant_id in self.excluded_participants
+    def _parse_quit_games(self, quit_val):
+        """Parse 'Puz. Quit:' value into a set of game letters, e.g. {'B'} or {'A', 'C'}"""
+        if not quit_val or quit_val.lower() in ('nan', 'none', '--', ''):
+            return set()
+        return set(re.findall(r'\b([ABC])\b', quit_val))
+
+    def did_quit_game(self, participant_id, game_type):
+        """Return True if this participant quit the given game (e.g. 'Game B')"""
+        letter = game_type.replace('Game ', '').strip()  # 'Game B' -> 'B'
+        return letter in self.quit_games.get(participant_id, set())
 
     def get_valid_participants(self):
-        """Get list of valid (non-excluded) participant IDs"""
-        all_participants = set(self.game_a_lookup.values()) | set(self.game_b_lookup.values())
-        return sorted(all_participants - self.excluded_participants)
+        """Get list of all participant IDs in the tracker"""
+        return sorted(set(self.game_a_lookup.values()) | set(self.game_b_lookup.values()))
 
 
 class GameStateAnalyzer:
@@ -852,9 +853,9 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
             ts_match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', filename)
             participant_id = ts_match.group(1) if ts_match else filename.split('_')[0]
 
-    # Check if participant is excluded
-    if participant_tracker and participant_tracker.is_excluded(participant_id):
-        print(f"  -> Skipping excluded participant: {participant_id}")
+    # Skip this file if the participant quit this specific game
+    if participant_tracker and participant_id and participant_tracker.did_quit_game(participant_id, game_name):
+        print(f"  -> Skipping {participant_id} {game_name} (participant quit this game)")
         return pd.DataFrame()
 
     classifier = SpeechCategoryClassifier()
