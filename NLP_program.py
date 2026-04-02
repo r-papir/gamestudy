@@ -375,6 +375,29 @@ class GameStateAnalyzer:
 
         return {'near_completion': False, 'level': None, 'seconds_to_completion': None, 'is_final_levels': False}
 
+    def get_proportion_into_level(self, relative_seconds):
+        """
+        Returns how far through the current level the speech occurred (0.0 to 1.0).
+        0.0 = beginning of level, 1.0 = end of level. Returns None if level can't be determined.
+        """
+        if self.session_start is None:
+            return None
+
+        absolute_time = self.session_start + timedelta(seconds=relative_seconds)
+
+        for level, times in self.level_timestamps.items():
+            level_start = times['start'] - timedelta(seconds=5)
+            level_end = times['end'] + timedelta(seconds=5)
+
+            if level_start <= absolute_time <= level_end:
+                duration = (times['end'] - times['start']).total_seconds()
+                if duration <= 0:
+                    return None
+                elapsed = (absolute_time - times['start']).total_seconds()
+                return round(max(0.0, min(1.0, elapsed / duration)), 3)
+
+        return None
+
     def get_max_level(self):
         """Return the highest level number in this session."""
         if not self.level_timestamps:
@@ -852,11 +875,13 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
 
         # Determine level from game-state data if available
         level = None
+        proportion_into_level = None
         near_completion_info = {'near_completion': False, 'level': None, 'seconds_to_completion': None, 'is_final_levels': False}
         if gamestate_analyzer:
             start_seconds = parse_timestamp_to_seconds(start_time)
             if start_seconds is not None:
                 level = gamestate_analyzer.get_level_for_timestamp(start_seconds)
+                proportion_into_level = gamestate_analyzer.get_proportion_into_level(start_seconds)
                 # Check if near level completion (within 10 seconds of solving)
                 near_completion_info = gamestate_analyzer.is_near_level_completion(start_seconds, window_seconds=10)
 
@@ -911,6 +936,7 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
             'participant_id': participant_id,
             'game': game_name,
             'level': level,
+            'proportion_into_level': proportion_into_level,
             'segment_id': segment_id,
             'start_time': start_time,
             'end_time': end_time,
@@ -1121,7 +1147,7 @@ def create_manual_review_file(classified_df, output_file=None):
 
     # Reorder columns for easier review
     columns_order = [
-        'participant_id', 'game', 'level',  # Level from game-state data
+        'participant_id', 'game', 'level', 'proportion_into_level',  # Level from game-state data
         'segment_id', 'start_time', 'end_time',  # TIMESTAMPS for finding in audio
         'text', 'audio_filename', 'transcript_file_path',  # Full path to find the file
         'auto_category', 'context_adjusted_category', 'context_source', 'context_flag',  # Context analysis
