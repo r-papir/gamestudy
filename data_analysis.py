@@ -52,6 +52,44 @@ sns.set_palette("husl")
 plt.rcParams['figure.figsize'] = (10, 6)
 plt.rcParams['figure.dpi'] = 100
 
+# ── PLOT COLORS ──────────────────────────────────────────────────────────────
+PLOT_COLORS = {
+    'primary':    'steelblue',   # scatter plots, paired lines, boxplots
+    'histogram':  'skyblue',     # histogram bars
+    'game_a':     '#2E86AB',     # Puzzle A line/markers
+    'game_b':     '#A23B72',     # Puzzle B line/markers
+    'mean_line':  'red',         # mean reference lines
+    'median_line': 'green',      # median reference lines
+    'categorical': ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99'],  # stacked bar chart
+}
+
+def set_plot_colors(primary=None, histogram=None, game_a=None, game_b=None,
+                    mean_line=None, median_line=None, categorical=None, palette=None):
+    """Change figure colors for all visualizations. Call before running analyses.
+
+    Args:
+        primary:     Color for scatter plots, paired lines, and boxplots (default: 'steelblue')
+        histogram:   Color for histogram bars (default: 'skyblue')
+        game_a:      Color for Puzzle A data (default: '#2E86AB')
+        game_b:      Color for Puzzle B data (default: '#A23B72')
+        mean_line:   Color for mean reference lines (default: 'red')
+        median_line: Color for median reference lines (default: 'green')
+        categorical: List of colors for the stacked category bar chart
+        palette:     Seaborn palette name for multi-color plots (default: 'husl')
+
+    Example:
+        set_plot_colors(primary='purple', game_a='orange', game_b='teal', palette='Set2')
+    """
+    if primary is not None:     PLOT_COLORS['primary'] = primary
+    if histogram is not None:   PLOT_COLORS['histogram'] = histogram
+    if game_a is not None:      PLOT_COLORS['game_a'] = game_a
+    if game_b is not None:      PLOT_COLORS['game_b'] = game_b
+    if mean_line is not None:   PLOT_COLORS['mean_line'] = mean_line
+    if median_line is not None: PLOT_COLORS['median_line'] = median_line
+    if categorical is not None: PLOT_COLORS['categorical'] = categorical
+    if palette is not None:     sns.set_palette(palette)
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Output directory - always Downloads
 OUTPUT_DIR = Path.home() / "Downloads"
 
@@ -1123,7 +1161,7 @@ class ARCDataAnalyzer:
                 continue
 
             ax = axes[idx]
-            ax.hist(times, bins=15, color='skyblue', edgecolor='black', alpha=0.7)
+            ax.hist(times, bins=15, color=PLOT_COLORS['histogram'], edgecolor='black', alpha=0.7)
             ax.set_xlabel('Completion Time (minutes)', fontsize=12)
             ax.set_ylabel('Frequency', fontsize=12)
             ax.set_title(f'{game} Completion Time Distribution', fontsize=14, fontweight='bold')
@@ -1131,8 +1169,8 @@ class ARCDataAnalyzer:
 
             mean_time = np.mean(times)
             median_time = np.median(times)
-            ax.axvline(mean_time, color='red', linestyle='--', linewidth=2, label=f'Mean: {mean_time:.1f} min')
-            ax.axvline(median_time, color='green', linestyle='--', linewidth=2, label=f'Median: {median_time:.1f} min')
+            ax.axvline(mean_time, color=PLOT_COLORS['mean_line'], linestyle='--', linewidth=2, label=f'Mean: {mean_time:.1f} min')
+            ax.axvline(median_time, color=PLOT_COLORS['median_line'], linestyle='--', linewidth=2, label=f'Median: {median_time:.1f} min')
             ax.legend()
 
         plt.tight_layout()
@@ -1157,7 +1195,7 @@ class ARCDataAnalyzer:
         # Paired line plot
         ax = axes[0]
         for i in range(len(both_pids)):
-            ax.plot([0, 1], [times_a[i], times_b[i]], 'o-', color='steelblue', alpha=0.4, linewidth=1)
+            ax.plot([0, 1], [times_a[i], times_b[i]], 'o-', color=PLOT_COLORS['primary'], alpha=0.4, linewidth=1)
         ax.plot([0, 1], [np.median(times_a), np.median(times_b)], 'o-', color='red',
                 linewidth=3, label='Median', zorder=5)
         ax.set_xticks([0, 1])
@@ -1323,7 +1361,7 @@ class ARCDataAnalyzer:
             df_age = data['data']
 
             plt.figure(figsize=(8, 6))
-            plt.scatter(df_age['age'], df_age['completion_time'] / 60, alpha=0.6, s=100, color='steelblue')
+            plt.scatter(df_age['age'], df_age['completion_time'] / 60, alpha=0.6, s=100, color=PLOT_COLORS['primary'])
 
             # Regression line
             z = np.polyfit(df_age['age'], df_age['completion_time'] / 60, 1)
@@ -1384,7 +1422,7 @@ class ARCDataAnalyzer:
 
             sns.boxplot(
                 data=df_plot, x='age_group', y='completion_time_min',
-                order=present_groups, ax=ax, color='steelblue', width=0.5,
+                order=present_groups, ax=ax, color=PLOT_COLORS['primary'], width=0.5,
                 flierprops=dict(marker='', linestyle='none')
             )
             sns.stripplot(
@@ -1432,7 +1470,7 @@ class ARCDataAnalyzer:
 
         fig, ax = plt.subplots(figsize=(14, 6))
         participant_categories.plot(kind='bar', stacked=True, ax=ax,
-                                   color=['#ff9999', '#66b3ff', '#99ff99', '#ffcc99'])
+                                   color=PLOT_COLORS['categorical'])
         ax.set_title('Proportion of Speech Categories by Participant', fontsize=14, fontweight='bold')
         ax.set_xlabel('Participant', fontsize=12)
         ax.set_ylabel('Proportion', fontsize=12)
@@ -1454,7 +1492,7 @@ class ARCDataAnalyzer:
         data = self.results['linear_regression']
 
         plt.figure(figsize=(8, 6))
-        plt.scatter(data['X'], data['y'], alpha=0.6, s=100, color='steelblue', label='Participants')
+        plt.scatter(data['X'], data['y'], alpha=0.6, s=100, color=PLOT_COLORS['primary'], label='Participants')
         plt.plot(data['X'], data['y_pred'], 'r-', linewidth=2,
                 label=f'Regression line (R2={data["r2"]:.3f})')
 
@@ -1494,7 +1532,7 @@ class ARCDataAnalyzer:
             completion_time_min = df['completion_time'] / 60
 
             # Scatter plot
-            ax.scatter(df['enjoyment'], completion_time_min, alpha=0.6, s=100, color='steelblue')
+            ax.scatter(df['enjoyment'], completion_time_min, alpha=0.6, s=100, color=PLOT_COLORS['primary'])
 
             # Regression line (convert y_pred to minutes too)
             X = df['enjoyment'].values
@@ -1557,9 +1595,9 @@ class ARCDataAnalyzer:
         x = np.arange(len(all_participants))
 
         # Plot both lines
-        ax.plot(x, game_a_times, 'o', color='#2E86AB', markersize=8,
+        ax.plot(x, game_a_times, 'o', color=PLOT_COLORS['game_a'], markersize=8,
                label='Puzzle A', alpha=0.8)
-        ax.plot(x, game_b_times, 's', color='#A23B72', markersize=8,
+        ax.plot(x, game_b_times, 's', color=PLOT_COLORS['game_b'], markersize=8,
                label='Puzzle B', alpha=0.8)
 
         # Customize the plot
@@ -1577,9 +1615,9 @@ class ARCDataAnalyzer:
         # Add mean lines
         mean_a = np.nanmean(game_a_times)
         mean_b = np.nanmean(game_b_times)
-        ax.axhline(y=mean_a, color='#2E86AB', linestyle='--', alpha=0.5,
+        ax.axhline(y=mean_a, color=PLOT_COLORS['game_a'], linestyle='--', alpha=0.5,
                   label=f'Puzzle A Mean: {mean_a:.1f} min')
-        ax.axhline(y=mean_b, color='#A23B72', linestyle='--', alpha=0.5,
+        ax.axhline(y=mean_b, color=PLOT_COLORS['game_b'], linestyle='--', alpha=0.5,
                   label=f'Puzzle B Mean: {mean_b:.1f} min')
 
         # Update legend to include means
