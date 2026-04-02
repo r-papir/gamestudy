@@ -853,6 +853,11 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
             ts_match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', filename)
             participant_id = ts_match.group(1) if ts_match else filename.split('_')[0]
 
+    # Game C is excluded from the current analysis
+    if game_name == 'Game C':
+        print(f"  -> Skipping {game_name} file (Game C excluded from analysis)")
+        return pd.DataFrame()
+
     # Skip this file if the participant quit this specific game
     if participant_tracker and participant_id and participant_tracker.did_quit_game(participant_id, game_name):
         print(f"  -> Skipping {participant_id} {game_name} (participant quit this game)")
