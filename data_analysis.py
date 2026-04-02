@@ -1145,6 +1145,48 @@ class ARCDataAnalyzer:
         self.results['speech_category_completion'] = results
         return results
 
+    def analyze_proportion_into_level(self):
+        """Kruskal-Wallis test: does proportion_into_level differ across speech categories?"""
+        if self.nlp_df is None:
+            print("  NLP data not loaded - skipping proportion into level analysis")
+            return None
+
+        if 'proportion_into_level' not in self.nlp_df.columns:
+            print("  'proportion_into_level' column not found in NLP data - skipping")
+            return None
+
+        print("\n  Proportion Into Level by Speech Category (Kruskal-Wallis)")
+
+        df = self.nlp_df.dropna(subset=['proportion_into_level', self.category_col])
+        df = df[~df[self.category_col].isin(['NEEDS_MANUAL_REVIEW', 'RA Speech', 'Unrelated'])]
+
+        groups = {}
+        for cat, grp in df.groupby(self.category_col):
+            vals = grp['proportion_into_level'].tolist()
+            if len(vals) >= 2:
+                groups[cat] = vals
+
+        if len(groups) < 2:
+            print("    Insufficient data across categories")
+            return None
+
+        for cat, vals in sorted(groups.items()):
+            print(f"    {cat}: n={len(vals)}, median={np.median(vals):.3f}, mean={np.mean(vals):.3f}")
+
+        h_stat, p_value = kruskal(*groups.values())
+        sig = '***' if p_value < 0.001 else '**' if p_value < 0.01 else '*' if p_value < 0.05 else 'ns'
+        print(f"    Kruskal-Wallis: H={h_stat:.3f}, p={p_value:.4f} {sig}")
+
+        results = {
+            'groups': {k: {'n': len(v), 'median': np.median(v), 'mean': np.mean(v), 'data': v}
+                       for k, v in groups.items()},
+            'H_statistic': h_stat,
+            'p_value': p_value,
+            'significant': p_value < 0.05
+        }
+        self.results['proportion_into_level'] = results
+        return results
+
     # =========================================================================
     # VISUALIZATION METHODS
     # =========================================================================
@@ -1482,6 +1524,60 @@ class ARCDataAnalyzer:
         print(f"    Saved: {output_path.name}")
         plt.close()
 
+    def create_proportion_into_level_plot(self):
+        """Violin + strip plot of proportion_into_level by speech category"""
+        if self.nlp_df is None or 'proportion_into_level' not in self.nlp_df.columns:
+            return
+        if 'proportion_into_level' not in self.results.get('proportion_into_level', {}).get('groups', {}):
+            if not self.results.get('proportion_into_level'):
+                return
+
+        print("  Creating proportion-into-level plot...")
+
+        df = self.nlp_df.dropna(subset=['proportion_into_level', self.category_col])
+        df = df[~df[self.category_col].isin(['NEEDS_MANUAL_REVIEW', 'RA Speech', 'Unrelated'])]
+
+        if df.empty:
+            return
+
+        category_order = [c for c in ['exploratory', 'confirmatory', 'exploitative'] if c in df[self.category_col].values]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        sns.violinplot(data=df, x=self.category_col, y='proportion_into_level',
+                       order=category_order, ax=ax, inner=None, alpha=0.4,
+                       palette=sns.color_palette('husl', len(category_order)))
+        sns.stripplot(data=df, x=self.category_col, y='proportion_into_level',
+                      order=category_order, ax=ax, size=4, alpha=0.6, jitter=True,
+                      palette=sns.color_palette('husl', len(category_order)))
+
+        # Median markers
+        groups = self.results['proportion_into_level']['groups']
+        for i, cat in enumerate(category_order):
+            if cat in groups:
+                ax.hlines(groups[cat]['median'], i - 0.2, i + 0.2,
+                          colors='black', linewidths=2.5, zorder=5)
+
+        ax.set_xlabel('Speech Category', fontsize=12)
+        ax.set_ylabel('Proportion Into Level (0 = start, 1 = end)', fontsize=12)
+
+        res = self.results['proportion_into_level']
+        sig = '***' if res['p_value'] < 0.001 else '**' if res['p_value'] < 0.01 else '*' if res['p_value'] < 0.05 else 'ns'
+        ax.set_title(
+            f'When During a Level Does Each Speech Category Occur?\n'
+            f'Kruskal-Wallis H={res["H_statistic"]:.2f}, p={res["p_value"]:.4f} {sig}',
+            fontsize=13, fontweight='bold'
+        )
+        ax.set_ylim(-0.05, 1.05)
+        ax.axhline(0.5, color='gray', linestyle='--', alpha=0.4, linewidth=1)
+        ax.text(len(category_order) - 0.5, 0.51, 'midpoint', fontsize=8, color='gray', va='bottom')
+
+        plt.tight_layout()
+        output_path = OUTPUT_DIR / f'proportion_into_level_{self.timestamp}.png'
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {output_path.name}")
+        plt.close()
+
     def create_regression_plot(self):
         """Create scatter plot with regression line"""
         if 'linear_regression' not in self.results or not self.results['linear_regression']:
@@ -1800,6 +1896,7 @@ def run_full_analysis():
     analyzer.enjoyment_correlation_analysis()
     analyzer.analyze_nlp_by_category()
     analyzer.completion_time_by_speech_category()
+    analyzer.analyze_proportion_into_level()
 
     # Create visualizations
     print("\n" + "=" * 50)
@@ -1817,6 +1914,7 @@ def run_full_analysis():
     analyzer.create_age_group_boxplot()
     analyzer.create_enjoyment_scatter_plots()
     analyzer.create_participant_distribution_chart()
+    analyzer.create_proportion_into_level_plot()
     analyzer.create_regression_plot()
 
     # Generate report
