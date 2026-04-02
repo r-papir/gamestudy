@@ -1,4 +1,4 @@
-]import pandas as pd
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -14,7 +14,7 @@ OUTPUT_DIR = Path.home() / "Downloads"
 # ─────────────────────────────────────────────────────────────────────────────
 
 COLORS = {
-    'Explore':   '#2E86AB',
+    'Explore':   "#2EABAB",
     'Establish': '#A23B72',
     'Exploit':   '#F18F01',
 }
