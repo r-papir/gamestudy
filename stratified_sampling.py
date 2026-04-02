@@ -1,22 +1,57 @@
 import re, os, random
 import tkinter as tk
 from tkinter import filedialog
-import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-# ── CONFIG ──────────────────────────────────────────────────────────────────
+# ── CONFIG ───────────────────────────────────────────────────────────────────
 root = tk.Tk()
 root.withdraw()
 TRANSCRIPT_DIR = filedialog.askdirectory(title="Select folder containing transcript .txt files")
 if not TRANSCRIPT_DIR:
     raise SystemExit("No folder selected. Exiting.")
-OUTPUT_FILE    = "EEE_coding_sheet.xlsx"
+OUTPUT_FILE           = "EEE_coding_sheet.xlsx"
 TOTAL_PER_PARTICIPANT = 20
-RANDOM_SEED    = 42
-# ────────────────────────────────────────────────────────────────────────────
+RANDOM_SEED           = 42
+EXCLUDE_PARTICIPANTS  = ["P002", "P007"]
+# ─────────────────────────────────────────────────────────────────────────────
+
+def is_ra_speech(text):
+    t = text.strip()
+    tl = t.lower()
+
+    # Short affirmations and filler
+    if re.match(r'^(mm-?hmm|uh-?huh|okay|ok|yes|right|alright|no|nope|yeah|yep|perfect|great|good|sure)[\.\?!]?$', tl):
+        return True
+
+    # Short positive feedback
+    if re.match(r'^(okay|ok|alright)[\.\,]?\s+(perfect|great|good|thank you|thanks|very good)[\.\!]?$', tl):
+        return True
+
+    # Closing remarks
+    closing_phrases = [
+        'thank you', 'very good job', 'good job', 'well done',
+        'i have to stop recording', 'let me stop recording',
+        "that's too sad", "let's see if we can"
+    ]
+    if any(phrase in tl for phrase in closing_phrases):
+        return True
+
+    # Questions directed at participant
+    if len(t) < 120 and re.match(r'^(why|what|how|do you|did|does|can you|could you|is it|are you|was it|were you)', tl):
+        return True
+
+    # Imperatives / prompts to verbalize
+    if re.match(r'^(tell me|talk (me through|about)|explain|describe|walk me through|go ahead|take it away|remember|try to)', tl):
+        return True
+
+    # RA reactions
+    if re.match(r'^(oh[\.\,\?]|ah[\.\,\?]|hmm[\.\,\?]|interesting|i see[\.\,]|okay so|ok so)', tl):
+        return True
+
+    return False
 
 def parse_transcript(filepath):
     with open(filepath, 'r') as f:
@@ -31,25 +66,7 @@ def parse_transcript(filepath):
         if not text:
             continue
         lines = [l.strip() for l in text.split('\n') if l.strip()]
-        ra_patterns = [
-            r'^(mm-?hmm\.?|uh-?huh\.?|okay\.?|ok\.?|yes\.?|right\.?|alright\.?)$',
-            r'^can you (tell|explain|describe)',
-            r'^what (did|do|are|is|was)',
-            r'^why (did|do|are|is|was)',
-            r'^how (did|do|are|is|was)',
-            r'^(and|so|but) (why|what|how)',
-            r'^(no|not|nope|yeah|yep)[\.,]?$',
-        ]
-        participant_lines = []
-        for line in lines:
-            is_ra = False
-            if len(line) < 80:
-                for pat in ra_patterns:
-                    if re.match(pat, line.lower()):
-                        is_ra = True
-                        break
-            if not is_ra:
-                participant_lines.append(line)
+        participant_lines = [l for l in lines if not is_ra_speech(l)]
         if participant_lines:
             cleaned_text = ' '.join(participant_lines)
             if len(cleaned_text) > 20:
@@ -64,7 +81,7 @@ def stratified_sample(utterances, n):
 
 # Parse all gA and gB files
 random.seed(RANDOM_SEED)
-files = [f for f in os.listdir(TRANSCRIPT_DIR) 
+files = [f for f in os.listdir(TRANSCRIPT_DIR)
          if f.endswith('.txt') and ('_gA_' in f or '_gB_' in f)]
 files.sort()
 print(f"Found {len(files)} transcript files (gA and gB only)")
@@ -75,6 +92,9 @@ for fname in files:
     if not match:
         continue
     pid, game = match.group(1), match.group(2)
+    if pid in EXCLUDE_PARTICIPANTS:
+        print(f"  Skipping {pid} (excluded)")
+        continue
     fpath = os.path.join(TRANSCRIPT_DIR, fname)
     utterances = parse_transcript(fpath)
     if pid not in participant_game_data:
@@ -101,7 +121,7 @@ for pid in sorted(participant_game_data.keys()):
             })
 
 print(f"\nTotal utterances to code: {len(rows)}")
-print(f"Participants: {len(participant_game_data)}")
+print(f"Participants included: {len(participant_game_data)}")
 
 # Build Excel
 wb = Workbook()
@@ -111,7 +131,6 @@ border = Border(left=thin, right=thin, top=thin, bottom=thin)
 # --- Coding Sheet ---
 ws = wb.active
 ws.title = "Coding Sheet"
-
 headers = ['#', 'Participant ID', 'Game', 'Timestamp', 'Utterance', 'Manual Category']
 col_widths = [5, 15, 8, 12, 80, 20]
 
@@ -129,7 +148,7 @@ fill_cat   = PatternFill("solid", fgColor="EBF5FB")
 
 for row_idx, row in enumerate(rows, 2):
     fill = fill_light if row_idx % 2 == 0 else fill_white
-    values = [row_idx-1, row['Participant ID'], row['Game'], 
+    values = [row_idx-1, row['Participant ID'], row['Game'],
               row['Timestamp'], row['Utterance'], row['Manual Category']]
     aligns = ['center', 'center', 'center', 'center', 'left', 'center']
     for col_idx, (val, align) in enumerate(zip(values, aligns), 1):
@@ -165,11 +184,11 @@ defs = [
      "Participant has confirmed a rule and is applying it strategically. Actions are deliberate and directed toward the goal using known information.",
      "I know, definitely, clearly, for sure, figured it out, got it, understand, now I'll just, just need to, all I have to do, now I can, okay now, just, easy, almost done, finish"),
     ("Unrelated",
-     "Utterance is not related to puzzle-solving reasoning (e.g., off-topic comment, meta-comment about the study).", "—"),
+     "Utterance is not related to puzzle-solving reasoning (e.g., off-topic comment, meta-comment about the study, or RA-prompted retrospective narration).", "—"),
     ("RA Speech",
      "Utterance is from the Research Assistant, not the participant.", "—"),
 ]
-cat_colors = {"Explore": "D6EAF8", "Establish": "D5F5E3", "Exploit": "FEF9E7", 
+cat_colors = {"Explore": "D6EAF8", "Establish": "D5F5E3", "Exploit": "FEF9E7",
               "Unrelated": "F2F3F4", "RA Speech": "FADBD8"}
 for col_idx, width in enumerate([18, 55, 65], 1):
     ws2.column_dimensions[get_column_letter(col_idx)].width = width
