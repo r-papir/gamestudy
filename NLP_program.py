@@ -89,8 +89,8 @@ class ParticipantTracker:
     """
 
     def __init__(self, tracker_csv_path):
-        """Load the participant tracker CSV"""
-        self.df = pd.read_csv(tracker_csv_path)
+        """Load the participant tracker Excel file"""
+        self.df = pd.read_excel(tracker_csv_path)
         self._build_lookup_tables()
 
     def _build_lookup_tables(self):
@@ -1453,14 +1453,14 @@ def run_full_pipeline():
     print("\n" + "=" * 60)
     print("FILE 1 of 2: PARTICIPANT TRACKER")
     print("=" * 60)
-    print("Select the CSV file that maps Session IDs to game files.")
-    print("File name example: 'Participant Tracker.csv'")
+    print("Select the Excel file that maps Session IDs to game files.")
+    print("File name example: 'Participant Tracker.xlsx'")
     print("Contains columns: Session ID, Game A Data, Game B Data, etc.")
     print("=" * 60)
     input(">>> Press ENTER to open file picker...")
     tracker_file = select_file(
-        "FILE 1: Select Participant Tracker CSV",
-        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        "FILE 1: Select Participant Tracker Excel file",
+        filetypes=[("Excel files", "*.xlsx *.xls"), ("All files", "*.*")]
     )
     if not tracker_file:
         print("No file selected. Exiting.")
@@ -1675,10 +1675,10 @@ def continue_pipeline_after_review():
     print("=" * 60)
 
     # Select Participant Tracker CSV again
-    print("\nPlease select the PARTICIPANT TRACKER CSV file...")
+    print("\nPlease select the PARTICIPANT TRACKER Excel file...")
     tracker_file = select_file(
-        "Select Participant Tracker CSV",
-        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        "Select Participant Tracker Excel file",
+        filetypes=[("Excel files", "*.xlsx *.xls"), ("All files", "*.*")]
     )
     if not tracker_file:
         print("No file selected. Exiting.")
@@ -1701,7 +1701,7 @@ def continue_pipeline_after_review():
         print("Please run run_full_pipeline() first.")
         return None
 
-    classified_df = pd.read_csv(classified_file)
+    classified_df = pd.read_excel(classified_file)
 
     # Merge manual reviews
     print("\n" + "=" * 50)
