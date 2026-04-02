@@ -1,4 +1,6 @@
 import re, os, random
+import tkinter as tk
+from tkinter import filedialog
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -6,7 +8,11 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────
-TRANSCRIPT_DIR = "."        # change to your folder path if needed
+root = tk.Tk()
+root.withdraw()
+TRANSCRIPT_DIR = filedialog.askdirectory(title="Select folder containing transcript .txt files")
+if not TRANSCRIPT_DIR:
+    raise SystemExit("No folder selected. Exiting.")
 OUTPUT_FILE    = "EEE_coding_sheet.xlsx"
 TOTAL_PER_PARTICIPANT = 20
 RANDOM_SEED    = 42
