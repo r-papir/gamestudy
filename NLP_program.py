@@ -965,63 +965,57 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
     return pd.DataFrame(results)
 
 
-def process_all_transcripts(transcript_dir, participant_tracker=None, output_file=None,
-                           gamestate_dir=None, apply_context=True):
+def process_all_transcripts(data_dir, participant_tracker=None, apply_context=True):
     """
-    Process all transcript files in a directory
+    Process all transcript files in a folder.
+
+    Expects files named using the standard convention:
+        P###_g[AB]_audio_MMDDYYYY_transcription.txt
+        P###_g[AB]_gamestate_MMDDYYYY.json
+
+    Automatically matches each transcript to its gamestate file by PID and game letter.
+    Game C files are skipped.
 
     Args:
-        transcript_dir: Directory containing transcript files (.txt or .json)
-        participant_tracker: ParticipantTracker instance for ID lookup
-        output_file: Where to save the classified segments
-        gamestate_dir: Directory containing game-state JSON files (optional)
+        data_dir: Folder containing all transcript and gamestate files
+        participant_tracker: ParticipantTracker instance for quit-game filtering
         apply_context: Whether to apply sequential context analysis (default True)
     """
-    if output_file is None:
-        output_file = OUTPUT_DIR / "classified_speech_segments.xlsx"
-
     all_results = []
+    data_path = Path(data_dir)
 
-    # Look for both .txt (Whisper) and .json files
-    transcript_path = Path(transcript_dir)
-    transcript_files = list(transcript_path.glob('*.txt')) + list(transcript_path.glob('*.json'))
+    # Find transcript files (named *_transcription.txt)
+    transcript_files = [f for f in data_path.glob('*_transcription.txt')]
+    print(f"Found {len(transcript_files)} transcription files in {data_dir}")
 
-    print(f"Found {len(transcript_files)} transcript files in {transcript_dir}")
-
-    if len(transcript_files) == 0:
-        print(f"Warning: No transcript files found in {transcript_dir}")
-        print("Make sure your transcriptions are in the correct folder.")
+    if not transcript_files:
+        print("Warning: No transcription files found. Make sure files are named P###_g[AB]_audio_*_transcription.txt")
         return pd.DataFrame()
 
-    # Load game-state files if directory provided
+    # Build gamestate lookup keyed by (PID, game_letter) e.g. ('P001', 'A')
     gamestate_lookup = {}
-    if gamestate_dir:
-        gamestate_path = Path(gamestate_dir)
-        gamestate_files = list(gamestate_path.glob('*.json'))
-        print(f"Found {len(gamestate_files)} game-state files in {gamestate_dir}")
-
-        for gs_file in gamestate_files:
-            # Extract timestamp from filename to match with transcripts
-            match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', gs_file.name)
-            if match:
-                timestamp = match.group(1)
-                try:
-                    gamestate_lookup[timestamp] = GameStateAnalyzer(gs_file)
-                except Exception as e:
-                    print(f"  Warning: Could not load game-state {gs_file.name}: {e}")
+    gamestate_files = [f for f in data_path.glob('*_gamestate_*.json')]
+    print(f"Found {len(gamestate_files)} gamestate files in {data_dir}")
+    for gs_file in gamestate_files:
+        match = re.search(r'(P\d+)_g([AB])_gamestate', gs_file.name, re.IGNORECASE)
+        if match:
+            key = (match.group(1).upper(), match.group(2).upper())
+            try:
+                gamestate_lookup[key] = GameStateAnalyzer(gs_file)
+            except Exception as e:
+                print(f"  Warning: Could not load gamestate {gs_file.name}: {e}")
 
     for transcript_file in transcript_files:
         print(f"Processing {transcript_file.name}...")
 
-        # Find matching game-state analyzer
+        # Extract (PID, game_letter) from filename to find matching gamestate
         gamestate_analyzer = None
-        if gamestate_lookup:
-            match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})', transcript_file.name)
-            if match:
-                timestamp = match.group(1)
-                gamestate_analyzer = gamestate_lookup.get(timestamp)
-                if gamestate_analyzer:
-                    print(f"  -> Matched game-state file for level detection")
+        match = re.search(r'(P\d+)_g([AB])_', transcript_file.name, re.IGNORECASE)
+        if match:
+            key = (match.group(1).upper(), match.group(2).upper())
+            gamestate_analyzer = gamestate_lookup.get(key)
+            if gamestate_analyzer:
+                print(f"  -> Matched gamestate for level detection")
 
         try:
             df = process_transcript_file(
@@ -1407,21 +1401,23 @@ def create_final_dataset(classified_speech_df, game_data_dir, participant_tracke
     # Determine which category column to use
     category_col = 'final_category' if 'final_category' in classified_speech_df.columns else 'auto_category'
 
-    # Build a lookup from participant_id + game -> JSON file
-    json_files = list(game_data_path.glob('*.json'))
+    # Build lookup: (PID, game_letter) -> gamestate JSON path
+    # Matches files named P###_g[AB]_gamestate_*.json
+    gamestate_files = list(game_data_path.glob('*_gamestate_*.json'))
+    gamestate_file_lookup = {}
+    for jf in gamestate_files:
+        match = re.search(r'(P\d+)_g([AB])_gamestate', jf.name, re.IGNORECASE)
+        if match:
+            key = (match.group(1).upper(), match.group(2).upper())
+            gamestate_file_lookup[key] = jf
 
     for idx, speech_row in classified_speech_df.iterrows():
-        participant_id = speech_row['participant_id']
-        game = speech_row['game']
+        participant_id = str(speech_row['participant_id']).upper()
+        game = speech_row['game']  # 'Game A' or 'Game B'
+        game_letter = game.replace('Game ', '').strip().upper()
 
-        # Find matching game data file
-        game_file = None
-        for jf in json_files:
-            if participant_tracker:
-                jf_participant = participant_tracker.get_participant_id_from_json(jf.name, game)
-                if jf_participant == participant_id:
-                    game_file = jf
-                    break
+        # Find matching gamestate file by PID + game letter
+        game_file = gamestate_file_lookup.get((participant_id, game_letter))
 
         if game_file is None:
             continue
@@ -1503,114 +1499,32 @@ def run_full_pipeline():
     print("\nLoading participant tracker...")
     participant_tracker = ParticipantTracker(tracker_file)
 
-    # Step 2: Ask if user wants to include Puzzle A
+    # Step 2: Select data folder
     print("\n" + "=" * 60)
-    print("PUZZLE A (GAME 1) - OPTIONAL")
+    print("FOLDER: ALL DATA")
     print("=" * 60)
-    skip_a = input(">>> Skip Puzzle A and only process Puzzle B? (y/n): ").strip().lower()
-
-    transcript_dir_a = None
-    gamestate_dir_a = None
-
-    if skip_a != 'y':
-        # Select Puzzle A transcript folder
-        print("\n" + "=" * 60)
-        print("FOLDER 1: PUZZLE A (GAME 1) TRANSCRIPTS")
-        print("=" * 60)
-        print("Select the FOLDER containing Puzzle A / Game 1 transcript files (.txt)")
-        print("These are the Whisper transcription output files.")
-        print("File names look like: 'puzzle-game1-audio-2026-01-05T17-15-03_transcription.txt'")
-        print("=" * 60)
-        input(">>> Press ENTER to open folder picker...")
-        transcript_dir_a = select_folder("FOLDER 1: Select Puzzle A Transcripts folder")
-        if not transcript_dir_a:
-            print("No folder selected - skipping Puzzle A.")
-        else:
-            print(f"  Selected: {transcript_dir_a}")
-
-            # Select Puzzle A game-state folder
-            print("\n" + "=" * 60)
-            print("FOLDER 2: PUZZLE A (GAME 1) GAME-STATE DATA")
-            print("=" * 60)
-            print("Select the FOLDER containing Puzzle A / Game 1 game-state JSON files.")
-            print("These contain movement data and level timing information.")
-            print("File names look like: 'puzzle-game1-state-2026-01-05T17-15-03-300Z.json'")
-            print("=" * 60)
-            input(">>> Press ENTER to open folder picker...")
-            gamestate_dir_a = select_folder("FOLDER 2: Select Puzzle A Game-State folder")
-            if not gamestate_dir_a:
-                print("No folder selected - will proceed without level detection for Puzzle A.")
-            else:
-                print(f"  Selected: {gamestate_dir_a}")
-    else:
-        print("Skipping Puzzle A - will only process Puzzle B.")
-
-    # Step 4: Select Puzzle B transcript folder
-    print("\n" + "=" * 60)
-    print("FOLDER 3 of 4: PUZZLE B (GAME 2) TRANSCRIPTS")
-    print("=" * 60)
-    print("Select the FOLDER containing Puzzle B / Game 2 transcript files (.txt)")
-    print("These are the Whisper transcription output files.")
-    print("File names look like: 'puzzle-game2-audio-2026-01-05T17-20-15_transcription.txt'")
+    print("Select the folder containing ALL your transcript and gamestate files.")
+    print("Files should be named using the standard convention:")
+    print("  P###_gA_audio_MMDDYYYY_transcription.txt")
+    print("  P###_gA_gamestate_MMDDYYYY.json")
     print("=" * 60)
     input(">>> Press ENTER to open folder picker...")
-    transcript_dir_b = select_folder("FOLDER 3: Select Puzzle B Transcripts folder")
-    if not transcript_dir_b:
+    data_dir = select_folder("Select folder containing all data files")
+    if not data_dir:
         print("No folder selected. Exiting.")
         return None
-    print(f"  Selected: {transcript_dir_b}")
+    print(f"  Selected: {data_dir}")
 
-    # Step 5: Select Puzzle B game-state folder
-    print("\n" + "=" * 60)
-    print("FOLDER 4 of 4: PUZZLE B (GAME 2) GAME-STATE DATA")
-    print("=" * 60)
-    print("Select the FOLDER containing Puzzle B / Game 2 game-state JSON files.")
-    print("These contain movement data and level timing information.")
-    print("File names look like: 'puzzle-game2-state-2026-01-05T17-20-15-300Z.json'")
-    print("=" * 60)
-    input(">>> Press ENTER to open folder picker...")
-    gamestate_dir_b = select_folder("FOLDER 4: Select Puzzle B Game-State folder")
-    if not gamestate_dir_b:
-        print("No folder selected - will proceed without level detection for Puzzle B.")
-        gamestate_dir_b = None
-    else:
-        print(f"  Selected: {gamestate_dir_b}")
-
-    # Step 4: Process transcripts with NLP
+    # Step 3: Process transcripts with NLP
     print("\n" + "=" * 50)
     print("STEP 1: Classifying speech segments with NLP")
     print("=" * 50)
 
-    # Process folders
-    classified_df_a = pd.DataFrame()
-    if transcript_dir_a:
-        print("\nProcessing Puzzle A transcripts...")
-        classified_df_a = process_all_transcripts(
-            transcript_dir_a,
-            participant_tracker=participant_tracker,
-            gamestate_dir=gamestate_dir_a,
-            apply_context=True
-        )
-    else:
-        print("\nSkipping Puzzle A (not selected).")
-
-    print("\nProcessing Puzzle B transcripts...")
-    classified_df_b = process_all_transcripts(
-        transcript_dir_b,
+    classified_df = process_all_transcripts(
+        data_dir,
         participant_tracker=participant_tracker,
-        gamestate_dir=gamestate_dir_b,
         apply_context=True
     )
-
-    # Combine results
-    if len(classified_df_a) > 0 and len(classified_df_b) > 0:
-        classified_df = pd.concat([classified_df_a, classified_df_b], ignore_index=True)
-    elif len(classified_df_a) > 0:
-        classified_df = classified_df_a
-    elif len(classified_df_b) > 0:
-        classified_df = classified_df_b
-    else:
-        classified_df = pd.DataFrame()
 
     # Save combined results with summary statistics
     if len(classified_df) > 0:
