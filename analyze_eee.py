@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend — prevents Tcl crash on macOS
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from pathlib import Path
