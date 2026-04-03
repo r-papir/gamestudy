@@ -983,6 +983,7 @@ def process_all_transcripts(data_dir, participant_tracker=None, apply_context=Tr
     """
     all_results = []
     data_path = Path(data_dir)
+    output_file = OUTPUT_DIR / "classified_speech_segments.xlsx"
 
     # Find transcript files (named P###_g[AB]_audio_*.txt)
     transcript_files = [f for f in data_path.glob('*_audio_*.txt')]
