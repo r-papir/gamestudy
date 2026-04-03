@@ -984,12 +984,12 @@ def process_all_transcripts(data_dir, participant_tracker=None, apply_context=Tr
     all_results = []
     data_path = Path(data_dir)
 
-    # Find transcript files (named *_transcription.txt)
-    transcript_files = [f for f in data_path.glob('*_transcription.txt')]
+    # Find transcript files (named P###_g[AB]_audio_*.txt)
+    transcript_files = [f for f in data_path.glob('*_audio_*.txt')]
     print(f"Found {len(transcript_files)} transcription files in {data_dir}")
 
     if not transcript_files:
-        print("Warning: No transcription files found. Make sure files are named P###_g[AB]_audio_*_transcription.txt")
+        print("Warning: No transcription files found. Make sure files are named P###_g[AB]_audio_MMDDYYYY.txt")
         return pd.DataFrame()
 
     # Build gamestate lookup keyed by (PID, game_letter) e.g. ('P001', 'A')
