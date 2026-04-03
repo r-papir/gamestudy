@@ -101,6 +101,11 @@ class ParticipantTracker:
         self.audio_b_lookup = {}  # audio timestamp -> participant_id
         self.quit_games = {}  # participant_id -> set of game letters they quit, e.g. {'B'} or {'A', 'C'}
 
+        # Participants excluded from transcript classification only.
+        # Game state, movement, and completion time data are still processed normally.
+        # P029: excessive researcher intervention in think-aloud protocol
+        self.transcript_excluded = {'P029'}
+
         for _, row in self.df.iterrows():
             session_id = str(row.get('Session ID:', '')).strip()
             if not session_id or session_id == 'nan':
@@ -885,6 +890,11 @@ def process_transcript_file(transcript_file, participant_tracker=None, participa
     # Game C is excluded from the current analysis
     if game_name == 'Game C':
         print(f"  -> Skipping {game_name} file (Game C excluded from analysis)")
+        return pd.DataFrame()
+
+    # Skip transcript classification for participants with protocol issues
+    if participant_tracker and participant_id and participant_id in participant_tracker.transcript_excluded:
+        print(f"  -> Skipping {participant_id} transcript (excluded from NLP classification)")
         return pd.DataFrame()
 
     # Skip this file if the participant quit this specific game
