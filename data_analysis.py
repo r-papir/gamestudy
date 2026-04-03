@@ -1846,7 +1846,254 @@ class ARCDataAnalyzer:
                     for cat, stats in res['groups'].items():
                         f.write(f"    {cat}: M={stats['mean']:.3f}, SD={stats['std']:.3f}, n={stats['n']}\n")
 
-            f.write("\n" + "=" * 80 + "\n")
+            if 'proportion_into_level' in self.results and self.results['proportion_into_level']:
+                res = self.results['proportion_into_level']
+                f.write(f"\nProportion Into Level by Speech Category:\n")
+                f.write(f"  Kruskal-Wallis: H={res['H_statistic']:.3f}, p={res['p_value']:.4f}\n")
+                f.write(f"  Significant: {'Yes' if res['significant'] else 'No'}\n")
+                for cat, stats in sorted(res['groups'].items()):
+                    f.write(f"  {cat}: median={stats['median']:.3f}, mean={stats['mean']:.3f}, n={stats['n']}\n")
+                if res['significant']:
+                    # Find earliest and latest category by median
+                    earliest = min(res['groups'], key=lambda c: res['groups'][c]['median'])
+                    latest   = max(res['groups'], key=lambda c: res['groups'][c]['median'])
+                    f.write(f"  Interpretation: Categories differ significantly in when they occur "
+                            f"within a level (p={res['p_value']:.4f}). '{earliest}' utterances tend "
+                            f"to occur earliest (median={res['groups'][earliest]['median']:.2f}) and "
+                            f"'{latest}' utterances latest (median={res['groups'][latest]['median']:.2f}), "
+                            f"where 0.0 = start of level and 1.0 = end of level.\n")
+                else:
+                    f.write(f"  Interpretation: No significant difference in when categories occur "
+                            f"within a level (p={res['p_value']:.4f}). Speech category timing is "
+                            f"roughly evenly distributed across levels.\n")
+
+            # =================================================================
+            # INTERPRETATION GUIDE
+            # =================================================================
+            f.write("\n\n" + "=" * 80 + "\n")
+            f.write("INTERPRETATION GUIDE\n")
+            f.write("How to read every statistic and plot in this analysis\n")
+            f.write("=" * 80 + "\n")
+
+            f.write("""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DESCRIPTIVE STATISTICS (completion_time_histograms, completion_time_by_participant)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Mean      — The average completion time across all participants. Sensitive to
+              outliers (one very slow participant pulls it up).
+
+  Median    — The middle value when times are sorted. More robust than the mean
+              when there are outliers. If the median is much lower than the mean,
+              a few slow participants are skewing the average.
+
+  SD        — Standard deviation. Tells you how spread out the times are. A large
+              SD means participants varied a lot; a small SD means they were
+              similar.
+
+  IQR (Q1–Q3) — The range covering the middle 50% of participants. Q1 is the
+              25th percentile, Q3 is the 75th. A wide IQR means high variability
+              even among typical participants.
+
+  Outliers  — Detected using the 1.5×IQR rule (values below Q1−1.5×IQR or above
+              Q3+1.5×IQR). Not necessarily errors — just unusually fast or slow
+              participants worth noting.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GAME A vs GAME B COMPARISON (game_comparison plot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Mann-Whitney U Test — A non-parametric test comparing whether one game tends
+              to produce faster or slower times than the other, without assuming
+              a normal distribution. Use this instead of a t-test when data are
+              skewed or the sample is small.
+
+  U statistic — The raw test statistic. On its own it's hard to interpret;
+              focus on the p-value and effect size instead.
+
+  p-value   — The probability of seeing a difference this large by chance if
+              the two games were actually equivalent. p < 0.05 is the conventional
+              threshold for "statistically significant."
+
+  Effect size (r) — How large the difference is in practical terms, independent
+              of sample size. r ≈ 0.1 = small, r ≈ 0.3 = medium, r ≈ 0.5 = large.
+              A result can be statistically significant but have a tiny effect size
+              (especially with large N), so always check both.
+
+  Paired line plot — Each line connects one participant's Game A time to their
+              Game B time. Lines going up = slower on B; lines going down = faster
+              on B. The thick red line shows the median trajectory.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER EFFECTS (order_effects plot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  This tests whether the order participants played the games (A first vs B first)
+  affected their completion times — i.e., whether practice or fatigue carried
+  over between puzzles.
+
+  Mann-Whitney U — Same interpretation as above, but here the groups are "played
+              Game X first" vs "played Game X second."
+
+  A significant result means order mattered — participants who played a game
+  second performed differently (likely faster due to learning transfer, or slower
+  due to fatigue).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHI-SQUARED TEST (speech_category_completion plot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Tests whether the distribution of speech categories (exploratory / confirmatory
+  / exploitative) differs between fast and slow performers. In other words: do
+  fast solvers talk differently than slow solvers?
+
+  X² statistic — Larger values indicate more deviation from what you'd expect if
+              category use and performance were unrelated.
+
+  p-value   — As above, p < 0.05 = the association is unlikely due to chance.
+
+  Cramer's V — Effect size for chi-squared, ranging 0–1. V < 0.1 = negligible,
+              V ≈ 0.3 = moderate, V > 0.5 = strong.
+
+  Degrees of freedom (dof) — Related to the number of categories/groups. Reported
+              for completeness; focus on p and Cramer's V.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SPEARMAN CORRELATION (category proportions vs efficiency)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Measures whether participants who use more of a given speech category tend to
+  be faster or slower solvers, without assuming a linear relationship.
+
+  rho (ρ)   — Ranges from −1 to +1. Positive = more of this category → faster;
+              negative = more of this category → slower. Values near 0 = no
+              relationship.
+
+  p-value   — Whether the correlation is statistically significant.
+
+  Use Spearman (not Pearson) when your data may not be normally distributed or
+  when you care about rank order rather than exact values.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LINEAR REGRESSION (regression plot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Models the relationship between confirmatory speech proportion (predictor) and
+  efficiency rank (outcome) as a straight line.
+
+  R²        — "R-squared." The proportion of variance in efficiency explained by
+              the predictor. R²=0.25 means the predictor accounts for 25% of the
+              differences in efficiency across participants. Higher is better, but
+              even modest R² can be meaningful in behavioral research.
+
+  Coefficient — The slope of the line. E.g., coefficient=−0.4 means each 10%
+              increase in confirmatory speech proportion is associated with a 0.04
+              decrease in efficiency rank (where lower rank = faster).
+
+  p-value   — Whether the slope is significantly different from zero.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AGE CORRELATIONS (age_correlation scatter plots, age_group_completion_time plot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Tests whether older participants took longer (or shorter) to complete puzzles.
+
+  Spearman r — Same as above. A positive value means older → slower; negative
+              means older → faster.
+
+  Linear regression coefficient — E.g., "12.3 sec/year" means each additional
+              year of age is associated with ~12 more seconds on that puzzle, on
+              average.
+
+  Age group boxplot — Splits participants into age brackets and shows the
+              distribution of completion times per bracket. The horizontal line
+              inside each box is the median; the box spans Q1–Q3; dots are
+              individual participants.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ENJOYMENT CORRELATIONS (enjoyment_vs_completion_time plot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Tests whether how much participants enjoyed the puzzle predicted their
+  completion time.
+
+  Spearman rho — As above. A positive value means higher enjoyment → longer
+              time (perhaps engaged/absorbed); negative means higher enjoyment
+              → faster time.
+
+  The scatter plots show each participant as a dot, with a regression line
+  overlaid. The R² in the legend tells you how well enjoyment predicts time.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NLP SPEECH CATEGORIES (participant_distribution chart, nlp_boxplots)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Speech is classified into three EEE categories:
+
+  Exploratory   — Orienting, uncertain, gathering information without a clear
+                  hypothesis. ("what does this do?", "I'm not sure...")
+
+  Confirmatory  — Testing a specific hypothesis. ("if I do X, then Y should
+                  happen...", "let me check if...")
+
+  Exploitative  — Applying a confirmed rule strategically toward the goal.
+                  ("I know I need to...", "just have to...")
+
+  Participant distribution chart — Stacked bar showing each participant's
+              proportion of speech in each category. Useful for seeing individual
+              differences at a glance.
+
+  NLP boxplots — Show how movement features (e.g., entropy, direction changes)
+              differ across speech categories. These link verbal behavior to
+              physical puzzle-solving behavior.
+
+  Kruskal-Wallis (movement features by category) — Tests whether movement
+              features differ significantly across speech categories. H is the
+              test statistic; p < 0.05 means at least one category differs.
+              Individual feature rows tell you which features drive the difference.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROPORTION INTO LEVEL (proportion_into_level plot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  For each utterance, this value captures how far through the current level it
+  occurred: 0.0 = very beginning, 1.0 = right at the end.
+
+  Violin plot — The width of the shape at any height shows how many utterances
+              occurred at that proportion. A wide base means lots of speech early
+              in the level; a wide top means lots of speech late.
+
+  Strip plot (dots) — Each dot is one utterance. Overlaid on the violin to show
+              the actual data distribution and sample size.
+
+  Black horizontal bar — The median for that category. The most important
+              summary value to compare across categories.
+
+  Dashed midpoint line — Marks the 0.5 midpoint (halfway through the level) for
+              visual reference.
+
+  Kruskal-Wallis — Tests whether the three categories differ significantly in
+              when they occur. A significant result (p < 0.05) supports the
+              hypothesis that explore speech clusters early, establish speech in
+              the middle, and exploit speech late in a level — consistent with
+              the EEE model of knowledge-search behavior.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SIGNIFICANCE NOTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ***  p < 0.001  (very strong evidence against the null hypothesis)
+  **   p < 0.01   (strong evidence)
+  *    p < 0.05   (conventional significance threshold)
+  ns   p ≥ 0.05   (not statistically significant — could be due to chance)
+
+  Important: "not significant" does not mean "no effect." With small samples,
+  real effects can fail to reach significance. Always report effect sizes
+  alongside p-values.
+
+""")
+
+            f.write("=" * 80 + "\n")
             f.write("END OF REPORT\n")
             f.write("=" * 80 + "\n")
 

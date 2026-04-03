@@ -1,6 +1,6 @@
 import whisper
 from tkinter import Tk
-from tkinter.filedialog import askdirectory
+from tkinter.filedialog import askopenfilename
 import os
 import re
 
@@ -25,26 +25,17 @@ def transcription():
     print("Loading Whisper model...")
     model = whisper.load_model("large-v3")
 
-    print("Select folder containing audio files...")
-    folder = askdirectory(title="Select folder containing audio files")
+    while True:
+        print("\nSelect an audio file to transcribe (cancel to stop)...")
+        audio_path = askopenfilename(
+            title="Select audio file",
+            filetypes=[("Audio files", "*.mp3 *.wav *.m4a *.flac *.webm"), ("All files", "*.*")]
+        )
 
-    if not folder:
-        print("No folder selected. Exiting.")
-        exit()
+        if not audio_path:
+            print("No file selected. Exiting.")
+            break
 
-    audio_extensions = ('.mp3', '.wav', '.m4a', '.flac', '.webm')
-    audio_files = [
-        os.path.join(folder, f) for f in os.listdir(folder)
-        if f.lower().endswith(audio_extensions)
-    ]
-
-    if not audio_files:
-        print("No audio files found in selected folder. Exiting.")
-        exit()
-
-    print(f"\nSelected {len(audio_files)} file(s)\n")
-
-    for audio_path in audio_files:
         print(f"Processing: {os.path.basename(audio_path)}")
 
         try:
@@ -70,6 +61,6 @@ def transcription():
         except Exception as e:
             print(f"✗ Error processing {os.path.basename(audio_path)}: {str(e)}\n")
 
-    print("All files processed!")
+    print("Done!")
 
 transcription()
