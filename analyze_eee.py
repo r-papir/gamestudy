@@ -260,7 +260,7 @@ def plot_eee_distribution(manual_df):
     out = OUTPUT_DIR / "figure1_eee_distribution.png"
     plt.savefig(out, dpi=300, bbox_inches='tight')
     print(f"\nSaved Figure 1: {out}")
-    plt.show()
+    plt.close()
 
 def plot_sequential_pattern(manual_df):
     df = manual_df.copy()
@@ -335,7 +335,7 @@ def plot_sequential_pattern(manual_df):
     out = OUTPUT_DIR / "figure2_sequential_pattern.png"
     plt.savefig(out, dpi=300, bbox_inches='tight')
     print(f"Saved Figure 2: {out}")
-    plt.show()
+    plt.close()
 
 def plot_agreement_by_category(cat_stats):
     cats   = list(cat_stats.keys())
@@ -362,7 +362,7 @@ def plot_agreement_by_category(cat_stats):
     out = OUTPUT_DIR / "figure3_nlp_agreement.png"
     plt.savefig(out, dpi=300, bbox_inches='tight')
     print(f"Saved Figure 3: {out}")
-    plt.show()
+    plt.close()
 
 def plot_trajectory_breakdown(manual_df):
     """Figure 4: EEE distribution broken down by learning trajectory."""
@@ -422,7 +422,7 @@ def plot_trajectory_breakdown(manual_df):
     out = OUTPUT_DIR / "figure4_trajectory_breakdown.png"
     plt.savefig(out, dpi=300, bbox_inches='tight')
     print(f"Saved Figure 4: {out}")
-    plt.show()
+    plt.close()
 
 def main():
     print("=" * 60)
