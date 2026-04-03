@@ -104,6 +104,7 @@ def prepare_manual(manual_df):
 
     df = df[df['manual_label'].isin(['Explore', 'Establish', 'Exploit'])].copy()
     df['Participant ID'] = df['Participant ID'].astype(str).str.strip()
+    df = df[~df['Participant ID'].isin(['P029', 'P031'])].copy()
     df['Timestamp'] = df['Timestamp'].astype(str).str.strip()
     return df
 
@@ -138,21 +139,69 @@ def prepare_nlp(nlp_df):
 
     return df
 
-def compute_agreement(manual_df, nlp_df):
-    merged = pd.merge(
-        manual_df[['Participant ID', 'Timestamp', 'manual_label']],
-        nlp_df[['Participant ID', 'Timestamp', 'nlp_label']],
-        on=['Participant ID', 'Timestamp'],
-        how='inner'
-    )
+def _ts_to_seconds(ts):
+    """Convert MM:SS or HH:MM:SS timestamp string to total seconds. Returns None on failure."""
+    try:
+        parts = str(ts).strip().split(':')
+        if len(parts) == 2:
+            return int(parts[0]) * 60 + float(parts[1])
+        elif len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+    except (ValueError, IndexError):
+        pass
+    return None
 
-    print(f"\nMatched {len(merged)} utterances for agreement analysis")
+def compute_agreement(manual_df, nlp_df, max_gap_seconds=5):
+    """Match manual and NLP rows by Participant ID + game and fuzzy timestamp (≤max_gap_seconds).
+    For each manual row, finds the closest NLP row within the gap window."""
+
+    manual = manual_df[['Participant ID', 'Timestamp', 'manual_label']].copy()
+    nlp    = nlp_df[['Participant ID', 'Timestamp', 'nlp_label']].copy()
+
+    # Add game column to NLP if available (used to restrict matching within same game)
+    if 'game' in nlp_df.columns:
+        nlp['game'] = nlp_df['game'].astype(str).str.strip()
+    else:
+        nlp['game'] = ''
+
+    manual['_ts_sec'] = manual['Timestamp'].apply(_ts_to_seconds)
+    nlp['_ts_sec']    = nlp['Timestamp'].apply(_ts_to_seconds)
+
+    rows = []
+    for _, m_row in manual.iterrows():
+        pid  = m_row['Participant ID']
+        m_ts = m_row['_ts_sec']
+        if m_ts is None:
+            continue
+
+        # Candidates: same participant, valid timestamp
+        cands = nlp[(nlp['Participant ID'] == pid) & (nlp['_ts_sec'].notna())].copy()
+        if cands.empty:
+            continue
+
+        cands['_diff'] = (cands['_ts_sec'] - m_ts).abs()
+        best = cands.loc[cands['_diff'].idxmin()]
+
+        if best['_diff'] <= max_gap_seconds:
+            rows.append({
+                'Participant ID': pid,
+                'manual_ts':      m_row['Timestamp'],
+                'nlp_ts':         best['Timestamp'],
+                'ts_diff_sec':    best['_diff'],
+                'manual_label':   m_row['manual_label'],
+                'nlp_label':      best['nlp_label'],
+            })
+
+    merged = pd.DataFrame(rows)
+
+    print(f"\nMatched {len(merged)} utterances for agreement analysis "
+          f"(fuzzy ≤{max_gap_seconds}s, {len(manual)} manual rows, {len(nlp)} NLP rows)")
 
     if len(merged) < 10:
         print("Warning: fewer than 10 matched utterances — agreement stats may be unreliable.")
 
     if len(merged) == 0:
-        print("No matched utterances found. Check that Participant ID and Timestamp formats match.")
+        print("No matched utterances found. Check Participant ID formats and timestamp ranges.")
         return None
 
     y_manual = merged['manual_label'].tolist()
