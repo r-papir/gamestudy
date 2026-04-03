@@ -88,7 +88,7 @@ def load_data():
 
 def prepare_manual(manual_df):
     df = manual_df.copy()
-    df['manual_label'] = df['Manual Category'].apply(normalize_manual)
+    df['manual_label'] = df['Model Category'].apply(normalize_manual)
 
     # Handle Learning Trajectory column — may be named differently
     traj_col = None
@@ -317,8 +317,8 @@ def plot_agreement_by_category(cat_stats):
 
 def plot_trajectory_breakdown(manual_df):
     """Figure 4: EEE distribution broken down by learning trajectory."""
-    if 'trajectory' not in manual_df.columns:
-        print("Skipping Figure 4: no trajectory column found.")
+    if 'trajectory' not in manual_df.columns or manual_df['trajectory'].isna().all():
+        print("Skipping Figure 4: Learning Trajectory column is blank.")
         return
 
     df = manual_df[manual_df['trajectory'].isin(['Mechanic', 'Objective'])].copy()
