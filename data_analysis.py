@@ -56,8 +56,8 @@ plt.rcParams['figure.dpi'] = 100
 PLOT_COLORS = {
     'primary':    'cornflowerblue',   # scatter plots, paired lines, boxplots
     'histogram':  'skyblue',     # histogram bars
-    'game_a':     "#6CE9E5",     # Puzzle A line/markers
-    'game_b':     "#17B598",     # Puzzle B line/markers
+    'game_a':     "#BB2E4F",     # Puzzle A line/markers
+    'game_b':     "#4F0E99",     # Puzzle B line/markers
     'mean_line':  'darkred',         # mean reference lines
     'median_line': 'orange',      # median reference lines
     'categorical': ['#ff9999', "#667dff", "#92d238", "#edde7d"],  # stacked bar chart
@@ -164,8 +164,8 @@ class ParticipantTracker:
         notes_col = next((c for c in self.df.columns if str(c).startswith('Notes')), None)
 
         for _, row in self.df.iterrows():
-            pid = str(row.get('PID:', '')).strip()
-            if not pid or pid == 'nan':
+            pid = re.sub(r'[^A-Za-z0-9]+$', '', str(row.get('PID:', '')).strip())
+            if not pid or pid.lower() == 'nan':
                 continue
 
             self.valid_pids.add(pid)
@@ -176,6 +176,15 @@ class ParticipantTracker:
                 'notes': row.get(notes_col, '') if notes_col else ''
             }
             self.quit_games[pid] = self._parse_quit_games(str(quit_val))
+
+        # P036 and P045 have gamestate files but are absent from the tracker.
+        # Register them as valid participants with no quit games recorded.
+        for pid in ('P036', 'P045'):
+            if pid not in self.valid_pids:
+                self.valid_pids.add(pid)
+                self.participant_info[pid] = {'puzzle_order': '', 'puzzles_quit': '', 'notes': ''}
+                self.quit_games[pid] = set()
+                print(f"  Note: {pid} absent from tracker — added as valid participant (known omission)")
 
         print(f"  Loaded {len(self.valid_pids)} participants from tracker")
 
@@ -335,6 +344,12 @@ class ARCDataAnalyzer:
 
         print(f"\n  Extracted {len(self.completion_times['Game A'])} Game A completion times")
         print(f"  Extracted {len(self.completion_times['Game B'])} Game B completion times")
+
+        # Known data collection gap: P008's Game A session was not recorded.
+        # Their Game B data is retained. This is not a code issue.
+        if 'P008' not in self.completion_times['Game A']:
+            print("  Note: P008 has no Game A gamestate file (session not recorded) — excluded from Game A only")
+
         self._determine_completion_status()
         return True
 
