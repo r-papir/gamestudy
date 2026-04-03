@@ -103,8 +103,8 @@ class ParticipantTracker:
 
         # Participants excluded from transcript classification only.
         # Game state, movement, and completion time data are still processed normally.
-        # P029: excessive researcher intervention in think-aloud protocol
-        self.transcript_excluded = {'P029'}
+        # P029, P031: excessive researcher intervention in think-aloud protocol
+        self.transcript_excluded = {'P029', 'P031'}
 
         for _, row in self.df.iterrows():
             session_id = str(row.get('Session ID:', '')).strip()
@@ -483,6 +483,22 @@ class SpeechCategoryClassifier:
                           'got it', 'yep', 'okay good']
         }
 
+        # Causal/inferential connectives — highly distinctive of Establish speech.
+        # Scored at weight 2 to outweigh generic single-word confirmatory markers.
+        self.confirmatory_strong_markers = [
+            'because', 'so that means', 'which means', "that's why", 'that means',
+            'so if', 'i noticed', 'i noticed that', 'that confirms', 'so the rule is',
+            'the rule is', 'i figured out', 'i think the rule', 'so when i', 'i realized',
+        ]
+
+        # Goal-directed execution language — highly distinctive of Exploit speech.
+        # Scored at weight 2 to outweigh generic single-word markers.
+        self.exploitative_strong_markers = [
+            "so i'll", "so i'm going to", 'i just need to', 'i know i need to',
+            'all i have to do', 'i know that', 'now i know', 'i already know',
+            'i can just', "i'm just going to", 'let me just go', "i'll just",
+        ]
+
         # Fix 3: RA speech markers — second-person interrogatives directed at the participant.
         self.ra_speech_markers = {
             'questions_to_participant': [
@@ -499,8 +515,8 @@ class SpeechCategoryClassifier:
             'oh okay', 'ah okay', 'mhm', 'mmm', 'yep', 'yup', 'uh'
         }
 
-    def score_category(self, text, markers_dict):
-        """Count markers from a category in text"""
+    def score_category(self, text, markers_dict, weight=1):
+        """Count markers from a category in text, applying weight per match."""
         text_lower = text.lower()
         score = 0
         matched_markers = []
@@ -508,8 +524,21 @@ class SpeechCategoryClassifier:
         for category, markers in markers_dict.items():
             for marker in markers:
                 if marker in text_lower:
-                    score += 1
+                    score += weight
                     matched_markers.append(marker)
+
+        return score, matched_markers
+
+    def score_list(self, text, markers_list, weight=1):
+        """Score a flat list of markers against text, applying weight per match."""
+        text_lower = text.lower()
+        score = 0
+        matched_markers = []
+
+        for marker in markers_list:
+            if marker in text_lower:
+                score += weight
+                matched_markers.append(marker)
 
         return score, matched_markers
 
@@ -528,9 +557,18 @@ class SpeechCategoryClassifier:
             if text_lower.strip('.,!? ') in self.unrelated_fillers:
                 return 'unrelated', 'high', {'exploratory': 0, 'confirmatory': 0, 'exploitative': 0}, {'exploratory': [], 'confirmatory': [], 'exploitative': []}
 
-        exp_score, exp_markers = self.score_category(text, self.exploratory_markers)
+        exp_score,  exp_markers  = self.score_category(text, self.exploratory_markers)
         conf_score, conf_markers = self.score_category(text, self.confirmatory_markers)
         expl_score, expl_markers = self.score_category(text, self.exploitative_markers)
+
+        # Add weighted strong markers (weight=2)
+        conf_strong_score, conf_strong_markers = self.score_list(text, self.confirmatory_strong_markers, weight=2)
+        expl_strong_score, expl_strong_markers = self.score_list(text, self.exploitative_strong_markers, weight=2)
+
+        conf_score  += conf_strong_score
+        expl_score  += expl_strong_score
+        conf_markers  = conf_markers  + conf_strong_markers
+        expl_markers  = expl_markers  + expl_strong_markers
 
         scores = {
             'exploratory': exp_score,
