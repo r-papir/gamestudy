@@ -264,6 +264,65 @@ def plot_eee_distribution(manual_df):
     print(f"\nSaved Figure 1: {out}")
     plt.close()
 
+def plot_eee_distribution_by_game(manual_df):
+    """Figure 5: Grouped bar chart of EEE distribution split by Game A vs Game B."""
+    if 'Game' not in manual_df.columns:
+        print("Skipping Figure 5: no 'Game' column found in manual coding sheet.")
+        return
+
+    cats   = ['Explore', 'Establish', 'Exploit']
+    games  = ['A', 'B']
+    df     = manual_df[manual_df['Game'].isin(games)].copy()
+
+    if df.empty:
+        print("Skipping Figure 5: no rows with Game A or B found.")
+        return
+
+    # Build pct per game
+    data = {}
+    ns   = {}
+    for game in games:
+        sub    = df[df['Game'] == game]
+        counts = sub['manual_label'].value_counts()
+        total  = len(sub)
+        data[game] = [counts.get(c, 0) / total * 100 if total > 0 else 0 for c in cats]
+        ns[game]   = [counts.get(c, 0) for c in cats]
+
+    x      = np.arange(len(cats))
+    width  = 0.35
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    for i, (game, label) in enumerate([('A', 'Game A'), ('B', 'Game B')]):
+        offset = (i - 0.5) * width
+        bars   = ax.bar(x + offset, data[game], width,
+                        color=[COLORS[c] for c in cats],
+                        alpha=0.75 + 0.25 * i,
+                        edgecolor='white', linewidth=1.2,
+                        label=label, hatch='' if game == 'A' else '//')
+        for bar, pct, n in zip(bars, data[game], ns[game]):
+            if pct > 0:
+                ax.text(bar.get_x() + bar.get_width() / 2,
+                        bar.get_height() + 0.8,
+                        f'{pct:.1f}%\n(n={n})',
+                        ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(cats, fontsize=11)
+    ax.set_ylabel('Proportion of Utterances (%)', fontsize=12)
+    ax.set_title('EEE Reasoning States by Game\n(Game A vs. Game B)',
+                 fontsize=13, fontweight='bold')
+    ax.set_ylim(0, max(max(data['A']), max(data['B'])) * 1.35)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.legend(fontsize=11)
+
+    plt.tight_layout()
+    out = OUTPUT_DIR / "figure5_eee_distribution_by_game.png"
+    plt.savefig(out, dpi=300, bbox_inches='tight')
+    print(f"Saved Figure 5: {out}")
+    plt.close()
+
+
 def plot_sequential_pattern(manual_df):
     df = manual_df.copy()
 
@@ -447,6 +506,9 @@ def main():
 
     # Figure 1: Overall EEE distribution
     plot_eee_distribution(manual_clean)
+
+    # Figure 5: EEE distribution by game
+    plot_eee_distribution_by_game(manual_clean)
 
     # Figure 2: Sequential pattern across transcript thirds
     plot_sequential_pattern(manual_clean)
