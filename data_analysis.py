@@ -1331,6 +1331,9 @@ class ARCDataAnalyzer:
                    'unique_positions', 'num_moves', 'num_revisits']
         features = [f for f in features if f in self.nlp_df.columns]
 
+        if not features:
+            return
+
         if len(features) < 6:
             fig, axes = plt.subplots(1, len(features), figsize=(5*len(features), 5))
             if len(features) == 1:
