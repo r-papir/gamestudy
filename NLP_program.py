@@ -436,15 +436,21 @@ class SpeechCategoryClassifier:
     def __init__(self):
         # Linguistic markers for each category
         # Exploratory = explore, Confirmatory = establish, Exploitative = exploit
+
+        # Fix 1: Exploratory markers tightened to genuine open-ended uncertainty only.
+        # Removed broad triggers: 'what', 'why', 'how', 'where', 'which', 'when',
+        # 'I see', 'there are', 'there is', 'this is', 'could', 'will', 'should',
+        # 'would', 'predict', 'checking', 'seeing' — these fired on Establish/Exploit constantly.
         self.exploratory_markers = {
-            'questions': ['what', 'why', 'how', 'where', 'which', 'when'],
-            'uncertainty': ['not sure', "don't know", 'trying to figure', 'confused'],
-            'exploration_verbs': ['exploring', 'checking', 'seeing',
-                                  'trying different', 'experimenting', 'random', 'randomly'],
-            'observations': ['I see', "there's", 'there are', 'there is',
-                            'this is', 'interesting', "doesn't make sense"]
+            'uncertainty': ['not sure', "don't know", 'trying to figure', 'confused',
+                            'i wonder', 'what if', "let me just see what happens",
+                            "no idea", "not sure what", "have no idea"],
+            'exploration_verbs': ['exploring', 'experimenting', 'randomly', 'random',
+                                  'trying different', 'just trying things'],
         }
 
+        # Fix 2: 'could', 'might', 'wonder', 'will', 'should', 'would', 'predict'
+        # belong only here — removed from exploratory to prevent double-firing.
         self.confirmatory_markers = {
             'hypothesis_statements': ['I think', 'my hypothesis', 'if...then',
                                      'probably', 'should be', 'seems like', 'bet', 'wonder if',
@@ -461,7 +467,7 @@ class SpeechCategoryClassifier:
         self.exploitative_markers = {
             'certainty': ['I know', 'definitely', 'obviously', 'clearly', 'for sure',
                          'certain', 'figured it out', 'got it', 'understand', 'I get it',
-                         'makes sense', 'that makes sense', 'ah okay', 'oh okay'],
+                         'makes sense', 'that makes sense'],
             'execution': ["now I'll just", 'just need to', 'all I have to do',
                          'just going to', 'now I can', 'okay now', "let me just",
                          'alright now', 'easy', 'match', 'so I need to',
@@ -470,6 +476,22 @@ class SpeechCategoryClassifier:
                           'last step', 'last thing', 'done', 'solved', 'there we go',
                           "that's it", 'yes', 'nice', 'perfect', 'boom', 'there it is',
                           'got it', 'yep', 'okay good']
+        }
+
+        # Fix 3: RA speech markers — second-person interrogatives directed at the participant.
+        self.ra_speech_markers = {
+            'questions_to_participant': [
+                'what are you doing', 'can you tell me', 'what happened',
+                'could you explain', "what's happening", 'why did you', 'how did you',
+                'what do you think', 'can you explain', 'what were you thinking',
+                'why are you', 'how are you', 'what made you'
+            ]
+        }
+
+        # Fix 3: Unrelated markers — pure filler, checked together with length guard.
+        self.unrelated_fillers = {
+            'okay', 'yeah', 'uh huh', 'mm', 'right', 'alright',
+            'oh okay', 'ah okay', 'mhm', 'mmm', 'yep', 'yup', 'uh'
         }
 
     def score_category(self, text, markers_dict):
@@ -488,6 +510,19 @@ class SpeechCategoryClassifier:
 
     def classify(self, text):
         """Classify a speech segment"""
+        text_stripped = text.strip()
+        text_lower = text_stripped.lower()
+
+        # Fix 3: Check for RA speech first (second-person interrogatives)
+        for marker in self.ra_speech_markers['questions_to_participant']:
+            if marker in text_lower:
+                return 'ra_speech', 'high', {'exploratory': 0, 'confirmatory': 0, 'exploitative': 0}, {'exploratory': [], 'confirmatory': [], 'exploitative': []}
+
+        # Fix 3: Check for unrelated filler (only if utterance is very short)
+        if len(text_stripped.split()) <= 3:
+            if text_lower.strip('.,!? ') in self.unrelated_fillers:
+                return 'unrelated', 'high', {'exploratory': 0, 'confirmatory': 0, 'exploitative': 0}, {'exploratory': [], 'confirmatory': [], 'exploitative': []}
+
         exp_score, exp_markers = self.score_category(text, self.exploratory_markers)
         conf_score, conf_markers = self.score_category(text, self.confirmatory_markers)
         expl_score, expl_markers = self.score_category(text, self.exploitative_markers)
@@ -507,32 +542,26 @@ class SpeechCategoryClassifier:
         max_score = max(scores.values())
         total_score = sum(scores.values())
 
-        # Flag for manual review ONLY if:
-        # 1. No markers matched at all
-        # 2. Tie between categories (can't decide)
+        # Flag for manual review if no markers matched or there's a tie
         if max_score == 0:
             return 'NEEDS_MANUAL_REVIEW', 'low', scores, markers_matched
 
         max_categories = [cat for cat, score in scores.items() if score == max_score]
         if len(max_categories) > 1:
-            # Tie - can't decide
             return 'NEEDS_MANUAL_REVIEW', 'low', scores, markers_matched
 
         category = max(scores, key=scores.get)
 
         # Calculate confidence level
-        # High: max_score >= 3 AND dominates other categories (60%+)
-        # Medium: max_score >= 2 OR single marker with no competition
-        # Low: single marker with some competition
+        # High: max_score >= 3 AND dominates (60%+)
+        # Medium: max_score >= 2
+        # Low: single marker — always goes to manual review (fix 4)
         if max_score >= 3 and max_score >= total_score * 0.6:
             confidence = 'high'
         elif max_score >= 2:
             confidence = 'medium'
-        elif max_score == 1 and total_score == 1:
-            # Single marker, no competition - trust it with low confidence
-            confidence = 'low'
         else:
-            # Single marker but has competition from other categories
+            # Fix 4: single marker is low confidence — route to manual review
             confidence = 'low'
 
         return category, confidence, scores, markers_matched
@@ -1139,7 +1168,11 @@ def create_confident_classifications_file(classified_df, output_file=None):
     if output_file is None:
         output_file = OUTPUT_DIR / "auto_classified_confident.xlsx"
 
-    confident_df = classified_df[classified_df['needs_review'] == False].copy()
+    # Fix 4: only medium and high confidence go here; low confidence → manual review
+    confident_df = classified_df[
+        (classified_df['needs_review'] == False) &
+        (classified_df['confidence'].isin(['medium', 'high']))
+    ].copy()
 
     if confident_df.empty:
         print("\nNo confident classifications to save.")
@@ -1177,7 +1210,11 @@ def create_manual_review_file(classified_df, output_file=None):
     if output_file is None:
         output_file = OUTPUT_DIR / "manual_review_needed.xlsx"
 
-    review_df = classified_df[classified_df['needs_review'] == True].copy()
+    # Fix 4: include low-confidence segments alongside flagged ones
+    review_df = classified_df[
+        (classified_df['needs_review'] == True) |
+        (classified_df['confidence'] == 'low')
+    ].copy()
 
     # Add empty column for manual coding
     review_df['manual_category'] = ''
