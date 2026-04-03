@@ -1131,6 +1131,43 @@ def process_all_transcripts(data_dir, participant_tracker=None, apply_context=Tr
     return final_df
 
 
+def create_confident_classifications_file(classified_df, output_file=None):
+    """
+    Save segments the NLP is confident about (needs_review == False) to Excel.
+    These are the classifications you can use directly without manual review.
+    """
+    if output_file is None:
+        output_file = OUTPUT_DIR / "auto_classified_confident.xlsx"
+
+    confident_df = classified_df[classified_df['needs_review'] == False].copy()
+
+    if confident_df.empty:
+        print("\nNo confident classifications to save.")
+        return confident_df
+
+    columns_order = [
+        'participant_id', 'game', 'level', 'proportion_into_level',
+        'segment_id', 'start_time', 'end_time',
+        'text', 'audio_filename',
+        'auto_category', 'confidence',
+        'exploratory_score', 'confirmatory_score', 'exploitative_score',
+        'exploratory_markers', 'confirmatory_markers', 'exploitative_markers',
+    ]
+    columns_order = [c for c in columns_order if c in confident_df.columns]
+    confident_df = confident_df[columns_order]
+
+    with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+        confident_df.to_excel(writer, sheet_name='Confident Classifications', index=False)
+
+    print(f"\nCreated confident classifications file: {output_file}")
+    print(f"  {len(confident_df)} segments classified with high/medium confidence")
+    cat_counts = confident_df['auto_category'].value_counts()
+    for cat, count in cat_counts.items():
+        print(f"    {cat}: {count}")
+
+    return confident_df
+
+
 def create_manual_review_file(classified_df, output_file=None):
     """
     Create an Excel file with segments needing manual review.
@@ -1596,10 +1633,11 @@ def run_full_pipeline():
         print("\nPipeline stopped: No transcripts to process.")
         return None
 
-    # Step 4: Create manual review file
+    # Step 4: Save confident classifications and create manual review file
     print("\n" + "=" * 50)
-    print("STEP 2: Creating manual review file")
+    print("STEP 2: Saving outputs")
     print("=" * 50)
+    create_confident_classifications_file(classified_df)
     create_manual_review_file(classified_df)
 
     print("\n" + "=" * 50)
