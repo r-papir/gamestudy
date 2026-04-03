@@ -54,13 +54,13 @@ plt.rcParams['figure.dpi'] = 100
 
 # ── PLOT COLORS ──────────────────────────────────────────────────────────────
 PLOT_COLORS = {
-    'primary':    'steelblue',   # scatter plots, paired lines, boxplots
+    'primary':    'cornflowerblue',   # scatter plots, paired lines, boxplots
     'histogram':  'skyblue',     # histogram bars
-    'game_a':     '#2E86AB',     # Puzzle A line/markers
-    'game_b':     '#A23B72',     # Puzzle B line/markers
-    'mean_line':  'red',         # mean reference lines
-    'median_line': 'green',      # median reference lines
-    'categorical': ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99'],  # stacked bar chart
+    'game_a':     "#6CE9E5",     # Puzzle A line/markers
+    'game_b':     "#17B598",     # Puzzle B line/markers
+    'mean_line':  'darkred',         # mean reference lines
+    'median_line': 'orange',      # median reference lines
+    'categorical': ['#ff9999', "#667dff", "#92d238", "#edde7d"],  # stacked bar chart
 }
 
 def set_plot_colors(primary=None, histogram=None, game_a=None, game_b=None,
@@ -429,7 +429,8 @@ class ARCDataAnalyzer:
         self.results['descriptive_stats'] = {}
 
         for game in ['Game A', 'Game B']:
-            times = list(self.completion_times[game].values())
+            times = [t for pid, t in self.completion_times[game].items()
+                     if self.completion_status[game].get(pid) != 'withdrawn']
             if not times:
                 print(f"\n  Warning: No completion times for {game}")
                 continue
