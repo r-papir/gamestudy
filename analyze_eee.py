@@ -14,9 +14,9 @@ OUTPUT_DIR = Path.home() / "Downloads"
 # ─────────────────────────────────────────────────────────────────────────────
 
 COLORS = {
-    'Explore':   "#2EABAB",
-    'Establish': '#A23B72',
-    'Exploit':   '#F18F01',
+    'Explore':   "#0E9386",
+    'Establish': "#C75170",
+    'Exploit':   "#EFE251",
 }
 
 MANUAL_LABEL_MAP = {
@@ -82,7 +82,7 @@ def load_data():
         raise SystemExit("No file selected.")
 
     manual_df = pd.read_excel(manual_path, sheet_name='Coding Sheet')
-    nlp_df    = pd.read_excel(nlp_path, sheet_name='Classified Segments')
+    nlp_df    = pd.read_excel(nlp_path, sheet_name='Confident Classifications')
 
     return manual_df, nlp_df
 
