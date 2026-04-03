@@ -14,9 +14,9 @@ OUTPUT_DIR = Path.home() / "Downloads"
 # ─────────────────────────────────────────────────────────────────────────────
 
 COLORS = {
-    'Explore':   "#0E9386",
+    'Explore':   "#10A99A",
     'Establish': "#C75170",
-    'Exploit':   "#EFE251",
+    'Exploit':   "#EFDF51",
 }
 
 MANUAL_LABEL_MAP = {
@@ -454,9 +454,6 @@ def main():
     if result is not None:
         merged, kappa, pct_agree, cat_stats = result
         plot_agreement_by_category(cat_stats)
-
-    # Figure 4: EEE by learning trajectory
-    plot_trajectory_breakdown(manual_clean)
 
     print("\n" + "=" * 60)
     print("ANALYSIS COMPLETE")
