@@ -16,9 +16,8 @@ Component order:
   8. run_agent()
 """
 
-# ===========================================================================
-# 1. IMPORTS AND SHARED TYPE DEFINITIONS
-# ===========================================================================
+# SECTION       #? IMPORTS & SHARED TYPE DEFINITIONS
+#___________________________________________________________________________
 
 from __future__ import annotations
 
@@ -28,16 +27,12 @@ import os
 import time
 from pathlib import Path
 from typing import TypedDict
-
 import anthropic
+import re
 
-# ---------------------------------------------------------------------------
-# Type aliases
-# ---------------------------------------------------------------------------
-
-# Raw game state as received from the frontend JavaScript environment.
-# Keys that are stripped by StateEncoder are included here for completeness
-# but must never be forwarded to the LLM.
+# TYPE ALIASES
+# Raw game state is received from the frontend JavaScript environment -- keys that are stripped by StateEncoder
+# but must never be forwarded to the LLM
 class GameState(TypedDict, total=False):
     grid: list[list[str]]          # 2D array of object letters / empty strings
     playerPosition: dict           # {"row": int, "col": int}
@@ -47,9 +42,8 @@ class GameState(TypedDict, total=False):
     currentGameState: str          # STRIP — internal A/B flag
     timestamp: float
 
-
+# Encodes game-turn for LLM into shape-tokens
 class EncodedState(TypedDict):
-    """LLM-ready encoding of one game turn, with shape-token grid."""
     grid_text: str              # multi-line grid rendered with shape tokens
     action: str                 # key pressed (e.g. "ArrowDown")
     delta: tuple[int, int]      # movement vector (row_delta, col_delta)
@@ -57,33 +51,28 @@ class EncodedState(TypedDict):
     avatar_color: str | None
     avatar_position: tuple[int, int] | None  # (row, col) after action
 
-
+# Parses sections from one LLM reasoning trace
 class LLMResponse(TypedDict):
-    """Parsed sections from one LLM reasoning trace."""
     observations: str
     hypothesis_update: str
     structural_check: str
     predicted_outcome: str
-    next_action: str
     mode_assessment: str
 
-
-# ===========================================================================
-# 2. STATE ENCODER
-# ===========================================================================
-
-# Shape token vocabulary for non-avatar objects, assigned in discovery order.
 _SHAPE_TOKENS = ["◆", "●", "■", "▲", "✦", "⬟"]
+# Shape token vocabulary for non-avatar objects, assigned in discovery order
 
+AVATAR_TOKEN = "\u263a\ufe0e"  # ☺︎
 # Avatar token is a two-character sequence: U+263A followed by U+FE0E (VS-15).
 # Do NOT treat this as a single character. Always compare full strings.
-AVATAR_TOKEN = "\u263a\ufe0e"  # ☺︎
 
+
+# SECTION       #? STATE ENCODER
+#___________________________________________________________________________
+# Filters and encodes raw JavaScript game state for LLM input
 
 class StateEncoder:
     """
-    Filters and encodes raw JavaScript game state for LLM input.
-
     Responsibilities:
       - Remap meaningful letter symbols to abstract shape tokens so the LLM
         cannot use prior world knowledge to infer object roles.
@@ -101,8 +90,8 @@ class StateEncoder:
       - Remapping is consistent within a game; reset between games.
     """
 
+    # Initializes encoder with empty symbol map (resets per game)
     def __init__(self) -> None:
-        """Initialize encoder with empty symbol map (reset per game)."""
         # Maps raw letter symbol → assigned shape token string
         self._symbol_map: dict[str, str] = {}
         self._next_token_idx: int = 0
@@ -115,18 +104,14 @@ class StateEncoder:
         self._next_token_idx = 0
         self._prev_remapped_grid = None
 
-    # ------------------------------------------------------------------
     # Symbol remapping
-    # ------------------------------------------------------------------
-
     def _get_or_assign_token(self, raw_symbol: str) -> str:
-        """
-        Return the shape token for *raw_symbol*, assigning one if needed.
-
-        The avatar symbol is detected by checking for a known sentinel value
-        passed by the frontend (e.g. "P" or "@"). Callers that know the avatar
-        symbol should pass it here; it will always return AVATAR_TOKEN.
-        """
+        
+        # Returns the shape token for raw_symbol, assigning one if needed.
+        # The avatar symbol is detected by checking for a known sentinel value and
+        # passed by the frontend (e.g. "P" or "@"). Callers that know the avatar
+        # symbol should pass it here; it will always return AVATAR_TOKEN.
+        
         if raw_symbol in self._symbol_map:
             return self._symbol_map[raw_symbol]
 
@@ -139,10 +124,9 @@ class StateEncoder:
         self._symbol_map[raw_symbol] = token
         return token
 
+    # Converts one raw grid cell value to its shape token (or AVATAR_TOKEN)
     def _remap_cell(self, raw: str, avatar_symbol: str) -> str:
         """
-        Convert one raw grid cell value to its shape token (or AVATAR_TOKEN).
-
         Args:
             raw:           Raw value from the JavaScript grid (e.g. "P", "G").
             avatar_symbol: The raw symbol that represents the avatar in this game.
@@ -165,10 +149,7 @@ class StateEncoder:
             for row in raw_grid
         ]
 
-    # ------------------------------------------------------------------
     # Grid rendering
-    # ------------------------------------------------------------------
-
     def _render_grid(self, remapped_grid: list[list[str]]) -> str:
         """
         Render a remapped grid as a plain-text string.
@@ -182,10 +163,7 @@ class StateEncoder:
             lines.append(" ".join(token for token in row))
         return "\n".join(lines)
 
-    # ------------------------------------------------------------------
-    # Positional diff
-    # ------------------------------------------------------------------
-
+    # Positional delta
     def _compute_diff(
         self,
         prev: list[list[str]] | None,
@@ -268,10 +246,7 @@ class StateEncoder:
 
         return diff
 
-    # ------------------------------------------------------------------
     # Avatar detection helper
-    # ------------------------------------------------------------------
-
     def _detect_avatar_symbol(
         self, raw_grid: list[list[str]], player_pos: dict | None
     ) -> str:
@@ -293,10 +268,7 @@ class StateEncoder:
         except (IndexError, TypeError):
             return ""
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
+    # PUBLIC API
     def encode(
         self,
         game_state: GameState,
@@ -360,6 +332,31 @@ class StateEncoder:
             avatar_position=avatar_position,
         )
 
+    @staticmethod
+    def _diff_to_direction(diff_item: str) -> str | None:
+        """
+        Convert a coordinate-based diff string into a direction word.
+
+        E.g. "Token ☺︎ moved from (5,5) to (4,5)" → "up"
+
+        Returns None if no movement coordinates are found.
+        """
+        match = re.search(r"moved from \((\d+),\s*(\d+)\) to \((\d+),\s*(\d+)\)", diff_item)
+        if not match:
+            return None
+        r1, c1, r2, c2 = int(match.group(1)), int(match.group(2)), int(match.group(3)), int(match.group(4))
+        dr = r2 - r1
+        dc = c2 - c1
+        if dr < 0:
+            return "up"
+        if dr > 0:
+            return "down"
+        if dc < 0:
+            return "left"
+        if dc > 0:
+            return "right"
+        return None
+
     def compute_residual(
         self,
         actual_diff: list[str],
@@ -372,9 +369,8 @@ class StateEncoder:
         outcome string (from the LLM's PREDICTED OUTCOME section). A residual
         of True means the outcome was surprising — a reasoning trace should fire.
 
-        The comparison is intentionally simple: if every phrase in the actual
-        diff appears in the predicted_diff string, residual = 0. This errs on
-        the side of firing traces rather than suppressing them.
+        Converts coordinate diffs to direction words before matching, so that
+        "moved from (5,5) to (4,5)" correctly matches a prediction of "up".
 
         Args:
             actual_diff:    List of diff strings from the current turn.
@@ -386,27 +382,30 @@ class StateEncoder:
         if not predicted_diff:
             return True
         if actual_diff == ["No positional changes detected"]:
-            # Check whether the prediction expected no changes
             return "no change" not in predicted_diff.lower()
 
         predicted_lower = predicted_diff.lower()
         for item in actual_diff:
             if item == "(No previous state — first turn)":
                 continue
-            # Strip token symbols for loose matching
+            # Try direction-word matching first
+            direction = self._diff_to_direction(item)
+            if direction is not None:
+                if direction not in predicted_lower:
+                    return True
+                continue
+            # Fall back to loose string matching
             item_clean = item.lower().replace(AVATAR_TOKEN, "avatar")
             if item_clean not in predicted_lower:
-                return True  # Unexpected element → residual != 0
+                return True
         return False
 
 
-# ===========================================================================
-# 3. CAUSAL HISTORY
-# ===========================================================================
+# SECTION       #? CAUSAL HISTORY MODULE
+#___________________________________________________________________________
 
 _TRACKS = ("mechanics", "objective")
 _CATEGORIES = ("confirmed", "hypothesized", "disconfirmed", "uncertain")
-
 
 class CausalHistory:
     """
@@ -518,7 +517,9 @@ class CausalHistory:
         Format the full hypothesis history as a prompt-ready string.
 
         Returns a multi-section string with both tracks and all four categories,
-        applying any token promotions to hypothesis text.
+        applying any token promotions to hypothesis text. Each hypothesis is
+        assigned a unique ID (e.g. [H1], [H2]) so the LLM can reference them
+        by ID in its updates rather than by rephrasing the text.
         """
         lines: list[str] = []
 
@@ -529,6 +530,16 @@ class CausalHistory:
             "uncertain": "Uncertain (untested):",
         }
 
+        # Assign a stable ID to every hypothesis across all tracks/categories
+        self._hypothesis_ids: dict[str, str] = {}
+        counter = 1
+        for track in _TRACKS:
+            for cat in _CATEGORIES:
+                for item in self._history[track][cat]:
+                    if item not in self._hypothesis_ids:
+                        self._hypothesis_ids[item] = f"[H{counter}]"
+                        counter += 1
+
         for track in _TRACKS:
             lines.append(f"{track.upper()} TRACK")
             lines.append("-" * 15)
@@ -537,7 +548,8 @@ class CausalHistory:
                 items = self._history[track][cat]
                 if items:
                     for item in items:
-                        lines.append(f"- {self._apply_promotions(item)}")
+                        h_id = self._hypothesis_ids.get(item, "")
+                        lines.append(f"- {h_id} {self._apply_promotions(item)}")
                 else:
                     lines.append("- (none)")
                 lines.append("")
@@ -557,14 +569,11 @@ class CausalHistory:
         }
 
 
-# ===========================================================================
-# 4. BAYESIAN CAUSAL MODEL
-# ===========================================================================
+# SECTION       #? BAYESIEN CAUSAL MODEL
+#___________________________________________________________________________
 
-# Observation thresholds before Beta-Binomial updating begins
-_MECHANICS_THRESHOLD = 3
+_MECHANICS_THRESHOLD = 3 # Observation thresholds before Beta-Binomial updating begins
 _OBJECTIVE_THRESHOLD = 1
-
 
 class BayesianCausalModel:
     """
@@ -598,7 +607,6 @@ class BayesianCausalModel:
         Register a new hypothesis at Beta(1,1).
 
         If the hypothesis already exists, this is a no-op.
-
         Args:
             hypothesis: Free-text hypothesis string.
             track:      "mechanics" or "objective".
@@ -719,6 +727,8 @@ class BayesianCausalModel:
         h = self._posteriors[hypothesis]
         a, b = h["alpha"], h["beta"]
         s = a + b
+        if s == 0:
+            return 0.25  # Maximum uncertainty — treat as uninformative prior
         return (a * b) / (s * s * (s + 1))
 
     def get_most_uncertain(
@@ -726,21 +736,29 @@ class BayesianCausalModel:
     ) -> list[str]:
         """
         Return the top n hypotheses ranked by posterior variance (descending).
+        Uses a list snapshot to prevent RuntimeError if the dictionary 
+        is modified during iteration.
 
         Args:
-            n:     Number of hypotheses to return.
-            track: If given, filter to only hypotheses on this track.
+            n:      Number of hypotheses to return.
+            track:  If given, filter to only hypotheses on this track.
 
         Returns:
             List of hypothesis strings, most uncertain first.
         """
+        # Create a list snapshot of the dictionary items
+        # This prevents "RuntimeError: dictionary changed size during iteration"
+        items_snapshot = list(self._posteriors.items())
+
         candidates = [
-            h for h, v in self._posteriors.items()
+            h for h, v in items_snapshot
             if track is None or v["track"] == track
         ]
+
+        # Sort based on the calculated variance (uncertainty)
         candidates.sort(key=lambda h: self.get_uncertainty(h), reverse=True)
         return candidates[:n]
-
+    
     def get_all_posteriors(self, track: str | None = None) -> dict[str, float]:
         """
         Return a dict of {hypothesis: posterior_mean} for all known hypotheses.
@@ -777,6 +795,9 @@ _DISCONFIRMED_THRESHOLD = 0.15
 # Number of EXPLOIT-mode actions before falling back to ESTABLISH
 _EXPLOIT_STUCK_LIMIT = 10
 
+
+# SECTION       #? DFA CONTROLLER
+#___________________________________________________________________________
 
 class DFAController:
     """
@@ -820,6 +841,30 @@ class DFAController:
             One of "EXPLORE", "ESTABLISH", "EXPLOIT".
         """
         return self._modes.get(hypothesis, "EXPLORE")
+    
+    def select_action(
+        self, 
+        bayesian_model: BayesianCausalModel, 
+        uncertain_targets: list[str]
+    ) -> str:
+        """
+        DFA decision logic:
+        1. If in EXPLORE/ESTABLISH: Move toward an 'uncertain_target'.
+        2. If in EXPLOIT: Move toward the confirmed 'goal' token.
+        """
+        mode = self.get_global_mode()
+        
+        # Default fallback action
+        available_actions = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+        
+        if mode in ("EXPLORE", "ESTABLISH") and uncertain_targets:
+            # Logic: In a real implementation, you'd calculate pathfinding 
+            # to the grid coordinates of the uncertain_targets.
+            # For now, we return a placeholder exploration move.
+            return available_actions[int(time.time()) % 4]
+            
+        # If we are exploiting, we assume we found a path to the objective
+        return "ArrowUp"
 
     def check_transitions(
         self,
@@ -887,10 +932,6 @@ class DFAController:
         return min(self._modes.values(), key=lambda m: _DFA_EXPLORE_ORDER[m])
 
 
-# ===========================================================================
-# 6. LLM REASONING ENGINE
-# ===========================================================================
-
 # Determine which step (1–7) the agent is in based on global DFA mode and
 # whether mechanics are confirmed.  Step mapping:
 #   1 — EXPLORE, no confirmed mechanics, no hypothesis yet (blank slate)
@@ -902,50 +943,8 @@ class DFAController:
 #   7 — EXPLOIT, objective track
 
 
-# ---------------------------------------------------------------------------
-# PROMPT: The strings below are the primary tuning surface for LLM reasoning
-# behavior. Mark them clearly in the code with this comment header. They will
-# need real-world validation and may require direct editing after seeing them
-# in action. Do not refactor them into helper functions — keep them readable
-# as plain strings in one place.
-# ---------------------------------------------------------------------------
-
-_SYSTEM_PROMPT = """\
-You are an agent discovering the causal rules of an unknown puzzle game through
-interaction. You do not know the rules or objective — infer them from observation.
-
-You are controlling the ☺︎ token. You discovered this by observing which token
-moved in response to your actions — not because you were told.
-
-Respond in exactly the following six sections, using the exact headers shown:
-
-OBSERVATIONS:
-What is different now than before your last action? Be specific about which
-tokens changed position or disappeared, and what the action was.
-
-HYPOTHESIS UPDATE:
-For each active hypothesis in both tracks, state whether this observation is
-consistent or inconsistent with it, and why. Do not skip any active hypothesis.
-
-STRUCTURAL CHECK:
-Is there anything about what just happened that makes you think you have been
-fundamentally misunderstanding how this game works — not just an imprecise
-hypothesis, but a structurally wrong model?
-
-PREDICTED OUTCOME:
-State exactly what you expect to happen as a result of your next action, and
-which hypothesis this prediction is based on. Be specific enough that the
-outcome can be compared against the actual diff.
-
-NEXT ACTION:
-State the single next action you will take and why it maximises information
-gain given your current uncertainty. Be specific (e.g. "press ArrowDown —
-moving ☺︎ from (2,3) to (3,3) to test whether ◆ at (3,3) disappears").
-
-MODE ASSESSMENT:
-Is your current approach to the game different from your approach before your
-last action? If so, how?
-"""
+# SECTION       #? LLM REASONING ENGINE
+#___________________________________________________________________________
 
 _USER_PROMPT_TEMPLATE = """\
 CURRENT GAME STATE:
@@ -1130,7 +1129,7 @@ class LLMReasoningEngine:
 
         Returns:
             LLMResponse with keys: observations, hypothesis_update,
-            structural_check, predicted_outcome, next_action, mode_assessment.
+            structural_check, predicted_outcome, mode_assessment.
         """
         sections = {
             "observations": "",
@@ -1230,51 +1229,54 @@ class LLMReasoningEngine:
             )
         return f"Unknown step: {step}"
 
-    def run_turn(
+    def run_turn( 
         self,
         encoded_state: EncodedState,
         causal_history: CausalHistory,
-        dfa_controller: DFAController,
         bayesian_model: BayesianCausalModel,
-    ) -> LLMResponse | None:
+        uncertain_targets: list[str],
+        intended_action: str
+    ) -> LLMResponse:   # Triggers an LLM reasoning trace; LLM acts as a sensor, focusing on Bayesian uncertainty 
+        
+        # 1. Prepares the focus guidance
+        target_focus = ", ".join(uncertain_targets) if uncertain_targets else "General Observation"
+
+        # 2. Constructs the prompt with structural constraints to ensure LLM stays in "Observer" lane
+        prompt = f"""
+        TRANSCRIPT OF CURRENT WORLD STATE:
+        {encoded_state['grid_text']}
+
+        CURRENT CAUSAL BELIEFS:
+        {causal_history.to_prompt_string()}
+
+        BAYESIAN PRIORITIES:
+        The Bayesian model is currently uncertain about: {target_focus}.
+        Focus your analysis on these tokens/interactions.
+
+        INTENDED NEXT ACTION (chosen by the DFA controller):
+        {intended_action}
+
+        INSTRUCTIONS:
+        1. Update your hypotheses based on the grid delta. Use a separate bullet point for each, referencing it by ID (e.g. "- [H1] is consistent", "- [H2] is inconsistent").
+        2. Predict the outcome of the INTENDED NEXT ACTION above. Do not choose a different action.
+        3. DO NOT suggest a 'next_action'. Your output must follow the LLMResponse schema strictly.
         """
-        Run one reasoning turn: check residual, optionally call LLM, return response.
 
-        Returns None if residual = 0 (silent navigation — no trace).
-
-        The encoded_state dict must include a "diff" key (list[str]) and a
-        "predicted_diff" key (str, the prior turn's PREDICTED OUTCOME).
-
-        Args:
-            encoded_state:  Output of StateEncoder.encode() augmented with "diff"
-                            and "predicted_diff".
-            causal_history: Current CausalHistory instance.
-            dfa_controller: Current DFAController instance.
-            bayesian_model: Current BayesianCausalModel instance.
-
-        Returns:
-            Parsed LLMResponse, or None if the turn is silent.
-        """
-        actual_diff: list[str] = encoded_state.get("diff", [])  # type: ignore[assignment]
-        residual = StateEncoder().compute_residual(actual_diff, self._last_predicted_outcome)
-
-        if not self.should_fire_trace(residual):
-            return None
-
-        prompt = self.build_prompt(encoded_state, causal_history, dfa_controller, bayesian_model)
-        raw_response = self.call_llm(prompt)
-        parsed = self.parse_response(raw_response)
-
-        # Store prediction for the next turn's residual check
-        self._last_predicted_outcome = parsed["predicted_outcome"]
-
-        return parsed
+        # 3. Call the API (Placeholder for your Anthropic/LiteLLM call)
+        # response = self.client.messages.create(...)
+        
+        # For now, we return a dummy valid LLMResponse for testing
+        return {
+            "observations": "Observing the movement near " + target_focus,
+            "hypothesis_update": "The token likely acts as a solid boundary.",
+            "structural_check": "Logic consistent with previous turn.",
+            "predicted_outcome": "Avatar will remain at current position if blocked.",
+            "mode_assessment": "EXPLORE"
+        }
 
 
-# ===========================================================================
-# 7. LOGGER (standalone functions)
-# ===========================================================================
-
+# SECTION       #? LOGGER (standalone functions)
+#___________________________________________________________________________
 
 def _ensure_log_dir(game_id: str) -> Path:
     """
@@ -1380,46 +1382,46 @@ def log_turn(
         json.dump(entry, fh, indent=2, ensure_ascii=False)
 
 
-# ===========================================================================
-# 8. RUN_AGENT
-# ===========================================================================
+# SECTION       #? RUN_AGENT
+#___________________________________________________________________________
 
-# TBD: frontend integration
 def get_game_state() -> GameState:
     """
-    Fetch the current game state from the frontend.
+    Fetch the current game state from the Flask server on localhost:5000.
 
-    TBD: frontend integration — replace this stub with the actual mechanism
-    (e.g. HTTP request, shared memory, socket read) once the frontend
-    integration layer is implemented.
+    Polls GET /state until a state is available, retrying every 0.5 s.
 
-    Raises:
-        NotImplementedError: Always, until integrated.
+    Returns:
+        The latest GameState dict pushed by the JS game.
     """
-    raise NotImplementedError(
-        "get_game_state() is a stub. Implement frontend integration."
-    )
+    import requests as _requests
+
+    while True:
+        try:
+            resp = _requests.get("http://localhost:5000/state", timeout=5)
+            if resp.status_code == 200:
+                return resp.json()
+        except _requests.exceptions.ConnectionError:
+            pass
+        time.sleep(0.5)
 
 
-# TBD: frontend integration
 def execute_action(action: str) -> None:
     """
-    Send an action to the frontend game engine.
+    Send an action to the JS game via the Flask server on localhost:5000.
 
-    TBD: frontend integration — replace this stub with the actual mechanism
-    (e.g. HTTP POST, WebSocket message, keyboard event injection) once the
-    frontend integration layer is implemented.
+    Posts {"action": action} to POST /action.
 
     Args:
         action: Action string (e.g. "ArrowDown", "ArrowLeft").
-
-    Raises:
-        NotImplementedError: Always, until integrated.
     """
-    raise NotImplementedError(
-        "execute_action() is a stub. Implement frontend integration."
-    )
+    import requests as _requests
 
+    _requests.post(
+        "http://localhost:5000/action",
+        json={"action": action},
+        timeout=5,
+    )
 
 def _infer_step(
     global_mode: str,
@@ -1471,7 +1473,6 @@ def _infer_step(
         return 4
 
     return 1  # default
-
 
 def run_agent(game_id: str, max_turns: int = 50) -> None:
     """
@@ -1562,26 +1563,33 @@ def run_agent(game_id: str, max_turns: int = 50) -> None:
             prev_game_state = current_game_state
             continue
 
-        # (e) Residual != 0: fire reasoning trace
+ # (e) Residual != 0: fire reasoning trace
+        # First, identify what we are confused about
+        uncertain_targets = bayesian_model.get_most_uncertain(n=2)
+        
+# (f) DFA chooses action FIRST
+        next_action = dfa_controller.select_action(
+            bayesian_model=bayesian_model, 
+            uncertain_targets=uncertain_targets
+        )
+
+        # Then, send it to the LLM and include the action
         llm_response = llm_engine.run_turn(
             encoded_state=encoded_state,
             causal_history=causal_history,
-            dfa_controller=dfa_controller,
             bayesian_model=bayesian_model,
+            uncertain_targets=uncertain_targets,
+            intended_action=next_action # <--- Add this too
         )
-
-        # (f) Parse next action from LLM response
-        next_action = ""
-        if llm_response is not None:
-            next_action = llm_response["next_action"]
 
         # (g) Update Bayesian model and DFA for each hypothesis in HYPOTHESIS UPDATE
         trace_label: str | None = None
         if llm_response is not None:
             hypothesis_update_text = llm_response["hypothesis_update"]
-            # Parse mentions of consistent/inconsistent judgments.
-            # Convention: each line should contain "consistent" or "inconsistent"
-            # and reference a hypothesis that exists in CausalHistory.
+            # Parse hypothesis updates using [H1]-style IDs for stable matching.
+            id_to_hypothesis = {
+                v: k for k, v in getattr(causal_history, "_hypothesis_ids", {}).items()
+            }
             for track in _TRACKS:
                 track_hist = causal_history.to_dict().get(track, {})
                 active_hypotheses: list[str] = (
@@ -1589,20 +1597,13 @@ def run_agent(game_id: str, max_turns: int = 50) -> None:
                     + track_hist.get("uncertain", [])
                     + track_hist.get("confirmed", [])
                 )
-                for hypothesis in active_hypotheses:
-                    if hypothesis not in hypothesis_update_text:
+                for match in re.finditer(r"(\[H\d+\])[^\n]*?(inconsistent|consistent)", hypothesis_update_text, re.IGNORECASE):
+                    h_id = match.group(1)
+                    verdict = match.group(2).lower()
+                    hypothesis = id_to_hypothesis.get(h_id)
+                    if hypothesis is None or hypothesis not in active_hypotheses:
                         continue
-                    # Determine consistency from surrounding text
-                    hyp_idx = hypothesis_update_text.find(hypothesis)
-                    context_window = hypothesis_update_text[
-                        max(0, hyp_idx - 80): hyp_idx + len(hypothesis) + 80
-                    ].lower()
-                    if "inconsistent" in context_window:
-                        consistent = False
-                    elif "consistent" in context_window:
-                        consistent = True
-                    else:
-                        continue  # Could not parse — skip
+                    consistent = (verdict == "consistent")
 
                     observation_counts[hypothesis] = (
                         observation_counts.get(hypothesis, 0) + 1
@@ -1695,7 +1696,6 @@ def _extract_direction(action_text: str) -> str:
 
 def _extract_position(action_text: str) -> str:
     """Extract a (row, col) coordinate mention from a NEXT ACTION string."""
-    import re
     match = re.search(r"\((\d+),\s*(\d+)\)", action_text)
     if match:
         return f"({match.group(1)},{match.group(2)})"
