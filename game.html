@@ -664,21 +664,25 @@
                     e.preventDefault();
                     logMovement('ArrowUp', 'up', 0, -1);
                     moveAvatar(0, -1);
+                    fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
                     logMovement('ArrowDown', 'down', 0, 1);
                     moveAvatar(0, 1);
+                    fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });
                     break;
                 case 'ArrowLeft':
                     e.preventDefault();
                     logMovement('ArrowLeft', 'left', -1, 0);
                     moveAvatar(-1, 0);
+                    fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
                     logMovement('ArrowRight', 'right', 1, 0);
                     moveAvatar(1, 0);
+                    fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });
                     break;
                 case 'r':
                 case 'R':
@@ -997,6 +1001,29 @@
                 S3Uploader.stopBackups();
             }
         });
+
+        // --- EEE Agent integration ---
+
+        function buildAgentState() {
+            return {
+                grid: generateGameStateMatrix(),
+                playerPosition: { row: gameState.avatarPos.y, col: gameState.avatarPos.x },
+                avatar_color: gameState.avatarColor,
+                timestamp: Date.now() / 1000
+            };
+        }
+
+        setInterval(async () => {
+            if (gameState.levelComplete) return;
+            try {
+                const res = await fetch('http://localhost:5000/action');
+                const data = await res.json();
+                if (data.action) {
+                    document.dispatchEvent(new KeyboardEvent('keydown', { key: data.action, bubbles: true }));
+                }
+            } catch (_) {}
+        }, 500);
+
     </script>
 </body>
 </html>
