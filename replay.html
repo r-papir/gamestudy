@@ -167,8 +167,8 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 
 const COLORS = {
   grey:'#D3D3D3', gray:'#D3D3D3',
-  blue:'#ADD8E6', yellow:'#DDCC77', pink:'#FFB6C1',
-  lime:'#90EE90', teal:'#44AA99',  rose:'#FF6B8A',
+  blue:'#ADD8E6', yellow:'#DDCC77', pink:'#CC6677',
+  lime:'#90EE90', teal:'#44AA99', rose:'#FF6B8A',
   magenta:'#FF69B4', violet:'#9370DB', orange:'#FF5F15'
 };
 
@@ -188,7 +188,10 @@ const GB_GOAL = { 1:'blue', 2:'teal', 3:'rose', 4:'lime', 5:'violet' };
 const GC_GOAL  = { 1:'#00CC66', 2:'#00FF99', 3:'#33FF66', 4:'#00CCFF' };
 
 // gC: track color per level (movable + fixed pieces share this color)
-const GC_TRACK = { 1:'#ADD8E6', 2:'#44AA99', 3:'#BBCC33', 4:'#882255' };
+const GC_TRACK   = { 1:'#ADD8E6', 2:'#44AA99', 3:'#BBCC33', 4:'#882255' };
+
+// gC: vehicle color per level
+const GC_VEHICLE = { 1:'#DDCC77', 2:'#CC6677', 3:'#332288', 4:'#88CCEE' };
 
 // ─────────────────────────────────────────────────────────
 // STATE
@@ -470,8 +473,8 @@ function styleCellC(el, sym, f) {
   switch (sym) {
     case 'E': el.style.background = '#F5F5F5'; break;
     case 'V':
-      el.style.background = COLORS.blue;
-      el.style.outline = '3px solid #2255aa';
+      el.style.background = GC_VEHICLE[f.level] || '#DDCC77';
+      el.style.outline = '3px solid #222';
       el.style.outlineOffset = '-3px';
       el.innerHTML = '<span style="font-size:.75em">🚗</span>';
       break;
@@ -484,7 +487,7 @@ function styleCellC(el, sym, f) {
       break;
     case 'G': {
       const gc = GC_GOAL[f.level] || '#aaa';
-      el.style.background = '#FFFFFF';
+      el.style.background = '#ccc';
       el.style.outline = `1px dashed ${gc}`;
       el.style.outlineOffset = '-1px';
       break;
