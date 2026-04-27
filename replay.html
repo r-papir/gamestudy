@@ -156,7 +156,7 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
   <div id="stat-row">
     <span id="move-ctr">Frame — / —</span>
     <span id="elapsed">00:00</span>
-    <span id="kb-hint">Space: play/pause · ←/→: step · Shift+←/→: ±10 · [/]: prev/next level · Home/End</span>
+    <span id="kb-hint">Space: play/pause · ←/→: step · Shift+←/→: ±10 · [/]: prev/next level</span>
   </div>
 </div>
 
@@ -339,7 +339,6 @@ function loadReplay() {
   buildTranscript();
   buildLevelJumps();
   buildMarkers();
-  buildLegend();
   renderFrame();
 }
 
@@ -350,7 +349,6 @@ function clearView() {
   document.getElementById('transcript-scroll').innerHTML =
     '<div style="color:#445;font-size:13px;padding:30px 16px;text-align:center">Load files to begin.</div>';
   document.getElementById('lj-btns').innerHTML = '';
-  document.getElementById('legend').innerHTML = '';
   document.getElementById('level-label').textContent = '—';
   document.getElementById('move-ctr').textContent = 'Frame — / —';
   document.getElementById('elapsed').textContent = '00:00';
@@ -501,21 +499,12 @@ function goalColor(lv) {
 
 function updateGameInfo(f) {
   document.getElementById('level-label').textContent = `Level ${f.level}`;
-  const badge = document.getElementById('color-badge');
   const dir   = document.getElementById('dir-label');
   const gs    = document.getElementById('gs-label');
   const chunk = document.getElementById('chunk-label');
 
-  badge.style.display = 'none';
   dir.textContent = gs.textContent = chunk.textContent = '';
 
-  if (S.puzzle === 'gA' || S.puzzle === 'gB') {
-    const c = f.colorBefore || 'grey';
-    badge.style.display = 'inline-block';
-    badge.textContent = c;
-    badge.style.background = COLORS[c] || '#ccc';
-    badge.style.color = lightness(COLORS[c]) > 128 ? '#333' : '#eee';
-  }
   if (S.puzzle === 'gB') {
     if (f.directionCapability) dir.textContent = `dir: ${f.directionCapability}`;
     if (f.currentGameState)    gs.textContent  = `state: ${f.currentGameState}`;
