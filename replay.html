@@ -445,15 +445,17 @@ function styleCell(el, sym, col, row, f) {
       break;
     }
     case 'C': {
-      if (S.puzzle === 'gA' && GA[lv]) {
-        const cname = GA[lv].c[`${col},${row}`];
-        el.style.background = cname ? COLORS[cname] : '#D0D0FF';
-      } else {
-        // gB color-cycler tile
+      if (S.puzzle === 'gB') {
+        // Force Puzzle B styling specifically
         el.style.background = '#F5F5F5';
         el.style.outline = '3px dotted #666';
         el.style.outlineOffset = '-4px';
         el.innerHTML = '<span style="font-size:.6em;color:#888">C</span>';
+      } 
+      else if (S.puzzle === 'gA' && GA[lv]) {
+        // Puzzle A logic: Solid colors, no outlines
+        const cname = GA[lv].c[`${col},${row}`];
+        el.style.background = cname ? COLORS[cname] : '#D0D0FF';
       }
       break;
     }
