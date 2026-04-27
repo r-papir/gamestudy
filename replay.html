@@ -184,6 +184,12 @@ const GA = {
 // gB: goal color per level
 const GB_GOAL = { 1:'blue', 2:'teal', 3:'rose', 4:'lime', 5:'violet' };
 
+// gC: goal outline color per level (from game3.html)
+const GC_GOAL  = { 1:'#00CC66', 2:'#00FF99', 3:'#33FF66', 4:'#00CCFF' };
+
+// gC: track color per level (movable + fixed pieces share this color)
+const GC_TRACK = { 1:'#ADD8E6', 2:'#44AA99', 3:'#BBCC33', 4:'#882255' };
+
 // ─────────────────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────────────────
@@ -403,7 +409,7 @@ function styleCell(el, sym, col, row, f) {
   el.style.cssText = `width:${el.style.width};height:${el.style.height};font-size:${el.style.fontSize};display:flex;align-items:center;justify-content:center;font-weight:700;cursor:default;user-select:none;`;
   el.innerHTML = '';
 
-  if (S.puzzle === 'gC') { styleCellC(el, sym); return; }
+  if (S.puzzle === 'gC') { styleCellC(el, sym, f); return; }
 
   const lv = f.level;
   switch (sym) {
@@ -448,7 +454,6 @@ function styleCell(el, sym, col, row, f) {
     }
     case 'T':
       el.style.background = '#D3D3D3';
-      el.innerHTML = '<span style="font-size:.6em;color:#555">T</span>';
       break;
     case 'D':
       el.style.background = '#F5F5F5';
@@ -461,7 +466,7 @@ function styleCell(el, sym, col, row, f) {
   }
 }
 
-function styleCellC(el, sym) {
+function styleCellC(el, sym, f) {
   switch (sym) {
     case 'E': el.style.background = '#F5F5F5'; break;
     case 'V':
@@ -471,21 +476,19 @@ function styleCellC(el, sym) {
       el.innerHTML = '<span style="font-size:.75em">🚗</span>';
       break;
     case 'M':
-      el.style.background = '#FFD700';
-      el.style.outline = '2px solid #bbaa00';
-      el.style.outlineOffset = '-2px';
+      el.style.background = GC_TRACK[f.level] || '#ADD8E6';
       break;
     case 'F':
-      el.style.background = '#888';
-      el.style.outline = '2px solid #555';
-      el.style.outlineOffset = '-2px';
+      el.style.background = GC_TRACK[f.level] || '#ADD8E6';
+      el.innerHTML = '<span style="font-size:.6em;opacity:.6">✕</span>';
       break;
-    case 'G':
-      el.style.background = '#F0FFF0';
-      el.style.outline = '4px solid #228B22';
-      el.style.outlineOffset = '-4px';
-      el.innerHTML = '<span style="color:#228B22">★</span>';
+    case 'G': {
+      const gc = GC_GOAL[f.level] || '#aaa';
+      el.style.background = '#FFFFFF';
+      el.style.outline = `1px dashed ${gc}`;
+      el.style.outlineOffset = '-1px';
       break;
+    }
     default:
       el.style.background = '#F5F5F5';
   }
