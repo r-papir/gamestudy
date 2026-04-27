@@ -430,10 +430,10 @@ function styleCell(el, sym, col, row, f) {
     }
     case 'G': {
       const gc = goalColor(lv);
-      el.style.background = '#F9F9F9';
-      el.style.outline = `4px solid ${gc}`;
+      el.style.background = gc;
+      el.innerHTML = `<span style="color:#F9F9F9">★</span>`;
+      el.style.outline = `4px solid ${gc}`; 
       el.style.outlineOffset = '-4px';
-      el.innerHTML = `<span style="color:${gc}">★</span>`;
       break;
     }
     case 'R':
