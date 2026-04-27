@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puzzle Replay</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;height:100vh}
+
+/* ── Header ── */
+#header{background:#f7f7f7;border-bottom:1px solid #ddd;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex-shrink:0}
+#header h1{font-size:17px;font-weight:700;color:#c0392b;white-space:nowrap}
+#load-btn{background:#fff;color:#333;border:1px solid #c0392b;padding:5px 13px;border-radius:4px;cursor:pointer;font-size:13px;transition:background .2s,color .2s}
+#load-btn:hover{background:#c0392b;color:#fff}
+#file-input{display:none}
+#participant-select{background:#fff;color:#333;border:1px solid #ccc;padding:5px 10px;border-radius:4px;font-size:13px;min-width:160px}
+#participant-select:disabled{opacity:.45}
+#puzzle-tabs{display:flex;gap:4px}
+.tab-btn{background:#fff;color:#aaa;border:1px solid #ddd;padding:5px 15px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:700;transition:all .15s}
+.tab-btn.available{color:#666;border-color:#bbb}
+.tab-btn.active{background:#c0392b;color:#fff;border-color:#c0392b}
+.tab-btn:disabled{cursor:default;opacity:.35}
+.tab-btn.available:not(:disabled):not(.active):hover{background:#f5f5f5;color:#333}
+
+/* ── Main ── */
+#main{display:flex;flex:1;min-height:0;overflow:hidden}
+
+/* ── Grid panel ── */
+#grid-panel{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 20px;background:#fff;min-width:300px}
+#game-info{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:13px;min-height:22px;flex-wrap:wrap}
+#level-label{font-weight:700;color:#c0392b;font-size:14px}
+#color-badge{padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid rgba(0,0,0,.15);display:none}
+#dir-label,#gs-label,#chunk-label{color:#999;font-size:12px}
+#grid-display{display:grid;gap:2px;background:#ccc;padding:2px;border:2px solid #ccc;border-radius:2px}
+.gc{display:flex;align-items:center;justify-content:center;position:relative;font-weight:700;cursor:default;user-select:none}
+#grid-placeholder{color:#bbb;font-size:14px;padding:60px 30px;text-align:center;background:#fafafa;border:2px dashed #e0e0e0}
+
+/* ── Legend ── */
+#legend{margin-top:10px;font-size:11px;color:#aaa;display:flex;flex-wrap:wrap;gap:6px;max-width:420px;justify-content:center}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-swatch{width:12px;height:12px;border-radius:2px;border:1px solid rgba(0,0,0,.12);flex-shrink:0}
+
+/* ── Transcript ── */
+#transcript-panel{flex:1;display:flex;flex-direction:column;background:#fafafa;border-left:1px solid #e0e0e0;min-width:260px;max-width:420px}
+#transcript-panel h3{padding:8px 14px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#bbb;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+#transcript-scroll{flex:1;overflow-y:auto;padding:10px;scrollbar-width:thin;scrollbar-color:#ddd #fafafa}
+.tseg{padding:7px 10px;border-radius:4px;margin-bottom:5px;border-left:3px solid transparent;transition:background .2s,border-color .2s}
+.tseg .ts{font-size:10px;color:#ccc;font-weight:700;display:block;margin-bottom:2px}
+.tseg .txt{font-size:13px;color:#888;line-height:1.5}
+.tseg.active{background:#fff5f5;border-left-color:#c0392b}
+.tseg.active .txt{color:#222}
+.tseg.active .ts{color:#c0392b}
+
+/* ── Controls ── */
+#controls{background:#f7f7f7;border-top:1px solid #ddd;padding:8px 16px 10px;flex-shrink:0}
+#pb-row{display:flex;align-items:center;gap:5px;margin-bottom:7px;flex-wrap:wrap}
+.cb{background:#fff;color:#555;border:1px solid #ddd;width:34px;height:34px;border-radius:4px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.cb:hover:not(:disabled){background:#eee}
+.cb:disabled{opacity:.3;cursor:default}
+#btn-play{background:#c0392b;border-color:#c0392b;color:#fff;width:42px;height:42px;font-size:18px}
+#btn-play:hover{background:#a93226}
+.speed-section{display:flex;align-items:center;gap:3px;margin-left:10px}
+.speed-section span{font-size:11px;color:#bbb;margin-right:3px}
+.spd{background:#fff;color:#aaa;border:1px solid #ddd;padding:3px 7px;border-radius:3px;cursor:pointer;font-size:12px;transition:all .15s}
+.spd.active{background:#eee;color:#333;border-color:#999}
+.spd:hover:not(.active){background:#f5f5f5;color:#666}
+
+/* Timeline */
+#tl-wrapper{margin:4px 0;position:relative;height:24px;cursor:pointer}
+#tl-track{position:absolute;top:50%;left:0;right:0;height:5px;background:#e0e0e0;border-radius:3px;transform:translateY(-50%)}
+#tl-fill{height:100%;background:#c0392b;border-radius:3px;width:0%;pointer-events:none}
+#tl-scrubber{position:absolute;top:50%;width:13px;height:13px;background:#c0392b;border-radius:50%;transform:translate(-50%,-50%);left:0%;box-shadow:0 0 4px rgba(0,0,0,.25);pointer-events:none}
+.lv-marker{position:absolute;top:0;width:2px;height:24px;background:#e67e22;opacity:.8;transform:translateX(-50%);pointer-events:none}
+.lv-marker-lbl{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:9px;color:#e67e22;white-space:nowrap;margin-bottom:1px}
+
+/* Level jump & status */
+#lj-row{display:flex;align-items:center;gap:5px;margin-top:4px;flex-wrap:wrap}
+#lj-row span{font-size:11px;color:#bbb}
+.ljb{background:#fff;color:#aaa;border:1px solid #ddd;padding:2px 9px;border-radius:3px;cursor:pointer;font-size:12px;transition:all .15s}
+.ljb:hover{background:#f0f0f0;color:#555}
+.ljb.cur{background:#eee;color:#333;border-color:#999}
+#stat-row{display:flex;align-items:center;gap:14px;margin-top:5px;font-size:11px;flex-wrap:wrap}
+#move-ctr{color:#bbb}
+#elapsed{color:#2980b9;font-variant-numeric:tabular-nums}
+#kb-hint{color:#ccc;flex:1;text-align:right}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Puzzle Replay Viewer</h1>
+  <input type="file" id="file-input" webkitdirectory multiple>
+  <button id="load-btn">📂 Load Data Folder</button>
+  <select id="participant-select" disabled>
+    <option value=""> Select Participant </option>
+  </select>
+  <div id="puzzle-tabs">
+    <button class="tab-btn" data-puzzle="gA" disabled>Puzzle A</button>
+    <button class="tab-btn" data-puzzle="gB" disabled>Puzzle B</button>
+    <button class="tab-btn" data-puzzle="gC" disabled>Puzzle C</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="grid-panel">
+    <div id="game-info">
+      <span id="level-label">—</span>
+      <span id="color-badge"></span>
+      <span id="dir-label"></span>
+      <span id="gs-label"></span>
+      <span id="chunk-label"></span>
+    </div>
+    <div id="grid-display">
+      <div id="grid-placeholder">Load files and select a participant.</div>
+    </div>
+    <div id="legend"></div>
+  </div>
+
+  <div id="transcript-panel">
+    <h3>Transcript</h3>
+    <div id="transcript-scroll">
+      <div style="color:#bbb;font-size:13px;padding:30px 16px;text-align:center">Load the ALL DATA folder to begin.</div>
+    </div>
+  </div>
+</div>
+
+<div id="controls">
+  <div id="pb-row">
+    <button class="cb" id="btn-home"   title="First frame (Home)">⏮</button>
+    <button class="cb" id="btn-prev10" title="Back 10 (Shift+←)">⏪</button>
+    <button class="cb" id="btn-prev"   title="Back 1 (←)">❮</button>
+    <button class="cb" id="btn-play"   title="Play / Pause (Space)">▶</button>
+    <button class="cb" id="btn-next"   title="Forward 1 (→)">❯</button>
+    <button class="cb" id="btn-next10" title="Forward 10 (Shift+→)">⏩</button>
+    <button class="cb" id="btn-end"    title="Last frame (End)">⏭</button>
+    <div class="speed-section">
+      <span>Speed:</span>
+      <button class="spd" data-speed="0.5">0.5×</button>
+      <button class="spd active" data-speed="1">1×</button>
+      <button class="spd" data-speed="2">2×</button>
+      <button class="spd" data-speed="4">4×</button>
+    </div>
+  </div>
+
+  <div id="tl-wrapper">
+    <div id="tl-track">
+      <div id="tl-fill"></div>
+      <div id="tl-scrubber"></div>
+    </div>
+  </div>
+
+  <div id="lj-row">
+    <span>Jump:</span>
+    <div id="lj-btns"></div>
+  </div>
+
+  <div id="stat-row">
+    <span id="move-ctr">Frame — / —</span>
+    <span id="elapsed">00:00</span>
+    <span id="kb-hint">Space: play/pause · ←/→: step · Shift+←/→: ±10 · [/]: prev/next level · Home/End</span>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────
+
+const COLORS = {
+  grey:'#D3D3D3', gray:'#D3D3D3',
+  blue:'#ADD8E6', yellow:'#DDCC77', pink:'#FFB6C1',
+  lime:'#90EE90', teal:'#44AA99',  rose:'#FF6B8A',
+  magenta:'#FF69B4', violet:'#9370DB', orange:'#FF5F15'
+};
+
+// gA: corner cell colors by "col,row" key, and target color per level
+const GA = {
+  1: { c:{'0,0':'teal','5,0':'yellow','0,5':'pink','5,5':'blue'},   t:'blue'   },
+  2: { c:{'0,0':'blue','5,0':'lime',  '0,5':'teal','5,5':'pink'},   t:'lime'   },
+  3: { c:{'0,0':'yellow','5,0':'blue','0,5':'pink','5,5':'teal'},   t:'pink'   },
+  4: { c:{'0,0':'yellow','5,0':'pink','0,5':'teal','5,5':'blue'},   t:'yellow' },
+  5: { c:{'0,0':'lime','5,0':'yellow','0,5':'blue','2,5':'pink','2,4':'teal'}, t:'pink' }
+};
+
+// gB: goal color per level
+const GB_GOAL = { 1:'blue', 2:'teal', 3:'rose', 4:'lime', 5:'violet' };
+
+// ─────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────
+
+const S = {
+  data: {},        // { pid: { gA: {gamestate, transcript}, ... } }
+  pid: null,
+  puzzle: null,
+  frames: [],
+  transcript: [],
+  totalMs: 0,
+  cur: 0,          // current frame index
+  playing: false,
+  speed: 1,
+  lastRaf: null,
+  pendingMs: 0,
+  dragging: false,
+  gridBuilt: null  // "CxR" string — track when to rebuild DOM cells
+};
+
+// ─────────────────────────────────────────────────────────
+// FILE LOADING
+// ─────────────────────────────────────────────────────────
+
+document.getElementById('load-btn').onclick = () =>
+  document.getElementById('file-input').click();
+
+document.getElementById('file-input').addEventListener('change', async function () {
+  const raw = {};
+  for (const file of this.files) {
+    const m = file.name.match(/^(P\d+)_(g[ABC])_(audio|gamestate|eyetracking)_\d{8}\.(json|txt)$/i);
+    if (!m) continue;
+    const [, pid, game, type, ext] = m;
+    if (type === 'eyetracking') continue;
+    if (type === 'audio' && ext !== 'txt') continue;
+    if (!raw[pid]) raw[pid] = {};
+    if (!raw[pid][game]) raw[pid][game] = {};
+    const text = await file.text();
+    if (type === 'gamestate') {
+      try { raw[pid][game].gs = JSON.parse(text); } catch(e) {}
+    } else {
+      raw[pid][game].tx = parseTranscript(text);
+    }
+  }
+  // Keep only complete combos (gamestate + non-empty transcript)
+  S.data = {};
+  for (const [pid, games] of Object.entries(raw)) {
+    for (const [game, d] of Object.entries(games)) {
+      if (d.gs && d.tx && d.tx.length) {
+        if (!S.data[pid]) S.data[pid] = {};
+        S.data[pid][game] = d;
+      }
+    }
+  }
+  buildDropdown();
+  this.value = '';
+});
+
+// ─────────────────────────────────────────────────────────
+// TRANSCRIPT PARSING
+// ─────────────────────────────────────────────────────────
+
+function parseTranscript(raw) {
+  const segs = [];
+  const lines = raw.split('\n');
+  const re = /^(\d{1,2}):(\d{2})$/;
+  let i = 0;
+  while (i < lines.length) {
+    const l = lines[i].trim();
+    if (l.startsWith('(Transcribed')) { i++; continue; }
+    const m = l.match(re);
+    if (m) {
+      const sec = +m[1] * 60 + +m[2];
+      const parts = [];
+      i++;
+      while (i < lines.length) {
+        const n = lines[i].trim();
+        if (n.match(re) || n.startsWith('(Transcribed')) break;
+        if (n) parts.push(n);
+        i++;
+      }
+      const txt = parts.join(' ').trim();
+      if (txt) segs.push({ sec, txt });
+    } else { i++; }
+  }
+  return segs;
+}
+
+// ─────────────────────────────────────────────────────────
+// DROPDOWN & TABS
+// ─────────────────────────────────────────────────────────
+
+function buildDropdown() {
+  const sel = document.getElementById('participant-select');
+  sel.innerHTML = '<option value="">— select participant —</option>';
+  Object.keys(S.data).sort().forEach(pid => {
+    const o = document.createElement('option');
+    o.value = pid; o.textContent = pid;
+    sel.appendChild(o);
+  });
+  sel.disabled = !Object.keys(S.data).length;
+}
+
+document.getElementById('participant-select').addEventListener('change', function () {
+  pause();
+  S.pid = this.value || null;
+  refreshTabs();
+});
+
+function refreshTabs() {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const ok = !!(S.pid && S.data[S.pid]?.[b.dataset.puzzle]);
+    b.disabled = !ok;
+    b.classList.toggle('available', ok);
+    b.classList.remove('active');
+  });
+  if (S.pid) {
+    const first = ['gA','gB','gC'].find(p => S.data[S.pid]?.[p]);
+    if (first) selectPuzzle(first);
+  } else {
+    clearView();
+  }
+}
+
+document.querySelectorAll('.tab-btn').forEach(b =>
+  b.addEventListener('click', () => { if (!b.disabled) selectPuzzle(b.dataset.puzzle); })
+);
+
+function selectPuzzle(p) {
+  pause();
+  S.puzzle = p;
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.puzzle === p)
+  );
+  loadReplay();
+}
+
+// ─────────────────────────────────────────────────────────
+// REPLAY LOADING
+// ─────────────────────────────────────────────────────────
+
+function loadReplay() {
+  const d = S.data[S.pid]?.[S.puzzle];
+  if (!d) return;
+  const gs = d.gs;
+  const t0 = new Date(gs.sessionStart).getTime();
+  const raw = gs.movements || gs.events || [];
+  S.frames = raw.map(f => ({ ...f, ms: new Date(f.timestamp).getTime() - t0 }));
+  S.transcript = d.tx;
+  S.cur = 0;
+  S.totalMs = S.frames.length ? S.frames[S.frames.length - 1].ms : 1;
+  S.gridBuilt = null;
+  buildTranscript();
+  buildLevelJumps();
+  buildMarkers();
+  buildLegend();
+  renderFrame();
+}
+
+function clearView() {
+  S.frames = []; S.transcript = [];
+  document.getElementById('grid-display').innerHTML =
+    '<div id="grid-placeholder">Load files and select a participant.</div>';
+  document.getElementById('transcript-scroll').innerHTML =
+    '<div style="color:#445;font-size:13px;padding:30px 16px;text-align:center">Load files to begin.</div>';
+  document.getElementById('lj-btns').innerHTML = '';
+  document.getElementById('legend').innerHTML = '';
+  document.getElementById('level-label').textContent = '—';
+  document.getElementById('move-ctr').textContent = 'Frame — / —';
+  document.getElementById('elapsed').textContent = '00:00';
+  setTimeline(0);
+}
+
+// ─────────────────────────────────────────────────────────
+// GRID RENDERING
+// ─────────────────────────────────────────────────────────
+
+function renderFrame() {
+  if (!S.frames.length) return;
+  const f = S.frames[S.cur];
+  renderGrid(f);
+  updateTranscript(f);
+  updateStatus(f);
+  updateTimeline();
+}
+
+function renderGrid(f) {
+  const g = f.gameStateBefore;
+  if (!g) return;
+  const rows = g.length, cols = g[0].length;
+  const CELL = Math.floor(420 / cols);
+  const container = document.getElementById('grid-display');
+  const key = `${cols}x${rows}`;
+
+  if (S.gridBuilt !== key) {
+    container.innerHTML = '';
+    container.style.gridTemplateColumns = `repeat(${cols},${CELL}px)`;
+    container.style.gridTemplateRows    = `repeat(${rows},${CELL}px)`;
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++) {
+        const el = document.createElement('div');
+        el.className = 'gc';
+        el.id = `gc-${c}-${r}`;
+        el.style.width = el.style.height = CELL + 'px';
+        el.style.fontSize = Math.floor(CELL * 0.36) + 'px';
+        container.appendChild(el);
+      }
+    S.gridBuilt = key;
+  }
+
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      styleCell(document.getElementById(`gc-${c}-${r}`), g[r][c], c, r, f);
+
+  updateGameInfo(f);
+}
+
+function styleCell(el, sym, col, row, f) {
+  el.style.cssText = `width:${el.style.width};height:${el.style.height};font-size:${el.style.fontSize};display:flex;align-items:center;justify-content:center;font-weight:700;cursor:default;user-select:none;`;
+  el.innerHTML = '';
+
+  if (S.puzzle === 'gC') { styleCellC(el, sym); return; }
+
+  const lv = f.level;
+  switch (sym) {
+    case 'E':
+      el.style.background = '#F5F5F5';
+      break;
+    case 'A': {
+      const col2 = f.colorBefore || 'grey';
+      el.style.background = COLORS[col2] || '#D3D3D3';
+      el.style.outline = '3px solid #222';
+      el.style.outlineOffset = '-3px';
+      break;
+    }
+    case 'G': {
+      const gc = goalColor(lv);
+      el.style.background = '#F9F9F9';
+      el.style.outline = `4px solid ${gc}`;
+      el.style.outlineOffset = '-4px';
+      el.innerHTML = `<span style="color:${gc}">★</span>`;
+      break;
+    }
+    case 'R':
+      el.style.background = COLORS.teal;
+      break;
+    case 'M': {
+      const mc = S.puzzle === 'gA' && GA[lv] ? COLORS[GA[lv].t] : '#FFD700';
+      el.style.background = mc || '#FFD700';
+      break;
+    }
+    case 'C': {
+      if (S.puzzle === 'gA' && GA[lv]) {
+        const cname = GA[lv].c[`${col},${row}`];
+        el.style.background = cname ? COLORS[cname] : '#D0D0FF';
+      } else {
+        // gB color-cycler tile
+        el.style.background = '#F5F5F5';
+        el.style.outline = '3px dotted #999';
+        el.style.outlineOffset = '-4px';
+        el.innerHTML = '<span style="font-size:.6em;color:#888">C</span>';
+      }
+      break;
+    }
+    case 'T':
+      el.style.background = '#D3D3D3';
+      el.innerHTML = '<span style="font-size:.6em;color:#555">T</span>';
+      break;
+    case 'D':
+      el.style.background = '#F5F5F5';
+      el.style.outline = '3px dotted #666';
+      el.style.outlineOffset = '-4px';
+      el.innerHTML = '<span style="font-size:.65em;color:#666">D</span>';
+      break;
+    default:
+      el.style.background = '#F5F5F5';
+  }
+}
+
+function styleCellC(el, sym) {
+  switch (sym) {
+    case 'E': el.style.background = '#F5F5F5'; break;
+    case 'V':
+      el.style.background = COLORS.blue;
+      el.style.outline = '3px solid #2255aa';
+      el.style.outlineOffset = '-3px';
+      el.innerHTML = '<span style="font-size:.75em">🚗</span>';
+      break;
+    case 'M':
+      el.style.background = '#FFD700';
+      el.style.outline = '2px solid #bbaa00';
+      el.style.outlineOffset = '-2px';
+      break;
+    case 'F':
+      el.style.background = '#888';
+      el.style.outline = '2px solid #555';
+      el.style.outlineOffset = '-2px';
+      break;
+    case 'G':
+      el.style.background = '#F0FFF0';
+      el.style.outline = '4px solid #228B22';
+      el.style.outlineOffset = '-4px';
+      el.innerHTML = '<span style="color:#228B22">★</span>';
+      break;
+    default:
+      el.style.background = '#F5F5F5';
+  }
+}
+
+function goalColor(lv) {
+  if (S.puzzle === 'gA') return COLORS[GA[lv]?.t] || '#228B22';
+  if (S.puzzle === 'gB') return COLORS[GB_GOAL[lv]] || '#228B22';
+  return '#228B22';
+}
+
+function updateGameInfo(f) {
+  document.getElementById('level-label').textContent = `Level ${f.level}`;
+  const badge = document.getElementById('color-badge');
+  const dir   = document.getElementById('dir-label');
+  const gs    = document.getElementById('gs-label');
+  const chunk = document.getElementById('chunk-label');
+
+  badge.style.display = 'none';
+  dir.textContent = gs.textContent = chunk.textContent = '';
+
+  if (S.puzzle === 'gA' || S.puzzle === 'gB') {
+    const c = f.colorBefore || 'grey';
+    badge.style.display = 'inline-block';
+    badge.textContent = c;
+    badge.style.background = COLORS[c] || '#ccc';
+    badge.style.color = lightness(COLORS[c]) > 128 ? '#333' : '#eee';
+  }
+  if (S.puzzle === 'gB') {
+    if (f.directionCapability) dir.textContent = `dir: ${f.directionCapability}`;
+    if (f.currentGameState)    gs.textContent  = `state: ${f.currentGameState}`;
+  }
+  if (S.puzzle === 'gC') {
+    if (f.selectedChunk != null) chunk.textContent = `chunk ${f.selectedChunk}`;
+    if (f.action) dir.textContent = f.action.replace(/_/g,' ');
+  }
+}
+
+function lightness(hex) {
+  if (!hex || hex.length < 7) return 200;
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return (r*299 + g*587 + b*114) / 1000;
+}
+
+// ─────────────────────────────────────────────────────────
+// TRANSCRIPT
+// ─────────────────────────────────────────────────────────
+
+function buildTranscript() {
+  const scroll = document.getElementById('transcript-scroll');
+  scroll.innerHTML = '';
+  if (!S.transcript.length) {
+    scroll.innerHTML = '<div style="color:#445;padding:20px;text-align:center">No transcript.</div>';
+    return;
+  }
+  S.transcript.forEach((seg, i) => {
+    const d = document.createElement('div');
+    d.className = 'tseg';
+    d.id = `ts${i}`;
+    d.innerHTML = `<span class="ts">${fmt(seg.sec)}</span><span class="txt">${esc(seg.txt)}</span>`;
+    scroll.appendChild(d);
+  });
+  S._lastSeg = -1;
+}
+
+function updateTranscript(f) {
+  if (!S.transcript.length) return;
+  const elapsed = f.ms / 1000;
+  let idx = 0;
+  for (let i = 0; i < S.transcript.length; i++) {
+    if (S.transcript[i].sec <= elapsed) idx = i;
+    else break;
+  }
+  if (idx === S._lastSeg) return;
+  S._lastSeg = idx;
+  document.querySelectorAll('.tseg').forEach((el, i) =>
+    el.classList.toggle('active', i === idx)
+  );
+  document.getElementById(`ts${idx}`)?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ─────────────────────────────────────────────────────────
+// TIMELINE
+// ─────────────────────────────────────────────────────────
+
+function buildMarkers() {
+  document.querySelectorAll('.lv-marker').forEach(m => m.remove());
+  if (!S.frames.length) return;
+  const wrap = document.getElementById('tl-wrapper');
+  let prev = S.frames[0].level;
+  S.frames.forEach(f => {
+    if (f.level !== prev) {
+      const pct = (f.ms / S.totalMs) * 100;
+      const m = document.createElement('div');
+      m.className = 'lv-marker';
+      m.style.left = pct + '%';
+      m.innerHTML = `<span class="lv-marker-lbl">L${f.level}</span>`;
+      wrap.appendChild(m);
+      prev = f.level;
+    }
+  });
+}
+
+function buildLevelJumps() {
+  const c = document.getElementById('lj-btns');
+  c.innerHTML = '';
+  if (!S.frames.length) return;
+  [...new Set(S.frames.map(f => f.level))].sort((a,b)=>a-b).forEach(lv => {
+    const b = document.createElement('button');
+    b.className = 'ljb'; b.textContent = `L${lv}`; b.dataset.lv = lv;
+    b.onclick = () => jumpToLevel(lv);
+    c.appendChild(b);
+  });
+}
+
+function jumpToLevel(lv) {
+  const i = S.frames.findIndex(f => f.level === lv);
+  if (i >= 0) { S.cur = i; renderFrame(); }
+}
+
+function updateTimeline() {
+  if (!S.frames.length) return;
+  setTimeline(S.frames[S.cur].ms / S.totalMs);
+  const lv = S.frames[S.cur].level;
+  document.querySelectorAll('.ljb').forEach(b =>
+    b.classList.toggle('cur', +b.dataset.lv === lv)
+  );
+}
+
+function setTimeline(frac) {
+  const pct = (frac * 100).toFixed(2) + '%';
+  document.getElementById('tl-fill').style.width = pct;
+  document.getElementById('tl-scrubber').style.left = pct;
+}
+
+// Timeline drag
+const tlWrap = document.getElementById('tl-wrapper');
+tlWrap.addEventListener('mousedown', e => { S.dragging = true; seekFrac(tlFrac(e)); });
+document.addEventListener('mousemove', e => { if (S.dragging) seekFrac(tlFrac(e)); });
+document.addEventListener('mouseup',   () => { S.dragging = false; });
+
+function tlFrac(e) {
+  const r = tlWrap.getBoundingClientRect();
+  return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+}
+function seekFrac(frac) {
+  if (!S.frames.length) return;
+  const ms = frac * S.totalMs;
+  let best = 0;
+  for (let i = 0; i < S.frames.length; i++) {
+    if (S.frames[i].ms <= ms) best = i; else break;
+  }
+  S.cur = best;
+  renderFrame();
+}
+
+// ─────────────────────────────────────────────────────────
+// STATUS BAR
+// ─────────────────────────────────────────────────────────
+
+function updateStatus(f) {
+  document.getElementById('move-ctr').textContent =
+    `Frame ${S.cur + 1} / ${S.frames.length}`;
+  document.getElementById('elapsed').textContent =
+    fmt(Math.floor(f.ms / 1000));
+}
+
+// ─────────────────────────────────────────────────────────
+// PLAYBACK
+// ─────────────────────────────────────────────────────────
+
+function play() {
+  if (!S.frames.length || S.playing) return;
+  if (S.cur >= S.frames.length - 1) S.cur = 0;
+  S.playing = true;
+  S.lastRaf = null;
+  S.pendingMs = 0;
+  document.getElementById('btn-play').textContent = '⏸';
+  requestAnimationFrame(raf);
+}
+
+function pause() {
+  S.playing = false;
+  document.getElementById('btn-play').textContent = '▶';
+}
+
+function raf(now) {
+  if (!S.playing) return;
+  if (S.lastRaf !== null) {
+    S.pendingMs += (now - S.lastRaf) * S.speed;
+    while (S.pendingMs > 0 && S.cur < S.frames.length - 1) {
+      const gap = S.frames[S.cur + 1].ms - S.frames[S.cur].ms;
+      if (S.pendingMs >= gap) { S.pendingMs -= gap; S.cur++; }
+      else break;
+    }
+    renderFrame();
+    if (S.cur >= S.frames.length - 1) { pause(); return; }
+  }
+  S.lastRaf = now;
+  requestAnimationFrame(raf);
+}
+
+function togglePlay() {
+  S.playing ? pause() : play();
+}
+
+function step(d) {
+  pause();
+  S.cur = Math.max(0, Math.min(S.frames.length - 1, S.cur + d));
+  renderFrame();
+}
+
+function jumpLevel(dir) {
+  if (!S.frames.length) return;
+  const lv = S.frames[S.cur].level;
+  if (dir > 0) {
+    const i = S.frames.findIndex((f, idx) => idx > S.cur && f.level > lv);
+    if (i >= 0) { S.cur = i; renderFrame(); }
+  } else {
+    const first = S.frames.findIndex(f => f.level === lv);
+    if (S.cur > first) { S.cur = first; renderFrame(); }
+    else {
+      const i = S.frames.findIndex(f => f.level === lv - 1);
+      if (i >= 0) { S.cur = i; renderFrame(); }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// BUTTON WIRING
+// ─────────────────────────────────────────────────────────
+
+document.getElementById('btn-play').onclick   = togglePlay;
+document.getElementById('btn-prev').onclick   = () => step(-1);
+document.getElementById('btn-next').onclick   = () => step(1);
+document.getElementById('btn-prev10').onclick = () => step(-10);
+document.getElementById('btn-next10').onclick = () => step(10);
+document.getElementById('btn-home').onclick   = () => { step(-Infinity); };
+document.getElementById('btn-end').onclick    = () => { S.cur = S.frames.length - 1; renderFrame(); };
+
+document.querySelectorAll('.spd').forEach(b =>
+  b.addEventListener('click', function () {
+    S.speed = parseFloat(this.dataset.speed);
+    document.querySelectorAll('.spd').forEach(x => x.classList.remove('active'));
+    this.classList.add('active');
+  })
+);
+
+// ─────────────────────────────────────────────────────────
+// KEYBOARD
+// ─────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+  switch (e.key) {
+    case ' ':          e.preventDefault(); togglePlay(); break;
+    case 'ArrowLeft':  e.preventDefault(); e.shiftKey ? step(-10) : step(-1); break;
+    case 'ArrowRight': e.preventDefault(); e.shiftKey ? step(10)  : step(1);  break;
+    case '[':          e.preventDefault(); jumpLevel(-1); break;
+    case ']':          e.preventDefault(); jumpLevel(1);  break;
+    case 'Home':       e.preventDefault(); S.cur = 0; renderFrame(); break;
+    case 'End':        e.preventDefault(); S.cur = S.frames.length - 1; renderFrame(); break;
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────────
+
+function fmt(s) {
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
