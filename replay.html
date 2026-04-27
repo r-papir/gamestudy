@@ -30,7 +30,6 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 #grid-panel{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 20px;background:#fff;min-width:300px}
 #game-info{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:13px;min-height:22px;flex-wrap:wrap}
 #level-label{font-weight:700;color:#c0392b;font-size:14px}
-#color-badge{padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid rgba(0,0,0,.15);display:none}
 #dir-label,#gs-label,#chunk-label{color:#999;font-size:12px}
 #grid-display{display:grid;gap:2px;background:#ccc;padding:2px;border:2px solid #ccc;border-radius:2px}
 .gc{display:flex;align-items:center;justify-content:center;position:relative;font-weight:700;cursor:default;user-select:none}
@@ -104,17 +103,16 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 
 <div id="main">
   <div id="grid-panel">
+
+    <div id="grid-display">
+      <div id="grid-placeholder">Load files and select a participant.</div>
+    </div>
     <div id="game-info">
       <span id="level-label">—</span>
-      <span id="color-badge"></span>
       <span id="dir-label"></span>
       <span id="gs-label"></span>
       <span id="chunk-label"></span>
     </div>
-    <div id="grid-display">
-      <div id="grid-placeholder">Load files and select a participant.</div>
-    </div>
-    <div id="legend"></div>
   </div>
 
   <div id="transcript-panel">
