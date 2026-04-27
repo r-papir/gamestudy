@@ -88,7 +88,7 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 <body>
 
 <div id="header">
-  <h1>Puzzle Replay Viewer</h1>
+  <h1>Puzzle Replay</h1>
   <input type="file" id="file-input" webkitdirectory multiple>
   <button id="load-btn">📂 Load Data Folder</button>
   <select id="participant-select" disabled>
@@ -278,7 +278,7 @@ function parseTranscript(raw) {
 
 function buildDropdown() {
   const sel = document.getElementById('participant-select');
-  sel.innerHTML = '<option value="">— select participant —</option>';
+  sel.innerHTML = '<option value=""> Select Participant </option>';
   Object.keys(S.data).sort().forEach(pid => {
     const o = document.createElement('option');
     o.value = pid; o.textContent = pid;
