@@ -247,7 +247,8 @@ const S = {
   lastRaf: null,
   playbackMs: 0,
   dragging: false,
-  gridBuilt: null  // "CxR" string — track when to rebuild DOM cells
+  gridBuilt: null,  // "CxR" string — track when to rebuild DOM cells
+  colorTransformers: {}  // puzzle B only: { level: { gameState: Set of "x,y" } }
 };
 
 // ─────────────────────────────────────────────────────────
@@ -386,6 +387,7 @@ function loadReplay() {
   S.playbackMs = 0;
   S.totalMs = S.frames.length ? S.frames[S.frames.length - 1].ms : 1;
   S.gridBuilt = null;
+  S.colorTransformers = S.puzzle === 'gB' ? inferColorTransformers(S.frames) : {};
   S._lastRippleFrame = -1;
   _winOverlayLevel = null;
   buildTranscript();
@@ -475,7 +477,14 @@ function styleCell(el, sym, col, row, f) {
   const lv = f.level;
   switch (sym) {
     case 'E':
-      el.style.background = '#F5F5F5';
+      if (S.puzzle === 'gB' && S.colorTransformers[f.level]?.[f.currentGameState]?.has(`${col},${row}`)) {
+        el.style.background = '#F5F5F5';
+        el.style.outline = '3px dotted #666';
+        el.style.outlineOffset = '-4px';
+        el.innerHTML = '<span style="font-size:.6em;color:#888">C</span>';
+      } else {
+        el.style.background = '#F5F5F5';
+      }
       break;
     case 'A': {
       const col2 = f.colorBefore || 'grey';
@@ -832,6 +841,28 @@ function createRipple() {
       setTimeout(() => r.remove(), 1000);
     }, i * 200);
   }
+}
+
+// ─────────────────────────────────────────────────────────
+// COLOR TRANSFORMER INFERENCE (puzzle B)
+// ─────────────────────────────────────────────────────────
+
+function inferColorTransformers(frames) {
+  const result = {};
+  for (let i = 0; i < frames.length - 1; i++) {
+    const f = frames[i], f2 = frames[i + 1];
+    if (!f.colorBefore || !f2.colorBefore) continue;
+    if (f.level !== f2.level) continue;
+    if (f.colorBefore === f2.colorBefore) continue;
+    if (!f.positionBefore || !f.delta) continue;
+    const x = f.positionBefore.x + (f.delta.dx || 0);
+    const y = f.positionBefore.y + (f.delta.dy || 0);
+    const lv = f.level, gs = f.currentGameState;
+    if (!result[lv]) result[lv] = {};
+    if (!result[lv][gs]) result[lv][gs] = new Set();
+    result[lv][gs].add(`${x},${y}`);
+  }
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────
