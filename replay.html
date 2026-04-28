@@ -35,6 +35,14 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 .gc{display:flex;align-items:center;justify-content:center;position:relative;font-weight:700;cursor:default;user-select:none}
 #grid-placeholder{color:#bbb;font-size:14px;padding:60px 30px;text-align:center;background:#fafafa;border:2px dashed #e0e0e0}
 
+/* ── Grid wrap & ripple ── */
+#grid-wrap{position:relative;display:inline-block}
+#ripple-container{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:10}
+.ripple{position:absolute;border-radius:50%;border:7px solid #32CD32;opacity:0}
+@keyframes winRipple{0%{width:0;height:0;opacity:0}10%{width:40px;height:40px;opacity:.8}100%{width:400px;height:400px;opacity:0}}
+#win-svg{position:absolute;top:0;left:0;pointer-events:none;z-index:5}
+#win-message{margin-top:8px;font-size:13px;font-weight:700;color:#27ae60;display:none;text-align:center;letter-spacing:.5px}
+
 /* ── Legend ── */
 #legend{margin-top:10px;font-size:11px;color:#aaa;display:flex;flex-wrap:wrap;gap:6px;max-width:420px;justify-content:center}
 .legend-item{display:flex;align-items:center;gap:4px}
@@ -104,9 +112,14 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 <div id="main">
   <div id="grid-panel">
 
-    <div id="grid-display">
-      <div id="grid-placeholder">Load files and select a participant.</div>
+    <div id="grid-wrap">
+      <div id="grid-display">
+        <div id="grid-placeholder">Load files and select a participant.</div>
+      </div>
+      <div id="ripple-container"></div>
+      <svg id="win-svg"></svg>
     </div>
+    <div id="win-message">All levels complete.</div>
     <div id="game-info">
       <span id="level-label">—</span>
       <span id="dir-label"></span>
@@ -192,6 +205,30 @@ const GC_TRACK   = { 1:'#ADD8E6', 2:'#44AA99', 3:'#BBCC33', 4:'#882255' };
 
 // gC: vehicle color per level
 const GC_VEHICLE = { 1:'#DDCC77', 2:'#CC6677', 3:'#332288', 4:'#88CCEE' };
+
+// Max levels per puzzle
+const GA_MAX_LEVEL = 5, GB_MAX_LEVEL = 5, GC_MAX_LEVEL = 4;
+
+// gC winning path cells per level (all cells that must be track/vehicle in win state)
+const GC_WIN_PATH = {
+  1: [[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6]],
+  2: [[0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[6,2],[6,1],[6,0]],
+  3: [[0,0],[1,0],[1,1],[2,1],[2,2],[3,2],[3,3],[4,3],[4,4],[4,5],[5,5],[5,6],[6,6]],
+  4: [[0,3],[1,3],[2,3],[3,2],[3,3],[3,4],[3,5],[3,6],[4,2],[5,0],[5,1],[5,2],[6,0]]
+};
+
+// Pre-built hardcoded winning grids for gC (used for win frame display)
+function _buildWinGrid(size, cells) {
+  const g = Array(size).fill(null).map(() => Array(size).fill('E'));
+  for (const [sym, r, c] of cells) g[r][c] = sym;
+  return g;
+}
+const GC_WIN_GRIDS = {
+  1: _buildWinGrid(7,[['V',3,0],['M',3,1],['M',3,2],['M',3,3],['F',3,4],['F',3,5],['M',3,6]]),
+  2: _buildWinGrid(7,[['V',0,3],['M',1,3],['F',2,3],['M',3,3],['M',4,3],['F',5,3],['M',6,3],['F',6,2],['F',6,1],['M',6,0]]),
+  3: _buildWinGrid(7,[['V',0,0],['M',1,0],['M',1,1],['F',2,1],['F',2,2],['F',3,2],['M',3,3],['M',4,3],['M',4,4],['M',4,5],['F',5,5],['F',5,6],['M',6,6]]),
+  4: _buildWinGrid(7,[['V',0,3],['M',1,3],['M',2,3],['F',3,2],['F',3,3],['M',3,4],['M',3,5],['V',3,6],['F',4,2],['F',5,0],['M',5,1],['M',5,2],['M',6,0]])
+};
 
 // ─────────────────────────────────────────────────────────
 // STATE
@@ -343,10 +380,13 @@ function loadReplay() {
   S.frames = raw.map(f => ({ ...f, ms: new Date(f.timestamp).getTime() - t0 }));
   // Prepend a synthetic frame at t=0 so the replay always starts from the beginning
   if (S.frames.length > 0) S.frames.unshift({ ...S.frames[0], ms: 0 });
+  synthesizeWinFrames(S.frames, S.puzzle);
   S.transcript = d.tx;
   S.cur = 0;
   S.totalMs = S.frames.length ? S.frames[S.frames.length - 1].ms : 1;
   S.gridBuilt = null;
+  S._lastRippleFrame = -1;
+  _winOverlayLevel = null;
   buildTranscript();
   buildLevelJumps();
   buildMarkers();
@@ -364,6 +404,11 @@ function clearView() {
   document.getElementById('move-ctr').textContent = 'Frame — / —';
   document.getElementById('elapsed').textContent = '00:00';
   setTimeline(0);
+  const svg = document.getElementById('win-svg');
+  if (svg) svg.innerHTML = '';
+  const wm = document.getElementById('win-message');
+  if (wm) wm.style.display = 'none';
+  _winOverlayLevel = null;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -377,6 +422,14 @@ function renderFrame() {
   updateTranscript(f);
   updateStatus(f);
   updateTimeline();
+  // Ripple on entering a win frame
+  if (f._isWin && S.cur !== S._lastRippleFrame) {
+    S._lastRippleFrame = S.cur;
+    createRipple();
+  }
+  // "All levels complete" message
+  const wmEl = document.getElementById('win-message');
+  if (wmEl) wmEl.style.display = f._isGameComplete ? 'block' : 'none';
 }
 
 function renderGrid(f) {
@@ -384,6 +437,7 @@ function renderGrid(f) {
   if (!g) return;
   const rows = g.length, cols = g[0].length;
   const CELL = Math.floor(420 / cols);
+  S._lastCell = CELL;
   const container = document.getElementById('grid-display');
   const key = `${cols}x${rows}`;
 
@@ -408,6 +462,7 @@ function renderGrid(f) {
       styleCell(document.getElementById(`gc-${c}-${r}`), g[r][c], c, r, f);
 
   updateGameInfo(f);
+  if (S.puzzle === 'gC') updateWinOverlay(f.level, S._lastCell || Math.floor(420/7));
 }
 
 function styleCell(el, sym, col, row, f) {
@@ -489,13 +544,9 @@ function styleCellC(el, sym, f) {
       el.style.background = GC_TRACK[f.level] || '#ADD8E6';
       el.innerHTML = '<span style="font-size:.6em;opacity:.6">✕</span>';
       break;
-    case 'G': {
-      const gc = GC_GOAL[f.level] || '#aaa';
-      el.style.background = '#ccc';
-      el.style.outline = `1px dashed ${gc}`;
-      el.style.outlineOffset = '-1px';
+    case 'G':
+      el.style.background = '#F5F5F5';
       break;
-    }
     default:
       el.style.background = '#F5F5F5';
   }
@@ -763,6 +814,215 @@ function fmt(s) {
 }
 function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─────────────────────────────────────────────────────────
+// RIPPLE
+// ─────────────────────────────────────────────────────────
+
+function createRipple() {
+  const container = document.getElementById('ripple-container');
+  if (!container) return;
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const r = document.createElement('div');
+      r.className = 'ripple';
+      r.style.animation = 'winRipple 1s ease-out forwards';
+      container.appendChild(r);
+      setTimeout(() => r.remove(), 1000);
+    }, i * 200);
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// WIN FRAME SYNTHESIS
+// ─────────────────────────────────────────────────────────
+
+function synthesizeWinFrames(frames, puzzle) {
+  const maxLv = puzzle === 'gA' ? GA_MAX_LEVEL : puzzle === 'gB' ? GB_MAX_LEVEL : GC_MAX_LEVEL;
+  const inserts = [];
+
+  // Find level transitions and synthesize win frame at each
+  for (let i = 1; i < frames.length; i++) {
+    const cur = frames[i];
+    if (frames[i - 1].level != null && cur.level !== frames[i - 1].level) {
+      // For gA/gB: scan backwards within the ending level to find the actual win move
+      // (some players buffer extra keys after the win, so last frame may not be the win frame)
+      let wf = null;
+      const lv = frames[i - 1].level;
+      for (let j = i - 1; j >= 0 && frames[j].level === lv && !wf; j--) {
+        wf = _makeWinFrame(frames[j], puzzle, false, maxLv);
+      }
+      if (wf) inserts.push({ idx: i, frame: wf });
+    }
+  }
+
+  // Try to synthesize final-level win from last recorded frame (scan backwards)
+  if (frames.length) {
+    const lastLv = frames[frames.length - 1].level;
+    let wf = null;
+    for (let j = frames.length - 1; j >= 0 && frames[j].level === lastLv && !wf; j--) {
+      wf = _makeWinFrame(frames[j], puzzle, true, maxLv);
+    }
+    if (wf) inserts.push({ idx: frames.length, frame: wf });
+  }
+
+  for (let k = inserts.length - 1; k >= 0; k--) {
+    frames.splice(inserts[k].idx, 0, inserts[k].frame);
+  }
+}
+
+function _makeWinFrame(f, puzzle, isLast, maxLv) {
+  if (puzzle === 'gC') return _makeGCWinFrame(f, isLast, maxLv);
+  return _makeGABWinFrame(f, puzzle, isLast, maxLv);
+}
+
+function _makeGABWinFrame(f, puzzle, isLast, maxLv) {
+  const gs = f.gameStateBefore;
+  const delta = f.delta;
+  if (!gs || !delta) return null;
+
+  let ar = -1, ac = -1, gr = -1, gc2 = -1;
+  for (let r = 0; r < gs.length; r++)
+    for (let c = 0; c < gs[r].length; c++) {
+      if (gs[r][c] === 'A') { ar = r; ac = c; }
+      if (gs[r][c] === 'G') { gr = r; gc2 = c; }
+    }
+  if (ar < 0 || gr < 0) return null;
+
+  const nr = ar + delta.dy, nc = ac + delta.dx;
+  const rows = gs.length, cols = gs[0].length;
+  if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) return null;
+
+  // Always validate win condition (scan may be backwards, so check every candidate)
+  const lv = f.level;
+  if (puzzle === 'gA') {
+    const adj = (Math.abs(nr - gr) + Math.abs(nc - gc2)) === 1;
+    if (!adj) return null;
+    const targetColor = GA[lv]?.t;
+    if (f.colorBefore !== targetColor) return null;
+  } else {
+    // gB: A must land on G with correct color
+    if (nr !== gr || nc !== gc2) return null;
+    const goalColor = GB_GOAL[lv];
+    if (goalColor && f.colorBefore !== goalColor) return null;
+  }
+
+  const newGs = gs.map(row => [...row]);
+  newGs[ar][ac] = 'E';
+  newGs[nr][nc] = 'A';
+
+  return {
+    ...f,
+    gameStateBefore: newGs,
+    positionBefore: { x: nc, y: nr },
+    ms: f.ms,
+    _isWin: true,
+    _isGameComplete: isLast && f.level === maxLv
+  };
+}
+
+function _makeGCWinFrame(f, isLast, maxLv) {
+  const lv = f.level;
+  const winGrid = GC_WIN_GRIDS[lv];
+  if (!winGrid) return null;
+
+  if (isLast) {
+    // Only synthesize if last action is a chunk move (indicates the winning action)
+    if (!f.action || !f.action.startsWith('move_chunk')) return null;
+  }
+
+  return {
+    ...f,
+    gameStateBefore: winGrid,
+    ms: f.ms,
+    _isWin: true,
+    _isGameComplete: isLast && lv === maxLv
+  };
+}
+
+// ─────────────────────────────────────────────────────────
+// gC WIN OVERLAY (SVG boundary of winning path)
+// ─────────────────────────────────────────────────────────
+
+let _winOverlayLevel = null;
+
+function updateWinOverlay(lv, cellSize) {
+  const svg = document.getElementById('win-svg');
+  if (!svg) return;
+
+  // Only recompute when level changes
+  if (lv === _winOverlayLevel) return;
+  _winOverlayLevel = lv;
+
+  const cells = GC_WIN_PATH[lv];
+  if (!cells) { svg.innerHTML = ''; return; }
+
+  const GAP = 2, PAD = 2;
+  const UNIT = cellSize + GAP;
+  const gridSize = 7;
+  const totalPx = PAD + gridSize * UNIT;
+
+  svg.setAttribute('width', totalPx);
+  svg.setAttribute('height', totalPx);
+  svg.style.width = totalPx + 'px';
+  svg.style.height = totalPx + 'px';
+
+  const pathD = _computeCellBoundary(cells, cellSize, GAP, PAD);
+  if (!pathD) { svg.innerHTML = ''; return; }
+
+  const goalColor = GC_GOAL[lv] || '#32CD32';
+  svg.innerHTML = `<path d="${pathD}" fill="none" stroke="${goalColor}" stroke-width="2.5" stroke-dasharray="6 3" stroke-linejoin="round"/>`;
+}
+
+function _computeCellBoundary(cells, cellSize, gap, pad) {
+  const UNIT = cellSize + gap;
+  const s = new Set(cells.map(([r, c]) => `${r},${c}`));
+  // Build directed boundary edges (each exposed face becomes a directed edge so
+  // that interior is always to the left when traversing)
+  const edgeMap = new Map();
+
+  const key = (x, y) => `${x},${y}`;
+
+  for (const [r, c] of cells) {
+    const x0 = pad + c * UNIT, y0 = pad + r * UNIT;
+    const x1 = x0 + UNIT,      y1 = y0 + UNIT;
+    // top face exposed → travel right
+    if (!s.has(`${r-1},${c}`)) edgeMap.set(key(x0,y0), key(x1,y0));
+    // right face exposed → travel down
+    if (!s.has(`${r},${c+1}`)) edgeMap.set(key(x1,y0), key(x1,y1));
+    // bottom face exposed → travel left
+    if (!s.has(`${r+1},${c}`)) edgeMap.set(key(x1,y1), key(x0,y1));
+    // left face exposed → travel up
+    if (!s.has(`${r},${c-1}`)) edgeMap.set(key(x0,y1), key(x0,y0));
+  }
+
+  if (!edgeMap.size) return '';
+
+  // Trace all polygons (outer boundary + any holes)
+  const visited = new Set();
+  const polygons = [];
+
+  for (const startKey of edgeMap.keys()) {
+    if (visited.has(startKey)) continue;
+    const poly = [];
+    let cur = startKey;
+    let safety = 0;
+    do {
+      visited.add(cur);
+      poly.push(cur.split(',').map(Number));
+      cur = edgeMap.get(cur);
+      safety++;
+    } while (cur && cur !== startKey && safety < 1000);
+
+    if (poly.length >= 3) polygons.push(poly);
+  }
+
+  return polygons.map(poly => {
+    let d = `M ${poly[0][0]} ${poly[0][1]}`;
+    for (let i = 1; i < poly.length; i++) d += ` L ${poly[i][0]} ${poly[i][1]}`;
+    return d + ' Z';
+  }).join(' ');
 }
 </script>
 </body>
