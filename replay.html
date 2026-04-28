@@ -245,7 +245,7 @@ const S = {
   playing: false,
   speed: 1,
   lastRaf: null,
-  pendingMs: 0,
+  playbackMs: 0,
   dragging: false,
   gridBuilt: null  // "CxR" string — track when to rebuild DOM cells
 };
@@ -383,6 +383,7 @@ function loadReplay() {
   synthesizeWinFrames(S.frames, S.puzzle);
   S.transcript = d.tx;
   S.cur = 0;
+  S.playbackMs = 0;
   S.totalMs = S.frames.length ? S.frames[S.frames.length - 1].ms : 1;
   S.gridBuilt = null;
   S._lastRippleFrame = -1;
@@ -661,7 +662,8 @@ function jumpToLevel(lv) {
 
 function updateTimeline() {
   if (!S.frames.length) return;
-  setTimeline(S.frames[S.cur].ms / S.totalMs);
+  const ms = S.playing ? S.playbackMs : S.frames[S.cur].ms;
+  setTimeline(ms / S.totalMs);
   const lv = S.frames[S.cur].level;
   document.querySelectorAll('.ljb').forEach(b =>
     b.classList.toggle('cur', +b.dataset.lv === lv)
@@ -703,7 +705,7 @@ function updateStatus(f) {
   document.getElementById('move-ctr').textContent =
     `Frame ${S.cur + 1} / ${S.frames.length}`;
   document.getElementById('elapsed').textContent =
-    fmt(Math.floor(f.ms / 1000));
+    fmt(Math.floor((S.playing ? S.playbackMs : f.ms) / 1000));
 }
 
 // ─────────────────────────────────────────────────────────
@@ -713,9 +715,10 @@ function updateStatus(f) {
 function play() {
   if (!S.frames.length || S.playing) return;
   if (S.cur >= S.frames.length - 1) S.cur = 0;
+  S.playbackMs = S.frames[S.cur].ms;
+  S._lastRippleFrame = -1;
   S.playing = true;
   S.lastRaf = null;
-  S.pendingMs = 0;
   document.getElementById('btn-play').textContent = '⏸';
   requestAnimationFrame(raf);
 }
@@ -728,14 +731,12 @@ function pause() {
 function raf(now) {
   if (!S.playing) return;
   if (S.lastRaf !== null) {
-    S.pendingMs += (now - S.lastRaf) * S.speed;
-    while (S.pendingMs > 0 && S.cur < S.frames.length - 1) {
-      const gap = S.frames[S.cur + 1].ms - S.frames[S.cur].ms;
-      if (S.pendingMs >= gap) { S.pendingMs -= gap; S.cur++; }
-      else break;
+    S.playbackMs = Math.min(S.totalMs, S.playbackMs + (now - S.lastRaf) * S.speed);
+    while (S.cur < S.frames.length - 1 && S.frames[S.cur + 1].ms <= S.playbackMs) {
+      S.cur++;
     }
     renderFrame();
-    if (S.cur >= S.frames.length - 1) { pause(); return; }
+    if (S.playbackMs >= S.totalMs) { pause(); return; }
   }
   S.lastRaf = now;
   requestAnimationFrame(raf);
