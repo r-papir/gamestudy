@@ -649,7 +649,7 @@
             for (const tile of activeTiles) {
                 if (tile.type === 'direction') {
                     matrix[tile.y][tile.x] = 'D';
-                } else if (tile.type === 'color') {
+                } else if (tile.type === 'color' || tile.type === 'colorCycle') {
                     matrix[tile.y][tile.x] = 'C';
                 }
             }
