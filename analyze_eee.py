@@ -1,9 +1,11 @@
+import json
 import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend — prevents Tcl crash on macOS
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from datetime import datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
@@ -46,6 +48,72 @@ def select_file(title, filetypes):
     path = filedialog.askopenfilename(title=title, filetypes=filetypes)
     root.destroy()
     return path if path else None
+
+def select_folder(title):
+    root = tk.Tk()
+    root.withdraw()
+    path = filedialog.askdirectory(title=title)
+    root.destroy()
+    return path if path else None
+
+def enrich_with_levels(manual_df, json_folder):
+    """Add a Level column by matching each utterance timestamp to the nearest
+    movement entry in the participant's gamestate JSON file."""
+
+    def _parse_iso(s):
+        return datetime.fromisoformat(s.replace('Z', '+00:00'))
+
+    df = manual_df.copy()
+    df['Level'] = np.nan
+
+    json_folder = Path(json_folder)
+
+    if 'Game' not in df.columns:
+        print("enrich_with_levels: no 'Game' column — skipping level enrichment.")
+        return df
+
+    for (pid, game), group in df.groupby(['Participant ID', 'Game']):
+        pattern = f"{pid}_g{game}_gamestate_*.json"
+        matches = list(json_folder.glob(pattern))
+        if not matches:
+            continue
+
+        try:
+            with open(matches[0]) as f:
+                data = json.load(f)
+
+            session_start = _parse_iso(data['sessionStart'])
+            movements = data.get('movements', [])
+            if not movements:
+                continue
+
+            mov_elapsed = []
+            mov_levels = []
+            for mov in movements:
+                try:
+                    mov_ts = _parse_iso(mov['timestamp'])
+                    mov_elapsed.append((mov_ts - session_start).total_seconds())
+                    mov_levels.append(mov['level'])
+                except (KeyError, ValueError, TypeError):
+                    continue
+
+            if not mov_elapsed:
+                continue
+
+            mov_elapsed = np.array(mov_elapsed)
+            mov_levels = np.array(mov_levels)
+
+            for idx in group.index:
+                utt_sec = _ts_to_seconds(df.at[idx, 'Timestamp'])
+                if utt_sec is None:
+                    continue
+                closest = np.argmin(np.abs(mov_elapsed - utt_sec))
+                df.at[idx, 'Level'] = int(mov_levels[closest])
+
+        except (OSError, KeyError, ValueError) as e:
+            print(f"  Warning: could not process {matches[0].name}: {e}")
+
+    return df
 
 def normalize_manual(label):
     if pd.isna(label):
@@ -485,6 +553,62 @@ def plot_trajectory_breakdown(manual_df):
     print(f"Saved Figure 4: {out}")
     plt.close()
 
+def plot_eee_by_level(manual_df):
+    """Figure 6: Stacked bar chart of EEE distribution broken down by puzzle level (1–5)."""
+    if 'Level' not in manual_df.columns or manual_df['Level'].isna().all():
+        print("Skipping Figure 6: Level column missing or all NaN — run enrich_with_levels first.")
+        return
+
+    cats   = ['Explore', 'Establish', 'Exploit']
+    levels = sorted(manual_df['Level'].dropna().unique())
+    levels = [int(lv) for lv in levels]
+
+    if not levels:
+        print("Skipping Figure 6: no valid level values found.")
+        return
+
+    props = {}
+    ns    = {}
+    for lv in levels:
+        sub    = manual_df[manual_df['Level'] == lv]
+        counts = sub['manual_label'].value_counts()
+        total  = len(sub)
+        props[lv] = {c: counts.get(c, 0) / total * 100 if total > 0 else 0 for c in cats}
+        ns[lv]    = total
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x      = np.arange(len(levels))
+    width  = 0.5
+    bottom = np.zeros(len(levels))
+
+    for cat in cats:
+        values = [props[lv][cat] for lv in levels]
+        bars = ax.bar(x, values, width, bottom=bottom,
+                      label=cat, color=COLORS[cat], edgecolor='white', linewidth=1)
+        for i, (bar, val) in enumerate(zip(bars, values)):
+            if val > 5:
+                ax.text(bar.get_x() + bar.get_width() / 2,
+                        bottom[i] + val / 2,
+                        f'{val:.0f}%', ha='center', va='center',
+                        fontsize=10, color='white', fontweight='bold')
+        bottom += np.array(values)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([f'Level {lv}\n(n={ns[lv]})' for lv in levels], fontsize=11)
+    ax.set_ylabel('Proportion of Utterances (%)', fontsize=12)
+    ax.set_title('EEE Reasoning States by Puzzle Level',
+                 fontsize=13, fontweight='bold')
+    ax.set_ylim(0, 105)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.legend(loc='upper right', framealpha=0.9, fontsize=10)
+
+    plt.tight_layout()
+    out = OUTPUT_DIR / "figure6_eee_by_level.png"
+    plt.savefig(out, dpi=300, bbox_inches='tight')
+    print(f"Saved Figure 6: {out}")
+    plt.close()
+
 def main():
     print("=" * 60)
     print("EEE ANALYSIS PIPELINE")
@@ -504,6 +628,15 @@ def main():
         print(f"\nLearning trajectory breakdown:")
         print(manual_clean['trajectory'].value_counts())
 
+    print("\nSelect your DATA FOLDER containing gamestate JSON files...")
+    json_folder = select_folder("Select Data folder with gamestate JSONs")
+    if json_folder:
+        manual_clean = enrich_with_levels(manual_clean, json_folder)
+        assigned = manual_clean['Level'].notna().sum()
+        print(f"Level enrichment: {assigned}/{len(manual_clean)} rows assigned a level.")
+    else:
+        print("No JSON folder selected — skipping level enrichment.")
+
     # Figure 1: Overall EEE distribution
     plot_eee_distribution(manual_clean)
 
@@ -518,6 +651,9 @@ def main():
     if result is not None:
         merged, kappa, pct_agree, cat_stats = result
         plot_agreement_by_category(cat_stats)
+
+    # Figure 6: EEE distribution by puzzle level
+    plot_eee_by_level(manual_clean)
 
     print("\n" + "=" * 60)
     print("ANALYSIS COMPLETE")
