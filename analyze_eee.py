@@ -152,7 +152,7 @@ def load_data():
         raise SystemExit("No file selected.")
 
     manual_df = pd.read_excel(manual_path, sheet_name='Coding Sheet')
-    nlp_df    = pd.read_excel(nlp_path, sheet_name='Confident Classifications')
+    nlp_df    = pd.read_excel(nlp_path, sheet_name='Classified Segments')
 
     return manual_df, nlp_df
 
