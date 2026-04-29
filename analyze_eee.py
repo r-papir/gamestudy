@@ -665,6 +665,7 @@ def plot_eee_by_level_and_game(manual_df):
         ax.spines['right'].set_visible(False)
         if ax is axes[0]:
             ax.set_ylabel('Proportion of Utterances (%)', fontsize=12)
+        if ax is axes[1]:
             ax.legend(loc='upper right', framealpha=0.9, fontsize=10)
 
     fig.suptitle('EEE Reasoning States by Level (Game A vs Game B)',
