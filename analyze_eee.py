@@ -609,6 +609,72 @@ def plot_eee_by_level(manual_df):
     print(f"Saved Figure 6: {out}")
     plt.close()
 
+def plot_eee_by_level_and_game(manual_df):
+    """Figure 7: Side-by-side stacked bar charts of EEE distribution by level, one subplot per game."""
+    if 'Level' not in manual_df.columns or manual_df['Level'].isna().all():
+        print("Skipping Figure 7: Level column missing or all NaN — run enrich_with_levels first.")
+        return
+
+    if 'Game' not in manual_df.columns:
+        print("Skipping Figure 7: no 'Game' column found in manual coding sheet.")
+        return
+
+    cats   = ['Explore', 'Establish', 'Exploit']
+    games  = ['A', 'B']
+    levels = sorted(int(lv) for lv in manual_df['Level'].dropna().unique())
+
+    if not levels:
+        print("Skipping Figure 7: no valid level values found.")
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5), sharey=True)
+
+    for ax, game in zip(axes, games):
+        gdf = manual_df[manual_df['Game'] == game]
+
+        props = {}
+        ns    = {}
+        for lv in levels:
+            sub    = gdf[gdf['Level'] == lv]
+            counts = sub['manual_label'].value_counts()
+            total  = len(sub)
+            props[lv] = {c: counts.get(c, 0) / total * 100 if total > 0 else 0 for c in cats}
+            ns[lv]    = total
+
+        x      = np.arange(len(levels))
+        width  = 0.5
+        bottom = np.zeros(len(levels))
+
+        for cat in cats:
+            values = [props[lv][cat] for lv in levels]
+            bars = ax.bar(x, values, width, bottom=bottom,
+                          label=cat, color=COLORS[cat], edgecolor='white', linewidth=1)
+            for i, (bar, val) in enumerate(zip(bars, values)):
+                if val > 5:
+                    ax.text(bar.get_x() + bar.get_width() / 2,
+                            bottom[i] + val / 2,
+                            f'{val:.0f}%', ha='center', va='center',
+                            fontsize=10, color='white', fontweight='bold')
+            bottom += np.array(values)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels([f'Level {lv}' for lv in levels], fontsize=11)
+        ax.set_title(f'Game {game}', fontsize=12, fontweight='bold')
+        ax.set_ylim(0, 105)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        if ax is axes[0]:
+            ax.set_ylabel('Proportion of Utterances (%)', fontsize=12)
+            ax.legend(loc='upper right', framealpha=0.9, fontsize=10)
+
+    fig.suptitle('EEE Reasoning States by Level (Game A vs Game B)',
+                 fontsize=13, fontweight='bold')
+    plt.tight_layout()
+    out = OUTPUT_DIR / "figure7_eee_by_level_and_game.png"
+    plt.savefig(out, dpi=300, bbox_inches='tight')
+    print(f"Saved Figure 7: {out}")
+    plt.close()
+
 def main():
     print("=" * 60)
     print("EEE ANALYSIS PIPELINE")
@@ -654,6 +720,9 @@ def main():
 
     # Figure 6: EEE distribution by puzzle level
     plot_eee_by_level(manual_clean)
+
+    # Figure 7: EEE distribution by level, split by game
+    plot_eee_by_level_and_game(manual_clean)
 
     print("\n" + "=" * 60)
     print("ANALYSIS COMPLETE")
