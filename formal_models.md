@@ -9,7 +9,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 **Locus:** endogenous (generated from within the agent)
 
 <details>
-  <summary>Transition Function</summary>
+  <summary>Click for transition function</summary>
 <br>
 
 Puzzle A is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$: <br>
@@ -58,7 +58,7 @@ def WinCondition:
 **Locus:** exogenous (generated from outside the agent, i.e. environment)
 
 <details>
-  <summary>Transition Function</summary>
+  <summary>Click for transition function</summary>
 <br>
   
 Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$: <br>
