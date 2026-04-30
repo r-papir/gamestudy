@@ -11,8 +11,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
   <summary>Transition Function</summary>
 <br>  
 Puzzle A is formally characterized as a partially observable, 
-deterministic finite labeled transition system 
-**$\mathcal{M} = (S, A, \delta, s_0, F)$**:
+deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$:
 
 - **State space:** $S = \text{Grid} \times \text{Colors} \times \text{Colors}$, 
   encoding position and a two-step color history $(pos, c, c')$, 
