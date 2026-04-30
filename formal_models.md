@@ -10,9 +10,10 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 
 <details>
   <summary>Transition Function</summary>
-<br>  
-Puzzle A is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$:
 <br>
+
+Puzzle A is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$:
+
 - **State space:** $S = \text{Grid} \times \text{Colors} \times \text{Colors}$, 
   encoding position and a two-step color history $(pos, c, c')$, 
   where $c'$ (*previous color*) is latent
@@ -59,8 +60,11 @@ def WinCondition:
 <details>
   <summary>Transition Function</summary>
 <br>
+  
 Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$:
+
 <br>
+
 - **State:** $S = \text{Grid} \times \text{Colors} \times \text{Axes} \times \text{Dimensions} \times \text{TileStates}$,
   where *current_dimension* ∈ $\\{D1, D2\\}$ is latent
 - **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, filtered by `allowed_axes`
