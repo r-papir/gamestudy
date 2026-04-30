@@ -21,6 +21,13 @@ deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0
 - **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$
 </details>
 
+
+- **State:** (position, current_color, prev_color) — prev_color is latent
+- **Actions:** {up, down, left, right}
+- **Transition:** stepping on a color tile shifts prev_color ← current_color, current_color ← tile_color
+- **Win:** adjacent to goal AND current_color = goal_color AND prev_color = gray
+- 
+
 ### Pseudo Code:
 ```python
 class MechanicsA:
