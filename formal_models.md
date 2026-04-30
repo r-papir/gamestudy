@@ -119,7 +119,7 @@ class MechanicsB:
                 elif FX_tile.current_function == 'empty':
                     return  # tile does not exist in this dimension; not visible to player
 
-    def win_condition:
+    def win_condition():
         while piece_moving:
             if entering_goal_box:
                 if avatar_color == goal_frame_color:
