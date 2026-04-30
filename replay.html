@@ -21,6 +21,7 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 .tab-btn.available{color:#666;border-color:#bbb}
 .tab-btn.active{background:#c0392b;color:#fff;border-color:#c0392b}
 .tab-btn:disabled{cursor:default;opacity:.35}
+.tab-btn.grayed{background:#e8e8e8;color:#bbb;border-color:#ddd;opacity:1;cursor:default}
 .tab-btn.available:not(:disabled):not(.active):hover{background:#f5f5f5;color:#333}
 
 /* ── Main ── */
@@ -268,7 +269,7 @@ document.getElementById('file-input').addEventListener('change', async function 
     if (type === 'audio' && ext !== 'txt') continue;
     if (!raw[pid]) raw[pid] = {};
     if (!raw[pid][game]) raw[pid][game] = {};
-    const text = await file.text();
+    const text = await readFileAsText(file);
     if (type === 'gamestate') {
       try { raw[pid][game].gs = JSON.parse(text); } catch(e) {}
     } else {
@@ -346,6 +347,7 @@ function refreshTabs() {
     b.disabled = !ok;
     b.classList.toggle('available', ok);
     b.classList.remove('active');
+    b.classList.toggle('grayed', !!(S.pid && !ok));
   });
   if (S.pid) {
     const first = ['gA','gB','gC'].find(p => S.data[S.pid]?.[p]);
@@ -817,6 +819,15 @@ document.addEventListener('keydown', e => {
 // ─────────────────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────────────────
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
 
 function fmt(s) {
   return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
