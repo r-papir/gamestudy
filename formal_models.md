@@ -7,7 +7,9 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 + **Latent state:** `prev_color`
 + **Locus:** endogenous (generated from within the agent)
 
-### Transition Function:
+<details>
+  <summary>Transition Function</summary>
+  
 Puzzle A is formally characterized as a partially observable, 
 deterministic finite labeled transition system 
 $\mathcal{M} = (S, A, \delta, s_0, F)$:
@@ -18,7 +20,7 @@ $\mathcal{M} = (S, A, \delta, s_0, F)$:
 - **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$
 - **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$
 - **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$
-
+</details>
 
 ### Pseudo Code:
 ```python
