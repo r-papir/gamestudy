@@ -95,6 +95,7 @@ class MechanicsB:
                     ignore_input()
 
     def on_FX_tile_enter(tile):
+
             if FX_tile.type == 'dimension_toggle':
                 if current_dimension == 'D1':
                     current_dimension = 'D2'
