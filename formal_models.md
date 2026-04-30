@@ -70,30 +70,11 @@ Puzzle B is formally characterized as a partially observable, deterministic fini
   </details> 
   
 - **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub>
+
   <details>
   (`entering_goal(pos)` AND `avatar_color` = `goal_color`)
   </details>
 </details>
-
-
-<details>
-<summary> Year 1 (2021 - 2022) </summary>
-  
-  <details>
-  <summary> Refreshers </summary>
-  
-  </details>
-
-  <details>
-  <summary> Semester 1 </summary>
-  <ul>
-    <li> Data Visualization </li>
-    <li> Ethics </li>
-  </ul>
-  </details>
-  
-</details>
-
 
 ### Pseudo Code:
 
