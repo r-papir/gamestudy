@@ -65,7 +65,7 @@ Puzzle B is formally characterized as a partially observable, deterministic fini
 - **State:** (position, avatar_color, allowed_axes, current_dimension, tile_states)
   — current_dimension is latent (exogenous)
 - **Actions:** {up, down, left, right} — filtered by allowed_axes
-- **Transition:** dotted frame tiles apply $f$($tile$,*current_dimension*)∈{direction_change,color_change,empty} <br>
+- **Transition:** dotted frame tiles apply $f$($tile$, *current_dimension*) ∈ {direction_change, color_change,empty} <br>
   (dotted frame tiles apply a dimension-dependent function in {direction_change, color_change, empty})
 - **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub> <br>​
   (`entering_goal(pos)` AND `avatar_color` = `goal_color`)
