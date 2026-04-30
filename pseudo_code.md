@@ -1,5 +1,6 @@
-## Game A Pseudo Code:
+## Puzzle A
 
+### Pseudo Code:
 ```python
 class MechanicsA:
     def __init__(level):
@@ -24,6 +25,10 @@ def WinCondition:
             else:
                 return
 ```
+### Formal Model
+
+Both puzzles are characterized by **partially observable, deterministic finite labeled transition systems**, where the latent state variable is `prev_color` in Puzzle A, and `current_dimension` in Puzzle B.
+
 
 <br>
 
