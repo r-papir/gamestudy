@@ -49,12 +49,40 @@ def WinCondition:
             else:
                 return
 ```
-
 <br>
 
 ## Puzzle B
-+ **Latent state:** `current_dimension`
-+ **Locus:** exogenous (generated from outside the agent, i.e. environment)
+
+**Latent state:** `current_dimension`
+
+**Locus:** exogenous (generated from outside the agent, i.e. environment)
+
+<details>
+  <summary>Transition Function</summary>
+  
+Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$:
+
+- **State space:** $S = \text{Grid} \times \text{Colors} \times \text{Axes} \times \text{Dimensions} \times \text{TileStates}$,
+  encoding position, avatar color, movement constraint, dimension, and tile state,
+  where $current\_dimension \in \{D1, D2\}$ is latent
+- **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, where inputs
+  inconsistent with $allowed\_axes$ are ignored
+- **Transition:** determined by tile type and $current\_dimension$:
+  - dimension toggle tile: $dim \rightarrow \text{toggle}(dim)$
+  - dotted frame tile: effect is dimension-dependent — direction change, color change, or empty
+- **Win:** $\text{entering\_goal}(pos) \wedge color = c_{goal}$
+</details>
+
+- **State:** (position, avatar_color, allowed_axes, current_dimension, tile_states)
+  — current_dimension is latent (exogenous: a property of the world,
+  not recoverable from action history alone)
+- **Actions:** {up, down, left, right} — inputs inconsistent with allowed_axes are ignored
+- **Transition:** determined by tile type and current_dimension:
+  - dimension toggle tile: current_dimension flips between D1 and D2
+  - dotted frame tile: effect is dimension-dependent —
+    direction_change, color_change, or empty (invisible)
+  - plain tile: no effect
+- **Win:** entering goal position AND avatar_color = goal_color
 
 ### Pseudo Code: Puzzle B
 
