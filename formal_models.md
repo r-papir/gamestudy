@@ -4,7 +4,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 
 ## Puzzle A
 
-Latent/hidden state `prev_color` is endogenous (arises from within the agent's own action history).
+Latent/hidden state `prev_color` is *endogenous* (arises from within the agent's own action history).
 
 ### Pseudo Code:
 ```python
