@@ -8,7 +8,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 + **Locus:** endogenous (generated from within the agent)
 
 ### Definition:
-$\mathcal{M} = (S, A, \delta, s_0, F)$, where:
+We characterize Puzzle A as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$, where:
 
 $$S = \text{Grid} \times \text{Colors} \times \text{Colors}$$
 
@@ -28,19 +28,6 @@ The set of winning states is:
 
 $$F = \{(pos, c, c') \in S \mid \text{adjacent}(pos, goal\_pos) \wedge c = c_{goal} \wedge c' = \text{gray}\}$$
 
-
-
-| Header 1 | Header 2 | Header 3 |
-| :--- | :---: | ---: |
-| Left-aligned | Centered | Right-aligned |
-| More data | More data | More data |
-
-State (S) = Grid × Colors × Colors
-
-Where:
-+ position ∈ Grid --> *agent postion*
-+ current_color ∈ Colors --> *avatar's current color*
-+ prev_color ∈ Colors —-> *avatar's previous color*
 
 Actions:
 A = {↑, ↓, ←, →}
