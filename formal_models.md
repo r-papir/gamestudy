@@ -7,6 +7,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 + **Latent state:** `prev_color`
 + **Locus:** endogenous (generated from within the agent)
 
+### Definition:
 $\mathcal{M} = (S, A, \delta, s_0, F)$, where:
 
 $$S = \text{Grid} \times \text{Colors} \times \text{Colors}$$
