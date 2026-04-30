@@ -8,7 +8,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 + **Locus:** endogenous (generated from within the agent)
 
 ### Transition Function:
-We characterize Puzzle A as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$, where:
+We formally characterize Puzzle A as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$, where:
 
 $$S = \text{Grid} \times \text{Colors} \times \text{Colors}$$
 
