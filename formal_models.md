@@ -63,7 +63,7 @@ def WinCondition:
 Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system M = (S, A, δ, s₀, F):
 
 - **State:** $S = \text{Grid} \times \text{Colors} \times \text{Axes} \times \text{Dimensions} \times \text{TileStates}$,
-  where $current_dimension$ \in \{D1, D2\}$ is latent
+  where *current_dimension* \in \{D1, D2\}$ is latent
 - **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, filtered by `allowed_axes`
 - **Transition:** dotted frame tiles apply $f$($tile$, *current_dimension*) ∈ {direction_change, color_change,empty}</span>
   <br>
