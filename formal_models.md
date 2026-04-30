@@ -8,7 +8,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 + **Locus:** endogenous (generated from within the agent)
 
 <details>
-  <summary> **Transition Function** </summary>
+  <summary>Transition Function</summary>
 <br>  
 Puzzle A is formally characterized as a partially observable, 
 deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$:
