@@ -1,6 +1,6 @@
 ## Formal Model
 
-Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***, where the latent state variable is `prev_color` in Puzzle A, and `current_dimension` in Puzzle B.
+Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***, where the latent (hidden) state variable is `prev_color` in Puzzle A, and `current_dimension` in Puzzle B.
 
 ### Pseudo Code: Puzzle A
 ```python
