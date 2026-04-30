@@ -1,4 +1,4 @@
-### Formal Model
+# Formal Models
 
 Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***. Learn more about their formal structures below.
 
