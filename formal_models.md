@@ -1,10 +1,56 @@
 ### Formal Model
 
 Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***.
+
 ## Puzzle A
 
 + **Latent state:** `prev_color`
 + **Locus:** endogenous (generated from within the agent)
+
+$M$ = ($S$,$A$,δ,$s$<sub>0</sub>​,$F$), where:
+
+M=(S,A,δ,s0,F)\mathcal{M} = (S, A, \delta, s_0, F)
+M=(S,A,δ,s0​,F), where:
+
+
+
+
+| Header 1 | Header 2 | Header 3 |
+| :--- | :---: | ---: |
+| Left-aligned | Centered | Right-aligned |
+| More data | More data | More data |
+
+State (S) = Grid × Colors × Colors
+
+Where:
++ position ∈ Grid --> *agent postion*
++ current_color ∈ Colors --> *avatar's current color*
++ prev_color ∈ Colors —-> *avatar's previous color*
+
+Actions:
+A = {↑, ↓, ←, →}
+
+Transition function δ: S × A → S:
+δ((pos, current_color, prev_color), a) =
+
+  let pos' = move(pos, a)
+
+  if color_changing_tile(pos'):
+      let c = tile_color(pos')
+      return (pos', c, current_color)   % shift color history forward
+
+  return (pos', current_color, prev_color)   % no color change
+
+Win condition F ⊆ S:
+F = {(pos, current_color, prev_color) | adjacent(pos, goal_pos) ∧ current_color = goal_color ∧ prev_color = gray}
+
+Initial state:
+s₀ = (start_pos, starting_color, gray)
+
+Full specification tuple:
+M = (S, A, δ, s₀, F)
+
+
 
 ### Pseudo Code:
 ```python
