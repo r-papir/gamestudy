@@ -1,8 +1,12 @@
-## Formal Model
+### Formal Model
 
-Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***, where the latent (hidden) state variable is `prev_color` in Puzzle A, and `current_dimension` in Puzzle B.
+Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***., , and `current_dimension` in Puzzle B.
 
-### Pseudo Code: Puzzle A
+## Puzzle A
+
+Latent/hidden state `prev_color` is endogenous (arises from within the agent's own action history).
+
+### Pseudo Code:
 ```python
 class MechanicsA:
     def __init__(level):
