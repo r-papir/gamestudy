@@ -1,6 +1,6 @@
 ### Formal Model
 
-Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***.Learn about their causal structure below.
+Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***. Learn more about their causal structure below.
 
 ## Puzzle A
 
