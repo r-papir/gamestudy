@@ -18,9 +18,9 @@ deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0
   where $c'$ (*previous color*) is latent
 - **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$
 - **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$ <br>
-  (stepping on a color tile shifts prev_color ← current_color, current_color ← tile_color)
+  (stepping on a color tile shifts `prev_color` ← `current_color`, `current_color` ← `tile_color`)
 - **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$ <br>
-  (adjacent to goal AND current_color = goal_color AND prev_color = gray)
+  (adjacent to goal AND current_color = `goal_color` AND `prev_color` = gray)
 </details>
 
 ### Pseudo Code:
