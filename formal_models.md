@@ -17,12 +17,11 @@ deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0
   encoding position and a two-step color history $(pos, c, c')$, 
   where $c'$ (*previous color*) is latent
 - **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$
-- **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$ (*stepping on a color tile shifts prev_color ← current_color, current_color ← tile_color*)
-- **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$ (*adjacent to goal AND current_color = goal_color AND prev_color = gray*)
+- **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$
+  (stepping on a color tile shifts prev_color ← current_color, current_color ← tile_color)
+- **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$
+  (adjacent to goal AND current_color = goal_color AND prev_color = gray)
 </details>
-
-
-- 
 
 ### Pseudo Code:
 ```python
