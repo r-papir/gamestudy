@@ -77,7 +77,7 @@ Puzzle B is formally characterized as a partially observable, deterministic fini
 - **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub>
   <details>
      <summary>...</summary>
-      (`entering_goal(pos)` AND `avatar_color` = `goal_color`)
+      (`entering_goal`(pos) AND `avatar_color` = `goal_color`)
     </details>
   </details>
 
