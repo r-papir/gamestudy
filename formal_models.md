@@ -79,10 +79,9 @@ class MechanicsB:
     def __init__(level):
         allowed_axes = level.starting_axes          # horizontal or vertical, predetermined per level
         current_dimension = level.starting_dimension  # D1 or D2, predetermined per level
-    
-    while avatar_moving:
-        on_input(direction):
-            
+
+    def on_input(direction):
+
             if allowed_axes == 'horizontal':
                 if direction in (LEFT, RIGHT):
                     move(avatar, direction)
@@ -94,8 +93,8 @@ class MechanicsB:
                     move(avatar, direction)
                 else:
                     ignore_input()
-        
-        on_FX_tile_enter(tile):
+
+    def on_FX_tile_enter(tile):
             if FX_tile.type == 'dimension_toggle':
                 if current_dimension == 'D1':
                     current_dimension = 'D2'
@@ -119,12 +118,12 @@ class MechanicsB:
                 elif FX_tile.current_function == 'empty':
                     return  # tile does not exist in this dimension; not visible to player
 
-def WinCondition:
-    while piece_moving:
-        if entering_goal_box:
-            if avatar_color == goal_frame_color:
-                return level_complete()
-            else:
-                return
+    def WinCondition:
+        while piece_moving:
+            if entering_goal_box:
+                if avatar_color == goal_frame_color:
+                    return level_complete()
+                else:
+                    return
 
 ```
