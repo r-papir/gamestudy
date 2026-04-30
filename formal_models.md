@@ -9,7 +9,7 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 
 $\mathcal{M} = (S, A, \delta, s_0, F)$, where:
 
-$$S = \text{Grid} \times \text{Colors} \times \text{Colors}$$
+$S = \text{Grid} \times \text{Colors} \times \text{Colors}$
 
 encodes avatar position and a two-step color history $(pos, c, c')$, with $c$ denoting the current color and $c'$ the previous color (latent — not directly observable by the participant).
 
