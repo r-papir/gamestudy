@@ -18,10 +18,10 @@ Puzzle A is formally characterized as a partially observable, deterministic fini
   encoding position and a two-step color history $(pos, c, c')$, 
   where $c'$ (*previous color*) is latent
 - **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$
-- **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$ <br>
-  (stepping on a color tile shifts `prev_color` ← `current_color`, `current_color` ← `tile_color`)
-- **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$ <br>
-  (adjacent to goal AND `current_color` = `goal_color` AND `prev_color` = gray)
+- **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$, i.e., <br>
+  stepping on a color tile shifts `prev_color` ← `current_color`, `current_color` ← `tile_color`
+- **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$, i.e., <br>
+  adjacent to goal AND `current_color` = `goal_color` AND `prev_color` = gray
 </details>
 
 ### Pseudo Code:
@@ -66,10 +66,10 @@ Puzzle B is formally characterized as a partially observable, deterministic fini
 - **State:** $S = \text{Grid} \times \text{Colors} \times \text{Axes} \times \text{Dimensions} \times \text{TileStates}$,
   where *current_dimension* ∈ $\\{D1, D2\\}$ is latent
 - **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, filtered by `allowed_axes`
-- **Transition:** dotted frame tiles apply $f$($tile$, *current_dimension*) ∈ {direction_change, color_change, empty} <br>
-  (the dotted frames apply a dimension-dependent function in {direction_change, color_change, empty})
-- **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub> <br>
-(`entering_goal`(pos) AND `avatar_color` = `goal_color`)</small>)
+- **Transition:** dotted frame tiles apply $f$($tile$, *current_dimension*) ∈ {direction_change, color_change, empty}, i.e, <br>
+the dotted frames apply a dimension-dependent function in {direction_change, color_change, empty}
+- **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub>, i.e., <br>
+`entering_goal`(pos) AND `avatar_color` = `goal_color`)</small>
 </details>
 
 ### Pseudo Code:
