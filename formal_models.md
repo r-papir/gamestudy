@@ -1,7 +1,6 @@
 ### Formal Model
 
-Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***., , and `current_dimension` in Puzzle B.
-
+Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***.
 ## Puzzle A
 
 + **Latent state:** `prev_color`
