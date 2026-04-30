@@ -8,53 +8,16 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 + **Locus:** endogenous (generated from within the agent)
 
 ### Transition Function:
-We formally characterize Puzzle A as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$, where:
+Puzzle A is formally characterized as a partially observable, 
+deterministic finite labeled transition system 
+$\mathcal{M} = (S, A, \delta, s_0, F)$:
 
-$$S = \text{Grid} \times \text{Colors} \times \text{Colors}$$
-
-encodes avatar position and a two-step color history $(pos, c, c')$, with $c$ denoting the current color and $c'$ the previous color (latent).
-
-The action space is $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, with no movement constraints.
-
-The transition function $\delta: S \times A \rightarrow S$ is defined as:
-
-δ((pos, c, c'), a):
-- if color_tile(pos') = k  →  (pos', k, c)
-- otherwise               →  (pos', c, c')
-
-where pos' = move(pos, a)
-where $pos' = \text{move}(pos, a)$.
-
-The initial state is $s_0 = (start\_pos, c_0, \text{gray})$, where $c_0$ is the level-specific starting color.
-
-The set of winning states is:
-
-$$F = \{(pos, c, c') \in S \mid \text{adjacent}(pos, goal\_pos) \wedge c = c_{goal} \wedge c' = \text{gray}\}$$
-
-
-Actions:
-A = {↑, ↓, ←, →}
-
-Transition function δ: S × A → S:
-δ((pos, current_color, prev_color), a) =
-
-  let pos' = move(pos, a)
-
-  if color_changing_tile(pos'):
-      let c = tile_color(pos')
-      return (pos', c, current_color)   % shift color history forward
-
-  return (pos', current_color, prev_color)   % no color change
-
-Win condition F ⊆ S:
-F = {(pos, current_color, prev_color) | adjacent(pos, goal_pos) ∧ current_color = goal_color ∧ prev_color = gray}
-
-Initial state:
-s₀ = (start_pos, starting_color, gray)
-
-Full specification tuple:
-M = (S, A, δ, s₀, F)
-
+- **State space:** $S = \text{Grid} \times \text{Colors} \times \text{Colors}$, 
+  encoding position and a two-step color history $(pos, c, c')$, 
+  where $c'$ is latent
+- **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$
+- **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$
+- **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$
 
 
 ### Pseudo Code:
