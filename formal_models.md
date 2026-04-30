@@ -4,7 +4,8 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 
 ## Puzzle A
 
-Latent/hidden state `prev_color` is *endogenous* (arises from within the agent's own action history).
+Latent/hidden state: `prev_color`
+Locus: endogenous (generated from within the agent)
 
 ### Pseudo Code:
 ```python
@@ -33,6 +34,10 @@ def WinCondition:
 ```
 
 <br>
+
+## Puzzle B
+Latent/hidden state: `current_dimension`
+Locus: exogenous (generated from outside the agent, i.e. environment)
 
 ### Pseudo Code: Puzzle B
 
