@@ -18,8 +18,11 @@ The action space is $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, wit
 
 The transition function $\delta: S \times A \rightarrow S$ is defined as:
 
-$$\delta((pos, c, c'), a) = \begin{cases} (pos', k, c) & \text{if } \text{color\_tile}(pos') = k \\ (pos', c, c') & \text{otherwise} \end{cases}$$
+δ((pos, c, c'), a):
+- if color_tile(pos') = k  →  (pos', k, c)
+- otherwise               →  (pos', c, c')
 
+where pos' = move(pos, a)
 where $pos' = \text{move}(pos, a)$.
 
 The initial state is $s_0 = (start\_pos, c_0, \text{gray})$, where $c_0$ is the level-specific starting color.
