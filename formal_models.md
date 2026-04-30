@@ -60,13 +60,15 @@ def WinCondition:
 <details>
   <summary>Transition Function</summary>
 
-Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$:
+Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system M = (S, A, δ, s₀, F):
 
-- **State space:** $S = \text{Grid} \times \text{Colors} \times \text{Axes} \times \text{Dimensions} \times \text{TileStates}$,
-  where $current\_dimension \in \{D1, D2\}$ is latent (exogenous)
-- **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, filtered by $allowed\_axes$
-- **Transition:** dotted frame tiles apply $f(tile, current\_dimension) \in \{\text{direction\_change}, \text{color\_change}, \text{empty}\}$
-- **Win:** $\text{entering\_goal}(pos) \wedge color = c_{goal}$
+- **State:** (position, avatar_color, allowed_axes, current_dimension, tile_states)
+  — current_dimension is latent (exogenous)
+- **Actions:** {up, down, left, right} — filtered by allowed_axes
+- **Transition:** dotted frame tiles apply a dimension-dependent function
+  in {direction_change, color_change, empty}
+- **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub> <br>​
+  entering_goal(pos) AND avatar_color = goal_color
 </details>
 
 ### Pseudo Code:
