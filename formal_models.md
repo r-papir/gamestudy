@@ -5,7 +5,9 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 ## Puzzle A
 
 **Latent state:** `prev_color`
+
 **Locus:** endogenous (generated from within the agent)
+
 <details>
   <summary>Transition Function</summary>
 <br>  
