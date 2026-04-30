@@ -60,7 +60,7 @@ def WinCondition:
 <details>
   <summary>Transition Function</summary>
 
-Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system M = (S, A, δ, s₀, F):
+Puzzle B is formally characterized as a partially observable, deterministic finite labeled transition system $$\mathcal{M} = $(S, A, δ, s₀, F)$:
 
 - **State:** $S = \text{Grid} \times \text{Colors} \times \text{Axes} \times \text{Dimensions} \times \text{TileStates}$,
   where *current_dimension* ∈ ${D1, D2}$ is latent
