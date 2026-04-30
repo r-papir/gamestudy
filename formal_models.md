@@ -21,7 +21,7 @@ deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0
 - **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$ <br>
   (stepping on a color tile shifts `prev_color` ← `current_color`, `current_color` ← `tile_color`)
 - **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$ <br>
-  (adjacent to goal AND current_color = `goal_color` AND `prev_color` = gray)
+  (adjacent to goal AND `current_color` = `goal_color` AND `prev_color` = gray)
 </details>
 
 ### Pseudo Code:
@@ -65,10 +65,10 @@ Puzzle B is formally characterized as a partially observable, deterministic fini
 - **State:** (position, avatar_color, allowed_axes, current_dimension, tile_states)
   — current_dimension is latent (exogenous)
 - **Actions:** {up, down, left, right} — filtered by allowed_axes
-- **Transition:** dotted frame tiles apply a dimension-dependent function
-  in {direction_change, color_change, empty}
+- **Transition:** dotted frame tiles apply $f$($tile,current_dimension$)∈{direction_change,color_change,empty} <br>
+  (dotted frame tiles apply a dimension-dependent function in {direction_change, color_change, empty})
 - **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub> <br>​
-  entering_goal(pos) AND avatar_color = goal_color
+  (`entering_goal(pos)` AND `avatar_color` = `goal_color`)
 </details>
 
 ### Pseudo Code:
