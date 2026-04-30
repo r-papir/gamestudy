@@ -7,11 +7,25 @@ Both puzzles are characterized by ***partially observable, deterministic finite 
 + **Latent state:** `prev_color`
 + **Locus:** endogenous (generated from within the agent)
 
-$M$ = ($S$,$A$,δ,$s$<sub>0</sub>​,$F$), where:
+We characterize Puzzle A as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$, where:
 
-M=(S,A,δ,s0,F)\mathcal{M} = (S, A, \delta, s_0, F)
-M=(S,A,δ,s0​,F), where:
+$$S = \text{Grid} \times \text{Colors} \times \text{Colors}$$
 
+encodes avatar position and a two-step color history $(pos, c, c')$, with $c$ denoting the current color and $c'$ the previous color (latent — not directly observable by the participant).
+
+The action space is $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$, with no movement constraints.
+
+The transition function $\delta: S \times A \rightarrow S$ is defined as:
+
+$$\delta((pos, c, c'), a) = \begin{cases} (pos', k, c) & \text{if } \text{color\_tile}(pos') = k \\ (pos', c, c') & \text{otherwise} \end{cases}$$
+
+where $pos' = \text{move}(pos, a)$.
+
+The initial state is $s_0 = (start\_pos, c_0, \text{gray})$, where $c_0$ is the level-specific starting color.
+
+The set of winning states is:
+
+$$F = \{(pos, c, c') \in S \mid \text{adjacent}(pos, goal\_pos) \wedge c = c_{goal} \wedge c' = \text{gray}\}$$
 
 
 
