@@ -49,6 +49,9 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 .legend-item{display:flex;align-items:center;gap:4px}
 .legend-swatch{width:12px;height:12px;border-radius:2px;border:1px solid rgba(0,0,0,.12);flex-shrink:0}
 
+/* ── Puzzle description ── */
+#puzzle-desc{font-size:12px;color:#555;line-height:1.5;max-width:480px;text-align:center;margin-bottom:8px;min-height:1em}
+
 /* ── Transcript ── */
 #transcript-panel{flex:1;display:flex;flex-direction:column;background:#fafafa;border-left:1px solid #e0e0e0;min-width:260px}
 #transcript-panel h3{padding:8px 14px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#bbb;border-bottom:1px solid #e8e8e8;flex-shrink:0}
@@ -112,6 +115,8 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 
 <div id="main">
   <div id="grid-panel">
+
+    <div id="puzzle-desc"></div>
 
     <div id="grid-wrap">
       <div id="grid-display">
@@ -180,6 +185,12 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 // ─────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────
+
+const PUZZLE_DESC = {
+  gA: '',
+  gB: '',
+  gC: 'x = immovable'
+};
 
 const COLORS = {
   grey:'#D3D3D3', gray:'#D3D3D3',
@@ -369,6 +380,7 @@ function selectPuzzle(p) {
   document.querySelectorAll('.tab-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.puzzle === p)
   );
+  document.getElementById('puzzle-desc').textContent = PUZZLE_DESC[p] || '';
   loadReplay();
 }
 
