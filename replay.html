@@ -394,6 +394,8 @@ function loadReplay() {
   S.colorTransformers = S.puzzle === 'gB' ? inferColorTransformers(S.frames) : {};
   S._lastRippleFrame = -1;
   _winOverlayLevel = null;
+  const _svg = document.getElementById('win-svg');
+  if (_svg) _svg.innerHTML = '';
   buildTranscript();
   buildLevelJumps();
   buildMarkers();
