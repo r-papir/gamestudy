@@ -1,28 +1,31 @@
 # Formal Models
 
-Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***. Learn more about their formal structures below.
+<!--Both puzzles are characterized by ***partially observable, deterministic finite labeled transition systems***. Learn more about their formal structures below.-->
 
-## Puzzle A
+### Puzzle A:
 
-**Latent state:** `prev_color`
+This puzzle is formalized as a ***partially observable, deterministic finite labeled transition system*** $\mathcal{M} = (S, A, δ, F, Obs, O)$, where: <br>
 
-**Locus:** endogenous (generated from within the agent)
+- **State space:** S := P × C × C, where a state is (pos, c, c_{-1})
+- **Possible actions:** $A =$ {↑, ↓, ←, →}
+- **Transition function:** δ((pos, c, c_{-1}), a) := (pos′, j, c) if pos′ is adjacent to a colored square where j is that square's color, and (pos′, c, c_{-1}) otherwise
+- **Final states:** F := {(pos, c, c_{-1}) ∈ S | pos ∈ P_goal ∧ c = c_goal ∧ c_{-1} = gray}
+- **Possible observations:** Obs := P × C
+- **Observation function:** O(pos, c, c_{-1}) := (pos, c)
 
-<details>
-  <summary>Define the transition function</summary>
-<br>
+We omit $\mathcal{s₀}$ from $\mathcal{M}$ as it is level-specific; $\mathcal{M}$ encodes the invariant causal structure of the game, and correct solution across instantiations constitutes evidence of its induction by the player.
 
-Puzzle A is formally characterized as a partially observable, deterministic finite labeled transition system $\mathcal{M} = (S, A, \delta, s_0, F)$: <br>
+**<ins>Locus:</ins>** <br>
+Endogenous (generated from within the agent).
 
-- **State space:** $S = \text{Grid} \times \text{Colors} \times \text{Colors}$, 
-  encoding position and a two-step color history $(pos, c, c')$, 
-  where $c'$ (*previous color*) is latent
-- **Actions:** $A = \{\uparrow, \downarrow, \leftarrow, \rightarrow\}$
-- **Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$ , i.e., <br>
-  stepping on a color tile shifts `prev_color` ← `current_color`, `current_color` ← `tile_color`
-- **Win:** $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$, i.e., <br>
-  adjacent to goal AND `current_color` = `goal_color` AND `prev_color` = gray
-</details>
+**<ins>Latencies:</ins>** <br>
+In Puzzle A, `prev_color` (or `c_{-1}`) is latent. The player observes the current position and color **(pos,c)** but not `c_{-1}`, despite `c_{-1}` determining win eligibility. Any states sharing **(pos, c)** are observationally equivalent under observation function ***O*** yet distinct under final states ***F***. In short, the player observes their current color, but not their previous color, despite the requirement for the previous color to equal gray in the final state.
+
+<!-- State space: $S = \text{Grid} \times \text{Colors} \times \text{Colors}$, encoding position and a two-step color history $(pos, c, c')$, where $c'$ (*previous color*) is latent -->
+
+<!-- Transition:** entering a color tile $k$ updates $(pos, c, c') \rightarrow (pos', k, c)$ , i.e., stepping on a color tile shifts `prev_color` ← `current_color`, `current_color` ← `tile_color` -->
+
+<!--Win: $\text{adjacent}(pos, goal) \wedge c = c_{goal} \wedge c' = \text{gray}$, i.e., adjacent to goal AND `current_color` = `goal_color` AND `prev_color` = gray -->
 
 ### Pseudo Code:
 ```python
@@ -50,9 +53,14 @@ def WinCondition:
                 return
 ```
 <br>
+<br>
 
-## Puzzle B
+## Puzzle B:
+Formal specifications and transition function coming soon.
 
+<!--NOTE: "dimension is the latent variable, and the tile functions are hidden obligations that are only partially resolvable because of dim's latency" -->
+
+<!--
 **Latent state:** `current_dimension`
 
 **Locus:** exogenous (generated from outside the agent, i.e. environment)
@@ -71,6 +79,7 @@ the dotted frames apply a dimension-dependent function in {direction_change, col
 - **Win:** entering_goal($pos$)∧color=c<sub>$goal$</sub> , i.e., <br>
 `entering_goal`(pos) AND `avatar_color` = `goal_color`)</small>
 </details>
+-->
 
 ### Pseudo Code:
 
