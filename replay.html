@@ -62,6 +62,8 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
 .tseg.active{background:#fff5f5;border-left-color:#c0392b}
 .tseg.active .txt{color:#222}
 .tseg.active .ts{color:#c0392b}
+.tw{display:inline}
+.tw.word-active{background:#ffd0d0;border-radius:3px;padding:1px 3px}
 
 /* ── Controls ── */
 #controls{background:#f7f7f7;border-top:1px solid #ddd;padding:8px 16px 10px;flex-shrink:0}
@@ -254,6 +256,9 @@ const S = {
   puzzle: null,
   frames: [],
   transcript: [],
+  words: null,       // flat [{word,start,end}] from _transcript_ JSON, or null
+  _wordEls: [],      // [{start,end,el}] built by buildTranscript when words present
+  _lastWordEl: null,
   totalMs: 0,
   cur: 0,          // current frame index
   playing: false,
@@ -275,16 +280,22 @@ document.getElementById('load-btn').onclick = () =>
 document.getElementById('file-input').addEventListener('change', async function () {
   const raw = {};
   for (const file of this.files) {
-    const m = file.name.match(/^(P\d+)_(g[ABC])_(audio|gamestate|eyetracking)_\d{8}\.(json|txt)$/i);
+    const m = file.name.match(/^(P\d+)_(g[ABC])_(audio|gamestate|eyetracking|transcript)_\d{8}\.(json|txt)$/i);
     if (!m) continue;
     const [, pid, game, type, ext] = m;
     if (type === 'eyetracking') continue;
     if (type === 'audio' && ext !== 'txt') continue;
+    if (type === 'transcript' && ext !== 'json') continue;
     if (!raw[pid]) raw[pid] = {};
     if (!raw[pid][game]) raw[pid][game] = {};
     const text = await readFileAsText(file);
     if (type === 'gamestate') {
       try { raw[pid][game].gs = JSON.parse(text); } catch(e) {}
+    } else if (type === 'transcript') {
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed.words)) raw[pid][game].words = parsed.words;
+      } catch(e) {}
     } else {
       raw[pid][game].tx = parseTranscript(text);
     }
@@ -399,6 +410,9 @@ function loadReplay() {
   if (S.frames.length > 0) S.frames.unshift({ ...S.frames[0], ms: 0 });
   synthesizeWinFrames(S.frames, S.puzzle);
   S.transcript = d.tx;
+  S.words = d.words || null;
+  S._wordEls = [];
+  S._lastWordEl = null;
   S.cur = 0;
   S.playbackMs = 0;
   S.totalMs = S.frames.length ? S.frames[S.frames.length - 1].ms : 1;
@@ -415,7 +429,7 @@ function loadReplay() {
 }
 
 function clearView() {
-  S.frames = []; S.transcript = [];
+  S.frames = []; S.transcript = []; S.words = null; S._wordEls = []; S._lastWordEl = null;
   document.getElementById('grid-display').innerHTML =
     '<div id="grid-placeholder">Load files and select a participant.</div>';
   document.getElementById('transcript-scroll').innerHTML =
@@ -618,34 +632,100 @@ function lightness(hex) {
 function buildTranscript() {
   const scroll = document.getElementById('transcript-scroll');
   scroll.innerHTML = '';
+  S._wordEls = [];
+  S._lastWordEl = null;
   if (!S.transcript.length) {
     scroll.innerHTML = '<div style="color:#445;padding:20px;text-align:center">No transcript.</div>';
     return;
   }
-  S.transcript.forEach((seg, i) => {
-    const d = document.createElement('div');
-    d.className = 'tseg';
-    d.id = `ts${i}`;
-    d.innerHTML = `<span class="ts">${fmt(seg.sec)}</span><span class="txt">${esc(seg.txt)}</span>`;
-    scroll.appendChild(d);
-  });
+
+  if (S.words) {
+    // Word-level mode: render each segment's words as individual spans
+    // Pre-index words into a sorted flat array for fast lookup
+    const wordsSorted = S.words.slice().sort((a, b) => a.start - b.start);
+
+    S.transcript.forEach((seg, i) => {
+      const segEnd = (S.transcript[i + 1]?.sec ?? Infinity);
+      // Collect words that fall within this segment's time window
+      const segWords = wordsSorted.filter(w => w.start >= seg.sec && w.start < segEnd);
+
+      const container = document.createElement('div');
+      container.className = 'tseg';
+      container.id = `ts${i}`;
+
+      const ts = document.createElement('span');
+      ts.className = 'ts';
+      ts.textContent = fmt(seg.sec);
+      container.appendChild(ts);
+
+      const txt = document.createElement('span');
+      txt.className = 'txt';
+
+      if (segWords.length) {
+        segWords.forEach((w, wi) => {
+          const span = document.createElement('span');
+          span.className = 'tw';
+          span.textContent = (wi === 0 ? '' : ' ') + w.word;
+          txt.appendChild(span);
+          S._wordEls.push({ start: w.start, end: w.end, el: span });
+        });
+      } else {
+        txt.textContent = seg.txt;
+      }
+
+      container.appendChild(txt);
+      scroll.appendChild(container);
+    });
+    // _wordEls is already in time order since wordsSorted is sorted and we iterate segments in order
+  } else {
+    // Segment-level mode (no word timestamps available)
+    S.transcript.forEach((seg, i) => {
+      const d = document.createElement('div');
+      d.className = 'tseg';
+      d.id = `ts${i}`;
+      d.innerHTML = `<span class="ts">${fmt(seg.sec)}</span><span class="txt">${esc(seg.txt)}</span>`;
+      scroll.appendChild(d);
+    });
+  }
   S._lastSeg = -1;
 }
 
 function updateTranscript(f) {
   if (!S.transcript.length) return;
   const elapsed = f.ms / 1000;
+
+  // Segment highlighting
   let idx = 0;
   for (let i = 0; i < S.transcript.length; i++) {
     if (S.transcript[i].sec <= elapsed) idx = i;
     else break;
   }
-  if (idx === S._lastSeg) return;
-  S._lastSeg = idx;
-  document.querySelectorAll('.tseg').forEach((el, i) =>
-    el.classList.toggle('active', i === idx)
-  );
-  document.getElementById(`ts${idx}`)?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  if (idx !== S._lastSeg) {
+    S._lastSeg = idx;
+    document.querySelectorAll('.tseg').forEach((el, i) =>
+      el.classList.toggle('active', i === idx)
+    );
+    document.getElementById(`ts${idx}`)?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  // Word highlighting (only when word timestamps are loaded)
+  if (!S._wordEls.length) return;
+
+  // Binary search for a word whose window contains elapsed
+  let wordEl = null;
+  let lo = 0, hi = S._wordEls.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const w = S._wordEls[mid];
+    if (elapsed < w.start)      { hi = mid - 1; }
+    else if (elapsed >= w.end)  { lo = mid + 1; }
+    else                        { wordEl = w.el; break; }
+  }
+
+  if (wordEl === S._lastWordEl) return;
+  if (S._lastWordEl) S._lastWordEl.classList.remove('word-active');
+  if (wordEl) wordEl.classList.add('word-active');
+  S._lastWordEl = wordEl;
 }
 
 // ─────────────────────────────────────────────────────────
