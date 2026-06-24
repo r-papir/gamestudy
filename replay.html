@@ -120,7 +120,7 @@ body{font-family:'Trebuchet MS',system-ui,sans-serif;background:#fff;color:#222;
     <button class="tab-btn" data-puzzle="gB" disabled>Puzzle B</button>
     <button class="tab-btn" data-puzzle="gC" disabled>Puzzle C</button>
   </div>
-  <button id="et-btn" disabled title="Toggle eye tracking overlay">👁 Eye Tracking</button>
+  <button id="et-btn" disabled title="Toggle eye tracking overlay">Eye Tracking</button>
 </div>
 
 <div id="main">
@@ -519,7 +519,11 @@ function updateGazeDot(f) {
   }
   if (best < 0) { dot.style.display = 'none'; return; }
 
-  const { x, y } = S.gazeDataClean[best];
+  const entry = S.gazeDataClean[best];
+  // Hide if tracker signal is stale (no valid gaze within last 500ms)
+  if (absMs - entry.absMs > 500) { dot.style.display = 'none'; return; }
+
+  const { x, y } = entry;
   const CELL = S._lastCell || Math.floor(420 / (f.gameStateBefore?.[0]?.length || 6));
   const GAP = 2, BORDER_PAD = 4; // 2px border + 2px padding on grid-display
   const cx = BORDER_PAD + x * (CELL + GAP) + CELL / 2;
