@@ -335,6 +335,19 @@ document.getElementById('file-input').addEventListener('change', async function 
       }
     }
   }
+  // Re-merge bundled P044 data: add any game missing from files, and inject
+  // bundled ET into games that loaded from files but have no eye tracking file.
+  [['gA', _GS_gA, _TX_gA, _WORDS_gA, _ET_gA],
+   ['gB', _GS_gB, _TX_gB, _WORDS_gB, _ET_gB],
+   ['gC', _GS_gC, _TX_gC, _WORDS_gC, _ET_gC]].forEach(([g, gs, txRaw, words, etData]) => {
+    if (!S.data['P044']) S.data['P044'] = {};
+    if (!S.data['P044'][g]) {
+      const tx = parseTranscript(txRaw);
+      if (gs && tx.length) S.data['P044'][g] = { gs, tx, words, et: parseBundledEyeTracking(etData) };
+    } else if (!S.data['P044'][g].et && etData) {
+      S.data['P044'][g].et = parseBundledEyeTracking(etData);
+    }
+  });
   buildDropdown();
   this.value = '';
 });
