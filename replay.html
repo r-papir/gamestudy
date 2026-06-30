@@ -311,8 +311,16 @@ document.getElementById('file-input').addEventListener('change', async function 
     } else if (type === 'eyetracking') {
       try {
         const parsed = JSON.parse(text);
-        if (Array.isArray(parsed.gaze)) raw[pid][game].et = parseEyeTracking(parsed);
-      } catch(e) {}
+        if (Array.isArray(parsed.gaze)) {
+          const et = parseEyeTracking(parsed);
+          raw[pid][game].et = et;
+          console.log(`[ET] ${pid} ${game}: ${et.length} valid gaze entries (of ${parsed.gaze.length} total)`);
+        } else {
+          console.warn(`[ET] ${pid} ${game}: gaze field is not an array`, typeof parsed.gaze);
+        }
+      } catch(e) {
+        console.error(`[ET] ${pid} ${game}: parse error`, e);
+      }
     } else {
       raw[pid][game].tx = parseTranscript(text);
     }
@@ -442,6 +450,7 @@ function loadReplay() {
   if (_svg) _svg.innerHTML = '';
   S.sessionStartMs = t0;
   S.gazeDataClean = d.et || [];
+  console.log(`[loadReplay] ${S.pid} ${S.puzzle}: gazeDataClean has ${S.gazeDataClean.length} entries, sessionStartMs=${t0}`);
   S.etEnabled = false;
   updateEtButton();
   buildTranscript();
