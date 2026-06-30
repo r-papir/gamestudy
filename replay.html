@@ -916,7 +916,7 @@ function setTimeline(frac) {
 
 // Timeline drag
 const tlWrap = document.getElementById('tl-wrapper');
-tlWrap.addEventListener('mousedown', e => { S.dragging = true; seekFrac(tlFrac(e)); });
+tlWrap.addEventListener('mousedown', e => { pause(); S.dragging = true; seekFrac(tlFrac(e)); });
 document.addEventListener('mousemove', e => { if (S.dragging) seekFrac(tlFrac(e)); });
 document.addEventListener('mouseup',   () => { S.dragging = false; });
 
@@ -927,6 +927,7 @@ function tlFrac(e) {
 function seekFrac(frac) {
   if (!S.frames.length) return;
   const ms = frac * S.totalMs;
+  S.playbackMs = ms;
   let best = 0;
   for (let i = 0; i < S.frames.length; i++) {
     if (S.frames[i].ms <= ms) best = i; else break;
