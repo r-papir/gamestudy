@@ -502,6 +502,16 @@ function updateEtButton() {
   btn.disabled = !hasData;
   btn.classList.toggle('et-avail', hasData && !S.etEnabled);
   btn.classList.toggle('et-on', S.etEnabled);
+  if (hasData) {
+    const firstGazeMs = S.gazeDataClean[0].absMs - S.sessionStartMs;
+    const firstSec = Math.round(firstGazeMs / 1000);
+    const offsetNote = firstSec > 5 ? ` (data starts at ${fmt(firstSec)})` : '';
+    btn.title = S.etEnabled
+      ? 'Click to hide eye tracking overlay'
+      : `Click to show eye tracking overlay${offsetNote}`;
+  } else {
+    btn.title = 'No eye tracking data for this participant/puzzle';
+  }
 }
 
 function updateGazeDot(f) {
@@ -509,7 +519,7 @@ function updateGazeDot(f) {
   if (!dot) return;
   if (!S.etEnabled || !S.gazeDataClean.length) { dot.style.display = 'none'; return; }
 
-  const absMs = S.sessionStartMs + f.ms;
+  const absMs = S.sessionStartMs + (S.playing ? S.playbackMs : f.ms);
   // Binary search for latest clean gaze entry at or before absMs
   let lo = 0, hi = S.gazeDataClean.length - 1, best = -1;
   while (lo <= hi) {
@@ -791,7 +801,7 @@ function buildTranscript() {
 
 function updateTranscript(f) {
   if (!S.transcript.length) return;
-  const elapsed = f.ms / 1000;
+  const elapsed = (S.playing ? S.playbackMs : f.ms) / 1000;
 
   // Segment highlighting
   let idx = 0;
