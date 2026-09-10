@@ -108,8 +108,9 @@
             display: none;
         }
 
-        /* Appearance comes from puzzle-theme.css; these rules are position only. */
-        #restart-button, #download-button, #skip-button {
+        /* Appearance comes from puzzle-theme.css; these rules are position only.
+           #download-button now lives inside the dashboard. */
+        #restart-button, #skip-button {
             position: fixed;
             z-index: 1000;
         }
@@ -135,13 +136,6 @@
             right: 20px;
             z-index: 1000;
             text-align: right;
-        }
-
-        /* Top-right, below the audio-recorder controls. */
-        #download-button {
-            right: 20px;
-            top: 100px;
-            display: block;
         }
 
         /* OLD energy bar (2026-09-04..2026-09-05) - superseded by the
@@ -335,24 +329,28 @@
     </script>
 
     <div id="dashboard">
-        <a id="dash-home" href="index.html">Home</a>
-        <span class="dash-sep"></span>
-        <select id="dash-puzzle" aria-label="Switch puzzle">
-            <option value="game.html">Puzzle 1</option>
-            <option value="game2new.html">Puzzle 2</option>
-            <option value="game3.html">Puzzle 3</option>
-            <option value="game4.html">Puzzle 4</option>
-            <option value="game5.html" selected>Puzzle 5</option>
-        </select>
-        <span class="dash-sep"></span>
-        <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
-        <span class="dash-sep"></span>
-        <label class="energy-switch" id="energy-switch" style="display:none">
-            <input type="checkbox" id="energy-switch-input" checked aria-label="Energy constraint">
-            <span class="track"></span>
-            <span class="track-label" id="energy-switch-label">Energy: On</span>
-            <span class="thumb"></span>
-        </label>
+        <div class="dash-row">
+            <a id="dash-home" href="index.html">Home</a>
+            <span class="dash-sep"></span>
+            <select id="dash-puzzle" aria-label="Switch puzzle">
+                <option value="game.html">Puzzle 1</option>
+                <option value="game2new.html">Puzzle 2</option>
+                <option value="game3.html">Puzzle 3</option>
+                <option value="game4.html">Puzzle 4</option>
+                <option value="game5.html" selected>Puzzle 5</option>
+            </select>
+            <span class="dash-sep"></span>
+            <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
+        </div>
+        <div class="dash-row">
+            <label class="energy-switch" id="energy-switch" style="display:none">
+                <input type="checkbox" id="energy-switch-input" checked aria-label="Energy constraint">
+                <span class="track"></span>
+                <span class="track-label" id="energy-switch-label">Energy: On</span>
+                <span class="thumb"></span>
+            </label>
+            <button id="download-button">Download Data</button>
+        </div>
     </div>
 
     <div id="instructions">
@@ -371,7 +369,6 @@
     </div>
     <button id="restart-button">Start Over</button>
     <button id="skip-button">Skip Level</button>
-    <button id="download-button">Download Data</button>
 
     <div id="quit-overlay" class="completion-overlay quit-overlay" hidden>
         <div class="completion-card">
@@ -1464,7 +1461,7 @@
 
                 return { x: Math.min(gridX, GRID_SIZE), y: Math.min(gridY, GRID_SIZE) };
             },
-            insertBeforeSelector: '#download-button',
+            insertBeforeSelector: '#dashboard',
             onRecordingStart: () => {
                 S3Uploader.startBackups(sessionCode, 'Game 5', () => AudioRecorder.getState().audioChunks);
             },
