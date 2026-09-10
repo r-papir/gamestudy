@@ -122,7 +122,7 @@
             display: none;
         }
 
-        #restart-button, #download-button {
+        #restart-button, #download-button, #skip-button {
             position: fixed;
             top: 20px;
             padding: 15px 30px;
@@ -142,13 +142,21 @@
             display: none;
         }
 
+        /* Sits in the same top-left slot as #restart-button; the two are never
+           shown at the same time (skip while playing, restart once complete). */
+        #skip-button {
+            left: 20px;
+            display: block;
+            font-size: 16px;
+        }
+
         #download-button {
             right: 20px;
             display: block;
             font-size: 16px;
         }
 
-        #restart-button:hover, #download-button:hover {
+        #restart-button:hover, #download-button:hover, #skip-button:hover {
             background-color: #1a1a1a;
             color: #ffffff;
         }
@@ -249,6 +257,7 @@
         <div id="grid"></div>
     </div>
     <button id="restart-button">Start Over</button>
+    <button id="skip-button">Skip Level</button>
     <button id="download-button">Download Data</button>
 
     <script src="webgazer.js"></script>
@@ -315,7 +324,8 @@
                 "dy": "-1 = up, +1 = down, 0 = no vertical movement"
             },
             sessionStart: new Date().toISOString(),
-            movements: []
+            movements: [],
+            skips: []
         };
 
         // Initialize grid display
@@ -365,6 +375,9 @@
             const gridElement = document.getElementById('grid');
             gridElement.classList.remove('fade-out');
             instructionsElement.classList.remove('fade-out');
+
+            // Skip Level is available whenever a level is in play
+            document.getElementById('skip-button').style.display = 'block';
         }
 
         // Get color at position
@@ -551,6 +564,7 @@
                             // Game complete - show restart button and upload data
                             gridElement.classList.remove('fade-out');
                             instructionsElement.classList.remove('fade-out');
+                            document.getElementById('skip-button').style.display = 'none';
                             document.getElementById('restart-button').style.display = 'block';
                             handleGameComplete();
                             showCompletionMessage('A');
@@ -700,6 +714,40 @@
             currentLevelIndex = 0;
             document.getElementById('restart-button').style.display = 'none';
             loadLevel(currentLevelIndex);
+        });
+
+        // Handle skip button click - advance to the next level without solving
+        // it. Mirrors the win transition (same fade + timing) but records a skip
+        // instead of a win, and skips the ripple.
+        document.getElementById('skip-button').addEventListener('click', () => {
+            if (currentLevelIndex >= levels.length) return;
+            if (gameState.levelComplete) return;  // a transition is already running
+
+            gameState.levelComplete = true;  // lock movement during the fade
+            sessionData.skips.push({
+                timestamp: new Date().toISOString(),
+                level: currentLevelIndex + 1,
+                gameStateBefore: generateGameStateMatrix()
+            });
+
+            const gridElement = document.getElementById('grid');
+            const instructionsElement = document.getElementById('instructions');
+            gridElement.classList.add('fade-out');
+            instructionsElement.classList.add('fade-out');
+
+            setTimeout(() => {
+                currentLevelIndex++;
+                if (currentLevelIndex < levels.length) {
+                    loadLevel(currentLevelIndex);
+                } else {
+                    gridElement.classList.remove('fade-out');
+                    instructionsElement.classList.remove('fade-out');
+                    document.getElementById('skip-button').style.display = 'none';
+                    document.getElementById('restart-button').style.display = 'block';
+                    handleGameComplete();
+                    showCompletionMessage('A');
+                }
+            }, 1200);
         });
 
         // Handle download button click
