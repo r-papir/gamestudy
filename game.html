@@ -280,7 +280,9 @@
             TEAL: '#44AA99',
             PINK: '#CC6677',
             LIME: '#BBCC33',
-            ORANGE: '#FF8438'
+            ORANGE: '#FF8438',
+            MAGENTA: '#882255',   // from game2new.html
+            LAVENDER: '#DAB1DA'   // from game5.html
         };
 
         // Game state
@@ -875,7 +877,6 @@
                 name: "Level 1",
                 instructions: "There are no instructions for this game, intentionally.<br>Using the arrow keys, play the game to discover controls, rules, and the objective.",
                 targetColor: 'orange',   // goal cell renders orange (#FF8438); the lone non-teal corner is also 'orange'
-                initialAvatarColor: 'orange',   // ego cell starts the same orange as the goal/corner
 
                 grid: [
                     [0, 0, 0, 0, 0, 0],
@@ -896,10 +897,39 @@
             };
         }
 
+        // Duplicate of level 1, recolored: magenta ego + goal, magenta/lavender
+        // corners. Ego starts magenta, so the win path needs a teal reset first.
         function level2() {
             return {
                 id: 2,
                 name: "Level 2",
+                instructions: "There are no instructions for this game, intentionally.<br>Using the arrow keys, play the game to discover controls, rules, and the objective.",
+                targetColor: 'magenta',   // goal cell renders magenta (#882255)
+                initialAvatarColor: 'magenta',   // ego starts the same magenta as the goal/corner
+
+                grid: [
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0]
+                ],
+                avatar: { x: 1, y: 4 },
+                center: { x: 5, y: 3 },
+                corners: {
+                    originTopLeft: { x: 1, y: 1, color: 'magenta' },
+                    originTopRight: { x: 6, y: 1, color: 'teal' },
+                    originBottomLeft: { x: 1, y: 6, color: 'teal' },
+                    originBottomRight: { x: 6, y: 6, color: 'lavender' }
+                }
+            };
+        }
+
+        function level3() {
+            return {
+                id: 3,
+                name: "Level 3",
                 instructions: "There are no instructions for this game, intentionally.<br>Using the arrow keys, play the game to discover controls, rules, and the objective.",
 
                 grid: [
@@ -921,10 +951,10 @@
             };
         }
 
-        function level3() {
+        function level4() {
             return {
-                id: 3,
-                name: "Level 3",
+                id: 4,
+                name: "Level 4",
                 instructions: "There are no instructions for this game, intentionally.<br>Using the arrow keys, play the game to discover controls, rules, and the objective.",
 
                 grid: [
@@ -948,10 +978,10 @@
             };
         }
 
-        function level4() {
+        function level5() {
             return {
-                id: 4,
-                name: "Level 4",
+                id: 5,
+                name: "Level 5",
                 instructions: "There are no instructions for this game, intentionally.<br>Using the arrow keys, play the game to discover controls, rules, and the objective.",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
@@ -974,10 +1004,10 @@
             };
         }
 
-        function level5() {
+        function level6() {
             return {
-                id: 5,
-                name: "Level 5",
+                id: 6,
+                name: "Level 6",
                 instructions: "There are no instructions for this game, intentionally.<br>Using the arrow keys, play the game to discover controls, rules, and the objective.",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
@@ -999,10 +1029,10 @@
             };
         }
 
-        function level6() {
+        function level7() {
             return {
-                id: 6,
-                name: "Level 6",
+                id: 7,
+                name: "Level 7",
                 instructions: "There are no instructions for this game, intentionally.<br>Using the arrow keys, play the game to discover controls, rules, and the objective.",
                 grid: [
                     [0, 0, 0, 0, 0, 0],
@@ -1033,7 +1063,8 @@
             level3(),
             level4(),
             level5(),
-            level6()
+            level6(),
+            level7()
         ];
 
         // Start game
