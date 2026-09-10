@@ -40,7 +40,7 @@
         .title-wrap {
             width: 100%;
             display: flex;
-            align-items: center;
+            align-items: baseline;
             justify-content: center;
             gap: 0.3rem;
             margin-bottom: 1.75rem;
@@ -103,11 +103,11 @@
             text-align: center;
             margin-bottom: 1.35rem;
         }
-        /* Sits inline and upright to the left of the STEP-Bench wordmark,
-           aligned to it and sized to match its height. */
+        /* Sits inline and upright just left of the STEP-Bench wordmark. The
+           PNG is cropped tight to the sprite, so aligning its baseline (bottom
+           edge) drops the mascot's lower outline onto the wordmark's baseline. */
         .mascot {
-            align-self: flex-start;
-            margin-top: 0.1rem;
+            align-self: baseline;
             height: clamp(2.4rem, 6vw, 3.5rem);
             width: auto;
             flex-shrink: 0;
