@@ -110,6 +110,11 @@ body {
     font-size: 16px;
     font-weight: 700;
 }
+/* game5 toggles this on when the current level is 4 - bold Silkscreen "4"
+   is hard to read. */
+#dashboard .dash-field.plain {
+    font-weight: 400;
+}
 #dash-level {
     font-size: 20px;
 }

@@ -80,7 +80,7 @@
             line-height: 1.5;
             text-align: center;
             opacity: 1;
-            transition: opacity 0.5s ease-in-out;
+            transition: opacity 0.7s ease-in-out;
         }
 
         #instructions.fade-out {
@@ -95,7 +95,7 @@
             padding: 2px;
             border: 3px solid #e0e0e0;
             opacity: 1;
-            transition: opacity 0.5s ease-in-out;
+            transition: opacity 0.7s ease-in-out;
         }
 
         #grid.fade-out {
@@ -412,18 +412,14 @@
         // it was caught, stops shifting, and shows a persistent "collected"
         // marker in both visibility modes.
         //
-        // Energy: a frame ring is drawn around the 8x8 play area (not part of
-        // the actual game grid) whenever the energy constraint is enabled. Its
-        // thickness is per-level - level.energyLayers (default 1): 1 cell thick
-        // = 10x10 rendered grid / 36 moves, 2 cells thick = 12x12 / 80 moves.
-        // Each move empties one frame cell, sweeping clockwise - the outermost
-        // ring first, then inward; blocked presses don't count. Energy resets
-        // to full (frame fully refilled) each level. If it empties before every
-        // token is collected, the level restarts from scratch. A toggle button
-        // (top-left) can disable the constraint entirely - the frame disappears
-        // and the grid shrinks back to just 8x8, moves then cost no energy and
-        // never trigger a restart; it resets back to enabled (frame back on)
-        // every level.
+        // Energy: a move budget shown as a bar under the grid - 35 moves on
+        // every level, 45 on the last level. Each successful move spends one;
+        // blocked presses don't count. Resets to full each level. If it hits
+        // zero before every token is collected, the level restarts from
+        // scratch. The dashboard's Energy switch can disable the constraint
+        // entirely - the bar disappears, moves cost nothing and never trigger
+        // a restart; it resets to enabled every level. (The earlier perimeter-
+        // frame version of this is commented out, not deleted.)
         //
         // Objective: collect every token. The level completes automatically
         // once every token is collected.
@@ -435,19 +431,14 @@
         // Coordinates are 1-based: columns and rows run 1..GRID_SIZE, (1,1) is the
         // top-left cell.
 
-        // Energy frame: a ring of cells around the 8x8 play area, `energyLayers`
-        // cells thick, making the whole rendered grid outerSize x outerSize
-        // (outerSize = GRID_SIZE + 2 * layers) while the energy constraint is
-        // enabled. The frame is not part of the actual game grid - it's drawn
-        // (in initGrid) and colored (in updateEnergyFrame) purely to represent
-        // energy, in outer (1-based, 1..outerSize) coordinates distinct from the
-        // game's own 1..GRID_SIZE. `energyLayers` is per-level (level.energyLayers,
-        // default ENERGY_LAYERS_DEFAULT): 1 layer = 36 moves, 2 layers = 80.
-        const ENERGY_LAYERS_DEFAULT = 1;
+        // Move budget: 35 moves on every level, 45 on the last level (set in
+        // loadLevel). Running out before all tokens are collected restarts the
+        // level. The energy bar under the grid shows what's left.
 
-        // One rectangular ring of cells in outer coordinates, clockwise from
-        // its top-left corner (min,min): across the top, down the right side,
-        // back across the bottom, up the left side.
+        /* --- Perimeter energy-frame geometry - DISABLED 2026-09-10 along with
+           the frame renderer. To bring the frame back you also need to restore
+           gameState.energy{Layers,OuterSize,FrameCells}. Kept for reference.
+        const ENERGY_LAYERS_DEFAULT = 1;
         function buildRing(min, max) {
             const cells = [];
             for (let x = min; x <= max; x++) cells.push({ x: x, y: min });
@@ -456,11 +447,6 @@
             for (let y = max - 1; y >= min + 1; y--) cells.push({ x: min, y: y });
             return cells;
         }
-
-        // Geometry for a frame `layers` cells thick. `cells` is the drain order:
-        // the outermost ring first (clockwise from its top-left corner), then
-        // each ring inward. `outerSize` is the full rendered grid dimension;
-        // `max` (= cells.length) is the moves allowed that level before restart.
         function energyGeometry(layers) {
             const outerSize = GRID_SIZE + 2 * layers;
             const cells = [];
@@ -469,6 +455,7 @@
             }
             return { layers: layers, outerSize: outerSize, cells: cells, max: cells.length };
         }
+        --- */
 
         // Which [dx, dy] each arrow key applies to the ego vehicle.
         const MOVE_FOR_KEY = {
@@ -490,13 +477,9 @@
             //                    collected, collectedAt }, ...] (1-based)
             tokens: [],
             moveCount: 0,   // ego moves this level (blocked presses excluded)
-            // Energy geometry - all four reset from the level's energyLayers on
-            // every loadLevel (see energyGeometry).
-            energyLayers: ENERGY_LAYERS_DEFAULT,
-            energyOuterSize: GRID_SIZE + 2 * ENERGY_LAYERS_DEFAULT,
-            energyFrameCells: energyGeometry(ENERGY_LAYERS_DEFAULT).cells,
-            energyMax: energyGeometry(ENERGY_LAYERS_DEFAULT).max,
-            energyRemaining: energyGeometry(ENERGY_LAYERS_DEFAULT).max,
+            // Move budget - reset per level in loadLevel (35, or 45 on the last).
+            energyMax: 35,
+            energyRemaining: 35,
             energyEnabled: true,         // resets to true on every loadLevel
             colors: {}
         };
@@ -698,7 +681,6 @@
                 id: 4,
                 name: "Level 4",
                 isPlayable: true,
-                energyLayers: 2,   // double frame ring - 80 moves (levels 1-3 use 1 ring / 36)
                 egoStart: { x: 5, y: 8 },
                 platform: rectCells(4, 4, 2, 2),
                 tokens: [
@@ -813,6 +795,9 @@
 
             const dashLevel = document.getElementById('dash-level');
             if (dashLevel) dashLevel.textContent = levelIndex + 1;
+            // Level 4's number is hard to read in bold Silkscreen - un-bold it.
+            const dashField = document.querySelector('#dashboard .dash-field');
+            if (dashField) dashField.classList.toggle('plain', levelIndex + 1 === 4);
 
             // Clear any lingering ripples from the previous level
             document.getElementById('ripple-container').innerHTML = '';
@@ -844,14 +829,9 @@
                 };
             });
             gameState.moveCount = 0;
-            // Energy geometry is per-level: level.energyLayers (default 1)
-            // decides how thick the frame ring is and how many moves it buys.
-            const geom = energyGeometry(level.energyLayers || ENERGY_LAYERS_DEFAULT);
-            gameState.energyLayers = geom.layers;
-            gameState.energyOuterSize = geom.outerSize;
-            gameState.energyFrameCells = geom.cells;
-            gameState.energyMax = geom.max;
-            gameState.energyRemaining = geom.max;
+            // Move budget: 35 every level, 45 on the last level.
+            gameState.energyMax = (levelIndex === levels.length - 1) ? 45 : 35;
+            gameState.energyRemaining = gameState.energyMax;
             gameState.energyEnabled = true;
             gameState.colors = { ...level.colors };
 
@@ -1094,7 +1074,7 @@
                     handleGameComplete();
                     showCompletionMessage('5');
                 }
-            }, 800);
+            }, 1000);
         }
 
         function showCompletionMessage(puzzleLabel) {
@@ -1266,7 +1246,7 @@
                     handleGameComplete();
                     showCompletionMessage('5');
                 }
-            }, 800);
+            }, 1000);
         });
 
         document.getElementById('download-button').addEventListener('click', () => {
