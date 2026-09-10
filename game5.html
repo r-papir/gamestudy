@@ -108,31 +108,25 @@
             display: none;
         }
 
-        /* Appearance comes from puzzle-theme.css; these are position only. */
-        #restart-button, #download-button, #skip-button, #energy-toggle-button {
+        /* Appearance comes from puzzle-theme.css; these rules are position only. */
+        #restart-button, #download-button, #skip-button {
             position: fixed;
-            top: 20px;
             z-index: 1000;
         }
 
+        /* Bottom-left. Shown only once the game is complete (the dashboard
+           owns the top-left corner). */
         #restart-button {
             left: 20px;
+            bottom: 20px;
             display: none;
         }
 
-        /* Bottom-right corner. Shown while playing, hidden once the game is
-           complete (then #restart-button appears top-left in its place). */
+        /* Bottom-right corner, shown while playing. */
         #skip-button {
-            top: auto;
+            right: 20px;
             bottom: 20px;
-            right: 20px;
             display: block;
-        }
-
-        #download-button {
-            right: 20px;
-            display: block;
-            font-size: 16px;
         }
 
         .audio-recorder-controls {
@@ -143,18 +137,11 @@
             text-align: right;
         }
 
+        /* Top-right, below the audio-recorder controls. */
         #download-button {
+            right: 20px;
             top: 100px;
-        }
-
-        /* Energy-constraint toggle - sits in the move counter's old slot,
-           tucked under the Skip Level button in the top-left. Shown on every
-           level while playing, hidden once the game is complete. */
-        #energy-toggle-button {
-            top: 90px;
-            left: 20px;
-            font-size: 16px;
-            display: none;
+            display: block;
         }
 
         /* OLD energy bar (2026-09-04..2026-09-05) - superseded by the
@@ -347,6 +334,30 @@
     })();
     </script>
 
+    <div id="dashboard">
+        <a id="dash-home" href="index.html">Home</a>
+        <span class="dash-sep"></span>
+        <label class="dash-field">
+            <span>Puzzle</span>
+            <select id="dash-puzzle" aria-label="Switch puzzle">
+                <option value="game.html">Puzzle 1</option>
+                <option value="game2new.html">Puzzle 2</option>
+                <option value="game3.html">Puzzle 3</option>
+                <option value="game4.html">Puzzle 4</option>
+                <option value="game5.html" selected>Puzzle 5</option>
+            </select>
+        </label>
+        <span class="dash-sep"></span>
+        <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
+        <span class="dash-sep"></span>
+        <label class="energy-switch" id="energy-switch" style="display:none">
+            <input type="checkbox" id="energy-switch-input" checked aria-label="Energy constraint">
+            <span class="track"></span>
+            <span class="track-label" id="energy-switch-label">Energy: On</span>
+            <span class="thumb"></span>
+        </label>
+    </div>
+
     <div id="instructions">
         There are no instructions for this game, intentionally.<br>
         Use the arrow keys to discover the controls, rules, and objective.
@@ -363,8 +374,17 @@
     </div>
     <button id="restart-button">Start Over</button>
     <button id="skip-button">Skip Level</button>
-    <button id="energy-toggle-button">Energy: On</button>
     <button id="download-button">Download Data</button>
+
+    <div id="quit-overlay" class="completion-overlay quit-overlay" hidden>
+        <div class="completion-card">
+            <h2>Quit puzzle?</h2>
+            <div class="card-actions">
+                <button type="button" class="card-btn" id="quit-confirm">Quit</button>
+                <button type="button" class="card-btn" id="quit-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script src="webgazer.js"></script>
     <script src="audio-recorder.js"></script>
@@ -796,6 +816,9 @@
                 return;
             }
 
+            const dashLevel = document.getElementById('dash-level');
+            if (dashLevel) dashLevel.textContent = levelIndex + 1;
+
             // Clear any lingering ripples from the previous level
             document.getElementById('ripple-container').innerHTML = '';
 
@@ -896,10 +919,13 @@
         // on every level while playing, hidden once the game is complete.
         // Resets to "On" every time a level loads.
         function updateEnergyToggleButton() {
-            const btn = document.getElementById('energy-toggle-button');
-            if (!btn) return;
-            btn.style.display = levels[currentLevelIndex] ? 'block' : 'none';
-            btn.textContent = 'Energy: ' + (gameState.energyEnabled ? 'On' : 'Off');
+            const sw = document.getElementById('energy-switch');
+            const input = document.getElementById('energy-switch-input');
+            const label = document.getElementById('energy-switch-label');
+            if (!sw) return;
+            sw.style.display = levels[currentLevelIndex] ? 'inline-flex' : 'none';
+            if (input) input.checked = gameState.energyEnabled;
+            if (label) label.textContent = 'Energy: ' + (gameState.energyEnabled ? 'On' : 'Off');
         }
 
         // OLD energy bar - superseded by the perimeter energy frame. Kept,
@@ -1206,9 +1232,12 @@
         // grid shrinks back to just the 8x8 play area. Does not reset the
         // current energy value or the level; loadLevel resets both back to
         // true/full (frame back on) every level.
-        document.getElementById('energy-toggle-button').addEventListener('click', () => {
-            if (currentLevelIndex >= levels.length) return;
-            gameState.energyEnabled = !gameState.energyEnabled;
+        document.getElementById('energy-switch-input').addEventListener('change', (e) => {
+            if (currentLevelIndex >= levels.length) {
+                e.target.checked = gameState.energyEnabled;  // ignore, keep in sync
+                return;
+            }
+            gameState.energyEnabled = e.target.checked;
             logEvent(gameState.energyEnabled ? 'energy_enabled' : 'energy_disabled');
             initGrid();   // frame appears/disappears - the grid DOM must be rebuilt
             renderGrid(); // repaint platform/tokens/ego into the rebuilt cells
@@ -1448,6 +1477,36 @@
         });
 
         } // end authorized-only Start block
+    </script>
+
+    <script>
+        // Dashboard puzzle switcher - confirm with a "Quit puzzle?" dialog
+        // before navigating away.
+        (function () {
+            var select = document.getElementById('dash-puzzle');
+            var overlay = document.getElementById('quit-overlay');
+            if (!select || !overlay) return;
+            var CURRENT = 'game5.html';
+            var pending = null;
+
+            select.addEventListener('change', function () {
+                var target = this.value;
+                this.value = CURRENT;                 // revert until confirmed
+                if (!target || target === CURRENT) return;
+                pending = target;
+                overlay.hidden = false;
+                requestAnimationFrame(function () { overlay.classList.add('visible'); });
+            });
+
+            document.getElementById('quit-confirm').addEventListener('click', function () {
+                if (pending) window.location.href = pending;
+            });
+            document.getElementById('quit-cancel').addEventListener('click', function () {
+                overlay.classList.remove('visible');
+                setTimeout(function () { overlay.hidden = true; }, 400);
+                pending = null;
+            });
+        })();
     </script>
 </body>
 </html>
