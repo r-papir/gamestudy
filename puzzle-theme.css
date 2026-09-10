@@ -69,12 +69,11 @@ body {
     border: 3px solid var(--ink);
     border-radius: 14px;
     box-shadow: 8px 10px 16px -6px rgba(28, 26, 23, 0.4);
-    font-family: 'Pixelify Sans', system-ui, sans-serif;
-    font-weight: 600;
-    font-size: 12px;
+    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--ink);
+    color: #000;
 }
 #dashboard .dash-sep {
     align-self: stretch;
@@ -86,11 +85,8 @@ body {
     align-items: center;
     gap: 6px;
 }
-#dashboard .dash-field > span {
-    color: var(--ink);
-}
 #dash-level {
-    font-size: 14px;
+    font-size: 15px;
 }
 #dash-home {
     display: inline-block;
@@ -114,12 +110,11 @@ body {
 }
 #dash-puzzle {
     font-family: inherit;
-    font-weight: 600;
-    font-size: 12px;
+    font-size: 13px;
     text-transform: uppercase;
     padding: 5px 8px;
-    background: #fff;
-    color: var(--ink);
+    background: #F3DCE6;   /* same pale pink as the energy switch's ON track */
+    color: #000;
     border: 3px solid var(--ink);
     border-radius: 8px;
     cursor: pointer;
@@ -129,7 +124,7 @@ body {
        text on the track --- */
 .energy-switch {
     --sw-h: 22px;
-    --sw-w: 164px;
+    --sw-w: 152px;
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -162,11 +157,10 @@ body {
     top: 50%;
     right: 12px;                 /* OFF: thumb left, label right */
     transform: translateY(-50%);
-    font-family: 'Pixelify Sans', system-ui, sans-serif;
-    font-weight: 600;
-    font-size: 11px;
+    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-size: 9px;
     letter-spacing: 0.5px;
-    color: var(--ink);
+    color: #000;
     white-space: nowrap;
     pointer-events: none;
 }
