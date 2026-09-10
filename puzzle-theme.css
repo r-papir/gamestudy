@@ -20,8 +20,11 @@ body {
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg);
     color: var(--ink);
-    /* Clearance for the fixed two-row dashboard in the top-left. */
-    padding-top: 120px;
+    /* Sit the content near the top (instructions first, then the grid)
+       rather than vertically centred - less scrolling on the puzzle.
+       padding-top is clearance for the fixed two-row dashboard. */
+    justify-content: flex-start;
+    padding-top: 112px;
 }
 
 /* --- Fixed corner controls - pink console keys, matching the homepage --- */
@@ -83,7 +86,7 @@ body {
     border-radius: 14px;
     box-shadow: 8px 10px 16px -6px rgba(28, 26, 23, 0.4);
     font-family: 'Silkscreen', 'Courier New', monospace;
-    font-size: 13px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #000;
@@ -102,11 +105,11 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
 }
 #dash-level {
-    font-size: 18px;
+    font-size: 20px;
 }
 #dash-home {
     display: inline-block;
@@ -130,7 +133,7 @@ body {
 }
 #dash-puzzle {
     font-family: inherit;
-    font-size: 13px;
+    font-size: 12px;
     text-transform: uppercase;
     padding: 5px 8px;
     background: #F3DCE6;   /* same pale pink as the energy switch's ON track */
@@ -142,8 +145,8 @@ body {
 /* Download Data lives on the dashboard's second row - scale it down to
    match #dash-home rather than the full corner-key size. */
 #dashboard #download-button {
-    font-size: 13px;
-    padding: 7px 12px;
+    font-size: 12px;
+    padding: 6px 10px;
     border-radius: 9px;
     background: var(--surface);   /* same as the page/light background */
     color: var(--ink);
