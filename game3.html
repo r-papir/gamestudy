@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Puzzle Game</title>
+    <title>STEP-Bench — Puzzle 3</title>
+    <link rel="icon" href="mascot.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
             padding: 20px;
-            font-family: 'Trebuchet MS', monospace;
-            background-color: #ffffff;
-            color: #000000;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
         }
 
@@ -27,8 +27,7 @@
             margin-bottom: 20px;
             font-size: 18px;
             padding: 15px;
-            background-color: #ffffff;
-            color: #1a1a1a;
+            color: var(--ink);
             border-radius: 8px;
             max-width: 800px;
             margin-left: auto;
@@ -104,40 +103,14 @@
             display: none;
         }
 
-        #restart-button, #download-button, #skip-button {
-            position: fixed;
-            top: 20px;
-            padding: 15px 30px;
-            font-size: 18px;
-            font-family: 'Trebuchet MS', monospace;
-            background-color: #ffffff;
-            color: #1a1a1a;
-            border: 3px solid #1a1a1a;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
+        /* Appearance comes from puzzle-theme.css; position only.
+           #download-button lives inside the dashboard. */
         #restart-button {
+            position: fixed;
             left: 20px;
-            display: none;
-        }
-
-        #download-button {
-            right: 20px;
-            display: block;
-            font-size: 16px;
-        }
-
-        #skip-button {
-            left: 20px;
-            display: block;
-        }
-
-        #restart-button:hover, #download-button:hover, #skip-button:hover {
-            background-color: #1a1a1a;
-            color: #ffffff;
+            bottom: 20px;
+            z-index: 1000;
+            display: none;   /* shown only once the game is complete */
         }
 
         .audio-recorder-controls {
@@ -146,10 +119,6 @@
             right: 20px;
             z-index: 1000;
             text-align: right;
-        }
-
-        #download-button {
-            top: 100px;
         }
 
         /* Hide WebGazer camera elements during gameplay */
@@ -163,7 +132,6 @@
         .completion-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.55);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -174,25 +142,19 @@
         }
         .completion-overlay.visible { opacity: 1; }
         .completion-card {
-            background: white;
-            border-radius: 16px;
             padding: 48px 56px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             transform: scale(0.8);
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            font-family: "Trebuchet MS", sans-serif;
         }
         .completion-overlay.visible .completion-card { transform: scale(1); }
         .completion-card h2 {
             margin: 0 0 12px;
             font-size: 28px;
-            color: #333;
         }
         .completion-card p {
             margin: 0;
             font-size: 16px;
-            color: #888;
         }
         .confetti-piece {
             position: fixed;
@@ -209,6 +171,7 @@
             100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
         }
     </style>
+    <link rel="stylesheet" href="puzzle-theme.css">
 </head>
 <body>
     <script>
@@ -223,6 +186,25 @@
     })();
     </script>
 
+    <div id="dashboard">
+        <div class="dash-row">
+            <a id="dash-home" href="index.html">Home</a>
+            <span class="dash-sep"></span>
+            <select id="dash-puzzle" aria-label="Switch puzzle">
+                <option value="game.html">Puzzle 1</option>
+                <option value="game2new.html">Puzzle 2</option>
+                <option value="game3.html" selected>Puzzle 3</option>
+                <option value="game4.html">Puzzle 4</option>
+                <option value="game5.html">Puzzle 5</option>
+            </select>
+            <span class="dash-sep"></span>
+            <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
+        </div>
+        <div class="dash-row">
+            <button id="download-button">Download Data</button>
+        </div>
+    </div>
+
     <div id="instructions">
         There are no instructions for this game, intentionally.<br>Use the arrow keys and space bar to discover the controls, rules, and objective.
     </div>
@@ -231,8 +213,16 @@
         <div id="grid"></div>
     </div>
     <button id="restart-button">Start Over</button>
-    <!-- <button id="skip-button">Skip Level</button> -->
-    <button id="download-button">Download Data</button>
+
+    <div id="quit-overlay" class="completion-overlay quit-overlay" hidden>
+        <div class="completion-card">
+            <h2>Quit puzzle?</h2>
+            <div class="card-actions">
+                <button type="button" class="card-btn" id="quit-confirm">Quit</button>
+                <button type="button" class="card-btn" id="quit-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script src="webgazer.js"></script>
     <script src="audio-recorder.js"></script>
@@ -539,6 +529,9 @@
                 return;
             }
 
+            const dashLevel = document.getElementById('dash-level');
+            if (dashLevel) dashLevel.textContent = levelIndex + 1;
+
             const level = levels[levelIndex];
             gameState.grid = level.grid.map(row => [...row]);
             gameState.chunks = level.chunks.map(chunk => chunk.map(cell => [...cell]));
@@ -710,7 +703,7 @@
                                 gridElement.classList.remove('fade-out');
                                 document.getElementById('restart-button').style.display = 'block';
                                 handleGameComplete();
-                                showCompletionMessage('C');
+                                showCompletionMessage('3');
                             }
                         }, 1000);
                     }, 1500);
@@ -843,7 +836,7 @@
                     gridElement.classList.remove('fade-out');
                     document.getElementById('restart-button').style.display = 'block';
                     handleGameComplete();
-                    showCompletionMessage('C');
+                    showCompletionMessage('3');
                 }
             }, 800);
         }
@@ -1027,7 +1020,7 @@
                     document.getElementById('restart-button').style.display = 'block';
                     document.getElementById('skip-button').style.display = 'none';
                     handleGameComplete();
-                    showCompletionMessage('C');
+                    showCompletionMessage('3');
                 }
             }, 500);
         });
@@ -1211,7 +1204,7 @@
                 'r': 'restart_level',
                 'R': 'restart_level'
             },
-            insertBeforeSelector: '#download-button',
+            insertBeforeSelector: '#dashboard',
             onRecordingStart: () => {
                 S3Uploader.startBackups(sessionCode, 'Game C', () => AudioRecorder.getState().audioChunks);
             },
@@ -1219,6 +1212,45 @@
                 S3Uploader.stopBackups();
             }
         });
+    </script>
+
+    <script>
+        // Dashboard puzzle switcher - confirm with a "Quit puzzle?" dialog
+        // before navigating away (Home included).
+        (function () {
+            var select = document.getElementById('dash-puzzle');
+            var home = document.getElementById('dash-home');
+            var overlay = document.getElementById('quit-overlay');
+            if (!overlay) return;
+            var CURRENT = 'game3.html';
+            var pending = null;
+
+            function askQuit(target) {
+                pending = target;
+                overlay.hidden = false;
+                requestAnimationFrame(function () { overlay.classList.add('visible'); });
+            }
+
+            if (select) select.addEventListener('change', function () {
+                var target = this.value;
+                this.value = CURRENT;
+                if (target && target !== CURRENT) askQuit(target);
+            });
+
+            if (home) home.addEventListener('click', function (e) {
+                e.preventDefault();
+                askQuit(home.getAttribute('href') || 'index.html');
+            });
+
+            document.getElementById('quit-confirm').addEventListener('click', function () {
+                if (pending) window.location.href = pending;
+            });
+            document.getElementById('quit-cancel').addEventListener('click', function () {
+                overlay.classList.remove('visible');
+                setTimeout(function () { overlay.hidden = true; }, 400);
+                pending = null;
+            });
+        })();
     </script>
 </body>
 </html>
