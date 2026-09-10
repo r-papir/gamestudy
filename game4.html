@@ -83,6 +83,11 @@
             opacity: 0;
         }
 
+        #grid-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
         #grid {
             display: inline-grid;
             grid-template-columns: repeat(5, 140px);
@@ -153,23 +158,26 @@
             color: #ffffff;
         }
 
-        /* Move counter - tucked under the Skip Level button in the top-left.
-           Shown on the numbered levels (1+), hidden on the level-0 tutorial
+        /* Energy bar - a rounded meter directly under the grid, spanning its
+           full width. Drains as the move budget is spent; running out before
+           the level is solved restarts it. Hidden on the tutorial (Level 1)
            and once the game is complete. */
-        #move-counter {
-            position: fixed;
-            top: 90px;
-            left: 20px;
-            padding: 10px 22px;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: 'Trebuchet MS', monospace;
-            background-color: #1a1a1a;
-            color: #ffffff;
+        #energy-bar-track {
+            width: 100%;
+            height: 14px;
+            margin-top: 10px;
+            box-sizing: border-box;
+            background-color: #e0e0e0;
             border: 3px solid #1a1a1a;
-            border-radius: 8px;
-            z-index: 1000;
+            border-radius: 999px;
+            overflow: hidden;
             display: none;
+        }
+        #energy-bar-fill {
+            height: 100%;
+            width: 100%;
+            background-color: #d15884;
+            transition: width 0.15s ease-out;
         }
 
         .cell {
@@ -337,12 +345,14 @@
         Use the left, right, and down arrow keys to discover the controls, rules, and objective.
     </div>
     <div id="game-container">
-        <div id="ripple-container"></div>
-        <div id="grid"></div>
+        <div id="grid-wrapper">
+            <div id="ripple-container"></div>
+            <div id="grid"></div>
+            <div id="energy-bar-track"><div id="energy-bar-fill"></div></div>
+        </div>
     </div>
     <button id="restart-button">Start Over</button>
     <button id="skip-button">Skip Level</button>
-    <div id="move-counter">Moves: 0</div>
     <button id="download-button">Download Data</button>
 
     <script src="webgazer.js"></script>
@@ -418,6 +428,9 @@
             ego2Step: 0,              // index into ego2Cycle for the NEXT Right press
             ego3Step: 0,              // index into ego3Cycle for the NEXT Down press
             pressCount: 0,            // arrow-key presses that moved a piece this level
+            energyMax: 20,            // move budget for the level (per-level; see loadLevel)
+            energyRemaining: 20,
+            energyEnabled: true,      // false on the tutorial (Level 1, which has no energyMax)
             isPlayable: true,
             colors: { ego1: '#FFFFFF', ego2: '#FFFFFF', ego3: '#FFFFFF' }
         };
@@ -460,14 +473,15 @@
         //   ego1Cycle / ego2Cycle : [ [dx,dy], ... ] delta cycles (required; [] = that key does nothing)
         //   ego3Cycle             : [ [dx,dy], ... ] only if the level uses ego 3
         //   colors                : { ego1, ego2, ego3? }
+        //   energyMax             : move budget for the level; omit on the
+        //                           tutorial (Level 1) so it has no energy limit
         //
-        // NOTE: the mechanic was rewritten from mouse-click to keyboard. Level 0
-        // and level 1 are specified for the new mechanic; the cycles in the
-        // remaining levels are placeholders carried over from the old design and
-        // will be respecified level by level.
+        // Levels are numbered 1..6; Level 1 is the tutorial. (The mechanic was
+        // rewritten from mouse-click to keyboard and every level respecified for
+        // it.)
         // ---------------------------------------------------------------
 
-        function level0() {
+        function level1() {
             // Tutorial level (shown first). The Left arrow key is the only key
             // that does anything here: it walks ego 1 (lime) along a zig-zag
             // staircase. ego 2 (grey) is FIXED - it has no cycle, so the Right
@@ -482,8 +496,8 @@
             // ego 2 sits on (4,4), the 6th cell of the path, so the player wins
             // by pressing Left six times.
             return {
-                id: 0,
-                name: "Level 0",
+                id: 1,
+                name: "Level 1",
                 isPlayable: true,
                 ego1Start: { x: 1, y: 1 },
                 ego2Start: { x: 4, y: 4 },
@@ -506,7 +520,7 @@
             };
         }
 
-        function level1() {
+        function level2() {
             // Grid reference (x,y), x = col 1-5, y = row 1-5. Center = (3,3).
             //
             // ego 1 (pink, Left arrow) and ego 2 (teal, Right arrow) each walk a
@@ -526,9 +540,10 @@
             // put both pieces on (3,3) at the same time. The starts (4,2) and
             // (2,4) differ, so the pieces do not start overlapping.
             return {
-                id: 1,
-                name: "Level 1",
+                id: 2,
+                name: "Level 2",
                 isPlayable: true,
+                energyMax: 20,   // TODO(budget): Rachel to set
                 ego1Start: { x: 4, y: 2 },
                 ego2Start: { x: 2, y: 4 },
                 ego1Cycle: [
@@ -550,7 +565,7 @@
             };
         }
 
-        function level2() {
+        function level3() {
             // ego 1 (yellow, Left arrow) and ego 2 (violet, Right arrow) run the
             // SAME 11- and 9-cell closed loops but in opposite directions. No
             // ego 3.
@@ -567,9 +582,10 @@
             // so the level can be won at either. The starts (4,4) and (2,2) do not
             // coincide, so there is no first-move win.
             return {
-                id: 2,
-                name: "Level 2",
+                id: 3,
+                name: "Level 3",
                 isPlayable: true,
+                energyMax: 20,   // TODO(budget): Rachel to set
                 ego1Start: { x: 4, y: 4 },
                 ego2Start: { x: 2, y: 2 },
                 ego1Cycle: [
@@ -621,52 +637,9 @@
             };
         }
 
-        function level3() {
-            // ego 1 (blue, Left arrow) and ego 2 (orange, Right arrow) each run
-            // a fixed closed loop of cells. No ego 3.
-            //
-            // ego 1 begins at (3,4); each Left press walks it one cell along:
-            //   (3,4) (4,4) (4,5) (5,5) (1,1) (2,1) (3,1) (3,2) (3,3) -> back to (3,4)
-            //
-            // ego 2 begins at (5,2); each Right press walks it one cell along:
-            //   (5,2) (4,2) (4,3) (3,3) (2,3) (2,4) (2,5) (1,5) -> back to (5,2)
-            //
-            // The two loops share exactly one cell - (3,3) - so that is the only
-            // win cell. The starts (3,4) and (5,2) differ, so no first-move win.
-            return {
-                id: 3,
-                name: "Level 3",
-                isPlayable: true,
-                ego1Start: { x: 3, y: 4 },
-                ego2Start: { x: 5, y: 2 },
-                ego1Cycle: [
-                    [1, 0],
-                    [0, 1],
-                    [1, 0],
-                    [1, 1],
-                    [1, 0],
-                    [1, 0],
-                    [0, 1],
-                    [0, 1],
-                    [0, 1]
-                ],
-                ego2Cycle: [
-                    [-1, 0],
-                    [0, 1],
-                    [-1, 0],
-                    [-1, 0],
-                    [0, 1],
-                    [0, 1],
-                    [-1, 0],
-                    [-1, 2]
-                ],
-                colors: {
-                    ego1: '#ADD8E6',  // blue
-                    ego2: '#FF5F15'   // orange
-                }
-            };
-        }
-
+        // NOTE (2026-09-10): the three-ego level and the two-ego blue/orange
+        // level were swapped in order, then everything was renumbered +1. They
+        // are now Level 4 (this function) and Level 5.
         function level4() {
             // First level with a third piece. ego 1 (magenta, Left), ego 2
             // (orange, Right) and ego 3 (yellow, Down) each run a fixed closed
@@ -691,6 +664,7 @@
                 id: 4,
                 name: "Level 4",
                 isPlayable: true,
+                energyMax: 20,   // TODO(budget): Rachel to set
                 ego1Start: { x: 3, y: 5 },
                 ego2Start: { x: 2, y: 1 },
                 ego3Start: { x: 2, y: 2 },
@@ -737,6 +711,53 @@
         }
 
         function level5() {
+            // ego 1 (blue, Left arrow) and ego 2 (orange, Right arrow) each run
+            // a fixed closed loop of cells. No ego 3.
+            //
+            // ego 1 begins at (3,4); each Left press walks it one cell along:
+            //   (3,4) (4,4) (4,5) (5,5) (1,1) (2,1) (3,1) (3,2) (3,3) -> back to (3,4)
+            //
+            // ego 2 begins at (5,2); each Right press walks it one cell along:
+            //   (5,2) (4,2) (4,3) (3,3) (2,3) (2,4) (2,5) (1,5) -> back to (5,2)
+            //
+            // The two loops share exactly one cell - (3,3) - so that is the only
+            // win cell. The starts (3,4) and (5,2) differ, so no first-move win.
+            return {
+                id: 5,
+                name: "Level 5",
+                isPlayable: true,
+                energyMax: 20,   // TODO(budget): Rachel to set
+                ego1Start: { x: 3, y: 4 },
+                ego2Start: { x: 5, y: 2 },
+                ego1Cycle: [
+                    [1, 0],
+                    [0, 1],
+                    [1, 0],
+                    [1, 1],
+                    [1, 0],
+                    [1, 0],
+                    [0, 1],
+                    [0, 1],
+                    [0, 1]
+                ],
+                ego2Cycle: [
+                    [-1, 0],
+                    [0, 1],
+                    [-1, 0],
+                    [-1, 0],
+                    [0, 1],
+                    [0, 1],
+                    [-1, 0],
+                    [-1, 2]
+                ],
+                colors: {
+                    ego1: '#ADD8E6',  // blue
+                    ego2: '#FF5F15'   // orange
+                }
+            };
+        }
+
+        function level6() {
             // Three-ego level. ego 1 (violet, Left), ego 2 (lime, Right) and
             // ego 3 (teal, Down) each run a fixed closed loop; the level is won
             // only when ALL THREE share a cell.
@@ -757,9 +778,10 @@
             // at (2,2)(2,4)(4,2)(4,4) - but two pieces on a cell is not a win.)
             // The three starts differ, so there is no first-move win.
             return {
-                id: 5,
-                name: "Level 5",
+                id: 6,
+                name: "Level 6",
                 isPlayable: true,
+                energyMax: 20,   // TODO(budget): Rachel to set
                 ego1Start: { x: 3, y: 5 },
                 ego2Start: { x: 1, y: 1 },
                 ego3Start: { x: 5, y: 3 },
@@ -845,6 +867,12 @@
             gameState.ego2Step = 0;
             gameState.ego3Step = 0;
             gameState.pressCount = 0;
+            // Move budget: a level has one iff it defines energyMax. The
+            // tutorial (Level 1) has none, so energy is off there. Running the
+            // budget out before solving restarts the level.
+            gameState.energyEnabled = level.energyMax != null;
+            gameState.energyMax = level.energyMax || 20;
+            gameState.energyRemaining = gameState.energyMax;
             gameState.isPlayable = level.isPlayable;
             gameState.colors = { ...level.colors };
 
@@ -853,23 +881,32 @@
             instructionsElement.style.display = 'block';
 
             renderGrid();
-            updateMoveCounter();
+            updateEnergyBar();
 
             const gridElement = document.getElementById('grid');
             gridElement.classList.remove('fade-out');
             instructionsElement.classList.remove('fade-out');
         }
 
-        // Move counter (top-left, under the Skip Level button). Visible only on
-        // the numbered levels - hidden on the level-0 tutorial and after the
-        // game is complete. Shows gameState.pressCount (arrow-key presses that
-        // moved a piece this level), which resets with each level.
-        function updateMoveCounter() {
-            const el = document.getElementById('move-counter');
-            if (!el) return;
+        // Energy bar under the grid. Fill width tracks energyRemaining /
+        // energyMax; hidden on the tutorial (Level 1) and once the game is
+        // complete. Resets full each level (see loadLevel).
+        function updateEnergyBar() {
+            const track = document.getElementById('energy-bar-track');
+            const fill = document.getElementById('energy-bar-fill');
+            if (!track || !fill) return;
             const level = levels[currentLevelIndex];
-            el.style.display = (level && level.id >= 1) ? 'block' : 'none';
-            el.textContent = 'Moves: ' + gameState.pressCount;
+            const show = !!level && gameState.energyEnabled;
+            track.style.display = show ? 'block' : 'none';
+            const pct = Math.max(0, Math.min(1, gameState.energyRemaining / gameState.energyMax)) * 100;
+            fill.style.width = pct + '%';
+        }
+
+        // Move budget ran out before the level was solved - restart it from
+        // scratch (pieces and budget reset), no fade.
+        function handleEnergyDepleted() {
+            logEvent('energy_depleted');
+            loadLevel(currentLevelIndex);
         }
 
         function renderGrid() {
@@ -973,11 +1010,18 @@
             pos.y = ny;
             gameState[stepKey] = (gameState[stepKey] + 1) % cycle.length;
             gameState.pressCount++;
+            if (gameState.energyEnabled) {
+                gameState.energyRemaining = Math.max(0, gameState.energyRemaining - 1);
+            }
 
             renderGrid();
-            updateMoveCounter();
+            updateEnergyBar();
 
-            if (isWin) handleWin();
+            if (isWin) {
+                handleWin();
+            } else if (gameState.energyEnabled && gameState.energyRemaining <= 0) {
+                handleEnergyDepleted();
+            }
             return true;
         }
 
@@ -1002,7 +1046,7 @@
                     instructionsElement.classList.remove('fade-out');
                     document.getElementById('skip-button').style.display = 'none';
                     document.getElementById('restart-button').style.display = 'block';
-                    updateMoveCounter();
+                    updateEnergyBar();
                     handleGameComplete();
                     showCompletionMessage('D');
                 }
@@ -1079,8 +1123,8 @@
             return matrix;
         }
 
-        // The level number to record in the data: the current level's id.
-        // Level 0 is the tutorial, then 1..6. Falls back to the raw index once
+        // The level number to record in the data: the current level's id
+        // (1..6; Level 1 is the tutorial). Falls back to the raw index once
         // every level is complete (levels[currentLevelIndex] is undefined then).
         function currentLevelId() {
             const lvl = levels[currentLevelIndex];
@@ -1088,7 +1132,7 @@
         }
 
         function logEvent(outcome, detail) {
-            // outcome: 'advance_cycle' | 'win' | 'skip_level'
+            // outcome: 'advance_cycle' | 'win' | 'skip_level' | 'energy_depleted'
             // detail (optional, for key-press events):
             //   { key, piece, cycleStepBefore, deltaApplied }
             // deltaApplied is the [dx, dy] added to that piece's CURRENT position
@@ -1105,6 +1149,8 @@
                 cycleStepBefore: (detail.cycleStepBefore != null) ? detail.cycleStepBefore : null,
                 deltaApplied: detail.deltaApplied ? [...detail.deltaApplied] : null,
                 pressCountBefore: gameState.pressCount,
+                energyRemainingBefore: gameState.energyRemaining,
+                energyEnabledBefore: gameState.energyEnabled,
                 ego1PosBefore: { ...gameState.ego1Pos },
                 ego2PosBefore: { ...gameState.ego2Pos },
                 ego3PosBefore: gameState.ego3Pos ? { ...gameState.ego3Pos } : null,
@@ -1149,7 +1195,7 @@
                     instructionsElement.classList.remove('fade-out');
                     document.getElementById('skip-button').style.display = 'none';
                     document.getElementById('restart-button').style.display = 'block';
-                    updateMoveCounter();
+                    updateEnergyBar();
                     handleGameComplete();
                     showCompletionMessage('D');
                 }
@@ -1274,12 +1320,12 @@
         if (!window.__puzzleDUnauthorized) {
 
         levels = [
-            level0(),
             level1(),
             level2(),
             level3(),
             level4(),
-            level5()
+            level5(),
+            level6()
         ];
 
         // Record each level's movement cycles in the session data - one list
@@ -1290,6 +1336,7 @@
         sessionData.movementCycles = levels.map(level => ({
             level: level.id,
             playable: level.isPlayable,
+            energyMax: (level.energyMax != null) ? level.energyMax : null,  // move budget; null on the tutorial (Level 1)
             deltasRelativeTo: "current position of the moved piece at press time",
             ego1: level.ego1Cycle.map(step => [...step]),
             ego2: level.ego2Cycle.map(step => [...step]),
