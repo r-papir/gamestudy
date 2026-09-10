@@ -21,10 +21,12 @@ body {
     background-color: var(--bg);
     color: var(--ink);
     /* Sit the content near the top (instructions first, then the grid)
-       rather than vertically centred - less scrolling on the puzzle.
-       padding-top is clearance for the fixed two-row dashboard. */
+       rather than vertically centred - less scrolling on the puzzle. The
+       dashboard is fixed top-left and is allowed to overlap the
+       instructions; the 2-line instructions block keeps the grid itself
+       clear of it, so only a small top pad is needed. */
     justify-content: flex-start;
-    padding-top: 112px;
+    padding-top: 40px;
 }
 
 /* --- Fixed corner controls - pink console keys, matching the homepage --- */
