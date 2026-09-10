@@ -26,7 +26,7 @@ body {
        instructions; the 2-line instructions block keeps the grid itself
        clear of it, so only a small top pad is needed. */
     justify-content: flex-start;
-    padding-top: 40px;
+    padding-top: 20px;
 }
 
 /* --- Fixed corner controls - pink console keys, matching the homepage --- */
@@ -60,16 +60,16 @@ body {
     box-shadow: 0 0 0 var(--ink);
 }
 
-/* Skip Level and the audio Start Recording button use the soft blurred
-   drop shadow from the homepage menu panel instead of the hard offset.
+/* Skip Level and the audio Start Recording button use the same soft blurred
+   drop shadow as the dashboard (offset kept close to the element).
    (Skip keeps its hover/active translate from the rule above.) */
 #skip-button,
 #skip-button:hover,
 .audio-recorder-btn {
-    box-shadow: 14px 16px 22px -6px rgba(28, 26, 23, 0.45);
+    box-shadow: 8px 10px 16px -6px rgba(28, 26, 23, 0.4);
 }
 #skip-button:active {
-    box-shadow: 8px 10px 14px -6px rgba(28, 26, 23, 0.45);
+    box-shadow: 3px 4px 10px -5px rgba(28, 26, 23, 0.4);
 }
 
 /* --- Floating dashboard (top-left) --- */
