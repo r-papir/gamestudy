@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Puzzle Game</title>
+    <title>STEP-Bench — Puzzle 4</title>
+    <link rel="icon" href="mascot.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
             padding: 20px;
-            font-family: 'Trebuchet MS', monospace;
-            background-color: #ffffff;
-            color: #000000;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
         }
 
@@ -67,8 +67,7 @@
             margin-bottom: 20px;
             font-size: 18px;
             padding: 15px;
-            background-color: #ffffff;
-            color: #1a1a1a;
+            color: var(--ink);
             border-radius: 8px;
             max-width: 800px;
             margin-left: auto;
@@ -108,37 +107,25 @@
             display: none;
         }
 
-        #restart-button, #download-button, #skip-button {
+        /* Appearance comes from puzzle-theme.css; these rules are position only.
+           #download-button lives inside the dashboard. */
+        #restart-button, #skip-button {
             position: fixed;
-            top: 20px;
-            padding: 15px 30px;
-            font-size: 18px;
-            font-family: 'Trebuchet MS', monospace;
-            background-color: #ffffff;
-            color: #1a1a1a;
-            border: 3px solid #1a1a1a;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
             z-index: 1000;
         }
 
+        /* Bottom-left, shown only once the game is complete. */
         #restart-button {
             left: 20px;
+            bottom: 20px;
             display: none;
         }
 
-        /* Sits in the same top-left slot as #restart-button; the two are never
-           shown at the same time (skip while playing, restart once complete). */
+        /* Bottom-right corner, shown while playing. */
         #skip-button {
-            left: 20px;
-            display: block;
-        }
-
-        #download-button {
             right: 20px;
+            bottom: 20px;
             display: block;
-            font-size: 16px;
         }
 
         .audio-recorder-controls {
@@ -147,15 +134,6 @@
             right: 20px;
             z-index: 1000;
             text-align: right;
-        }
-
-        #download-button {
-            top: 100px;
-        }
-
-        #restart-button:hover, #download-button:hover, #skip-button:hover {
-            background-color: #1a1a1a;
-            color: #ffffff;
         }
 
         /* Energy bar - a rounded meter directly under the grid, spanning its
@@ -167,7 +145,7 @@
             margin-top: 10px;
             box-sizing: border-box;
             background-color: #e0e0e0;
-            border: 3px solid #1a1a1a;
+            border: 3px solid var(--ink);
             border-radius: 999px;
             overflow: hidden;
             display: none;
@@ -175,7 +153,7 @@
         #energy-bar-fill {
             height: 100%;
             width: 100%;
-            background-color: #d15884;
+            background-color: var(--primary);
             transition: width 0.15s ease-out;
         }
 
@@ -198,7 +176,6 @@
         .completion-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.55);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -209,25 +186,19 @@
         }
         .completion-overlay.visible { opacity: 1; }
         .completion-card {
-            background: white;
-            border-radius: 16px;
             padding: 48px 56px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             transform: scale(0.8);
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            font-family: "Trebuchet MS", sans-serif;
         }
         .completion-overlay.visible .completion-card { transform: scale(1); }
         .completion-card h2 {
             margin: 0 0 12px;
             font-size: 28px;
-            color: #333;
         }
         .completion-card p {
             margin: 0;
             font-size: 16px;
-            color: #888;
         }
         .confetti-piece {
             position: fixed;
@@ -244,10 +215,11 @@
             100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
         }
     </style>
+    <link rel="stylesheet" href="puzzle-theme.css">
 </head>
 <body>
     <script>
-    // ---- Puzzle D authorization gate ----
+    // ---- Puzzle 4 authorization gate ----
     // Must be the first script on the page. If the visitor has not entered the
     // authorization code this session, cover the page with a full-screen code
     // prompt and set window.__puzzleDUnauthorized so the calibration check and
@@ -276,21 +248,21 @@
             overlay.setAttribute('style', [
                 'position:fixed', 'inset:0', 'z-index:2147483647',
                 'display:flex', 'align-items:center', 'justify-content:center',
-                'background:#ffffff',
-                "font-family:'Trebuchet MS',Verdana,sans-serif"
+                'background:#F9F9F6',
+                "font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
             ].join(';'));
             overlay.innerHTML =
                 '<div style="width:360px;max-width:88vw;text-align:center;padding:24px;">' +
-                '<h1 style="font-weight:300;color:#333;font-size:1.9rem;margin:0 0 10px;">Puzzle D</h1>' +
-                '<p style="color:#666;font-size:0.95rem;margin:0 0 22px;">Enter the authorization code to continue.</p>' +
+                '<h1 style="font-family:\'Silkscreen\',\'Courier New\',monospace;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1C1A17;font-size:1.5rem;margin:0 0 12px;">Puzzle 4</h1>' +
+                '<p style="color:#6B655B;font-size:0.95rem;margin:0 0 22px;">Enter the authorization code to continue.</p>' +
                 '<input id="pd-auth-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" ' +
                 'aria-label="Authorization code" ' +
                 'style="width:100%;box-sizing:border-box;padding:12px 14px;font-size:18px;font-family:inherit;' +
-                'text-align:center;letter-spacing:6px;text-transform:uppercase;border:2px solid #111;border-radius:8px;" />' +
+                'text-align:center;letter-spacing:6px;text-transform:uppercase;border:3px solid #1C1A17;border-radius:10px;" />' +
                 '<div id="pd-auth-error" style="color:#c62828;font-size:14px;min-height:18px;margin:9px 0 0;"></div>' +
                 '<button id="pd-auth-btn" type="button" ' +
-                'style="margin-top:12px;width:100%;padding:12px;font-size:16px;font-family:inherit;color:#111;' +
-                'background:#fee6e3;border:2px solid #111;border-radius:8px;box-shadow:4px 4px 0 #111;cursor:pointer;">Continue</button>' +
+                'style="margin-top:12px;width:100%;padding:12px;font-family:\'Silkscreen\',\'Courier New\',monospace;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:#FBF3EE;' +
+                'background:#d15884;border:3px solid #1C1A17;border-radius:10px;box-shadow:4px 4px 0 #1C1A17;cursor:pointer;">Continue</button>' +
                 '</div>';
 
             (document.body || document.documentElement).appendChild(overlay);
@@ -339,6 +311,31 @@
     })();
     </script>
 
+    <div id="dashboard">
+        <div class="dash-row">
+            <a id="dash-home" href="index.html">Home</a>
+            <span class="dash-sep"></span>
+            <select id="dash-puzzle" aria-label="Switch puzzle">
+                <option value="game.html">Puzzle 1</option>
+                <option value="game2new.html">Puzzle 2</option>
+                <option value="game3.html">Puzzle 3</option>
+                <option value="game4.html" selected>Puzzle 4</option>
+                <option value="game5.html">Puzzle 5</option>
+            </select>
+            <span class="dash-sep"></span>
+            <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
+        </div>
+        <div class="dash-row">
+            <label class="energy-switch" id="energy-switch" style="display:none">
+                <input type="checkbox" id="energy-switch-input" checked aria-label="Energy constraint">
+                <span class="track"></span>
+                <span class="track-label" id="energy-switch-label">Energy: On</span>
+                <span class="thumb"></span>
+            </label>
+            <button id="download-button">Download Data</button>
+        </div>
+    </div>
+
     <div id="instructions">
         There are no instructions for this game, intentionally.<br>
         Use the left, right, and down arrow keys to discover the controls, rules, and objective.
@@ -352,7 +349,16 @@
     </div>
     <button id="restart-button">Start Over</button>
     <button id="skip-button">Skip Level</button>
-    <button id="download-button">Download Data</button>
+
+    <div id="quit-overlay" class="completion-overlay quit-overlay" hidden>
+        <div class="completion-card">
+            <h2>Quit puzzle?</h2>
+            <div class="card-actions">
+                <button type="button" class="card-btn" id="quit-confirm">Quit</button>
+                <button type="button" class="card-btn" id="quit-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script src="webgazer.js"></script>
     <script src="audio-recorder.js"></script>
@@ -849,6 +855,12 @@
                 return;
             }
 
+            const dashLevel = document.getElementById('dash-level');
+            if (dashLevel) dashLevel.textContent = levelIndex + 1;
+            // Level 4's number is hard to read in bold - un-bold it.
+            const dashField = document.querySelector('#dashboard .dash-field');
+            if (dashField) dashField.classList.toggle('plain', levelIndex + 1 === 4);
+
             // Clear any lingering ripples from the previous level
             document.getElementById('ripple-container').innerHTML = '';
 
@@ -882,6 +894,7 @@
 
             renderGrid();
             updateEnergyBar();
+            updateEnergyToggleButton();
 
             const gridElement = document.getElementById('grid');
             gridElement.classList.remove('fade-out');
@@ -889,8 +902,8 @@
         }
 
         // Energy bar under the grid. Fill width tracks energyRemaining /
-        // energyMax; hidden once the game is complete (or on any level with no
-        // energyMax). Resets full each level (see loadLevel).
+        // energyMax; hidden once the game is complete or while energy is
+        // toggled off. Resets full each level (see loadLevel).
         function updateEnergyBar() {
             const track = document.getElementById('energy-bar-track');
             const fill = document.getElementById('energy-bar-fill');
@@ -900,6 +913,19 @@
             track.style.display = show ? 'block' : 'none';
             const pct = Math.max(0, Math.min(1, gameState.energyRemaining / gameState.energyMax)) * 100;
             fill.style.width = pct + '%';
+        }
+
+        // Dashboard energy switch - reflects gameState.energyEnabled. Shown on
+        // every level while playing, hidden once the game is complete. Resets
+        // to "On" every level (loadLevel sets energyEnabled = true).
+        function updateEnergyToggleButton() {
+            const sw = document.getElementById('energy-switch');
+            const input = document.getElementById('energy-switch-input');
+            const label = document.getElementById('energy-switch-label');
+            if (!sw) return;
+            sw.style.display = levels[currentLevelIndex] ? 'inline-flex' : 'none';
+            if (input) input.checked = gameState.energyEnabled;
+            if (label) label.textContent = 'Energy: ' + (gameState.energyEnabled ? 'On' : 'Off');
         }
 
         // Move budget ran out before the level was solved - restart it from
@@ -1047,8 +1073,9 @@
                     document.getElementById('skip-button').style.display = 'none';
                     document.getElementById('restart-button').style.display = 'block';
                     updateEnergyBar();
+                    updateEnergyToggleButton();
                     handleGameComplete();
-                    showCompletionMessage('D');
+                    showCompletionMessage('4');
                 }
             }, 800);
         }
@@ -1133,6 +1160,7 @@
 
         function logEvent(outcome, detail) {
             // outcome: 'advance_cycle' | 'win' | 'skip_level' | 'energy_depleted'
+            //          | 'energy_enabled' | 'energy_disabled'
             // detail (optional, for key-press events):
             //   { key, piece, cycleStepBefore, deltaApplied }
             // deltaApplied is the [dx, dy] added to that piece's CURRENT position
@@ -1196,10 +1224,25 @@
                     document.getElementById('skip-button').style.display = 'none';
                     document.getElementById('restart-button').style.display = 'block';
                     updateEnergyBar();
+                    updateEnergyToggleButton();
                     handleGameComplete();
-                    showCompletionMessage('D');
+                    showCompletionMessage('4');
                 }
             }, 800);
+        });
+
+        // Dashboard energy switch - flips whether the move budget applies. While
+        // off, presses cost nothing and the level never auto-restarts from
+        // running out. Resets to On every level (loadLevel).
+        document.getElementById('energy-switch-input').addEventListener('change', (e) => {
+            if (currentLevelIndex >= levels.length) {
+                e.target.checked = gameState.energyEnabled;
+                return;
+            }
+            gameState.energyEnabled = e.target.checked;
+            logEvent(gameState.energyEnabled ? 'energy_enabled' : 'energy_disabled');
+            updateEnergyBar();
+            updateEnergyToggleButton();
         });
 
         document.getElementById('download-button').addEventListener('click', () => {
@@ -1391,7 +1434,7 @@
 
                 return { x: Math.min(gridX, GRID_SIZE), y: Math.min(gridY, GRID_SIZE) };
             },
-            insertBeforeSelector: '#download-button',
+            insertBeforeSelector: '#dashboard',
             onRecordingStart: () => {
                 S3Uploader.startBackups(sessionCode, 'Game D', () => AudioRecorder.getState().audioChunks);
             },
@@ -1401,6 +1444,45 @@
         });
 
         } // end authorized-only Start block
+    </script>
+
+    <script>
+        // Dashboard puzzle switcher - confirm with a "Quit puzzle?" dialog
+        // before navigating away (Home included).
+        (function () {
+            var select = document.getElementById('dash-puzzle');
+            var home = document.getElementById('dash-home');
+            var overlay = document.getElementById('quit-overlay');
+            if (!overlay) return;
+            var CURRENT = 'game4.html';
+            var pending = null;
+
+            function askQuit(target) {
+                pending = target;
+                overlay.hidden = false;
+                requestAnimationFrame(function () { overlay.classList.add('visible'); });
+            }
+
+            if (select) select.addEventListener('change', function () {
+                var target = this.value;
+                this.value = CURRENT;                 // revert until confirmed
+                if (target && target !== CURRENT) askQuit(target);
+            });
+
+            if (home) home.addEventListener('click', function (e) {
+                e.preventDefault();
+                askQuit(home.getAttribute('href') || 'index.html');
+            });
+
+            document.getElementById('quit-confirm').addEventListener('click', function () {
+                if (pending) window.location.href = pending;
+            });
+            document.getElementById('quit-cancel').addEventListener('click', function () {
+                overlay.classList.remove('visible');
+                setTimeout(function () { overlay.hidden = true; }, 400);
+                pending = null;
+            });
+        })();
     </script>
 </body>
 </html>
