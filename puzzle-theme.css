@@ -5,6 +5,16 @@
    Link this AFTER each page's own <style> block so it wins any leftover
    conflicts. */
 
+/* The digit "4" - and only "4" - renders in VT323 wherever the 'Digit4'
+   family leads the font stack. Everything else falls through to the next
+   family. */
+@font-face {
+    font-family: 'Digit4';
+    src: url('vt323-latin.woff2') format('woff2');
+    unicode-range: U+34;
+    font-display: swap;
+}
+
 :root {
     --bg: #F9F9F6;
     --surface: #F9F9F6;
@@ -17,7 +27,7 @@
 
 body {
     box-sizing: border-box;
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Digit4', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg);
     color: var(--ink);
     /* Sit the content near the top (instructions first, then the grid)
@@ -34,7 +44,7 @@ body {
 #skip-button,
 #download-button {
     padding: 12px 18px;
-    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
     font-size: 12px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -87,7 +97,7 @@ body {
     border: 3px solid var(--ink);
     border-radius: 14px;
     box-shadow: 8px 10px 16px -6px rgba(28, 26, 23, 0.4);
-    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -204,7 +214,7 @@ body {
     top: 50%;
     right: 12px;                 /* OFF: thumb left, label right */
     transform: translateY(-50%);
-    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
     font-size: 9px;
     letter-spacing: 0.5px;
     color: #000;
@@ -261,10 +271,10 @@ body {
     border: 3px solid var(--ink);
     border-radius: 18px;
     box-shadow: 14px 16px 22px -6px rgba(28, 26, 23, 0.45);
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Digit4', 'Inter', system-ui, sans-serif;
 }
 .completion-card h2 {
-    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--ink);
@@ -279,7 +289,7 @@ body {
     justify-content: center;
 }
 .card-btn {
-    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;

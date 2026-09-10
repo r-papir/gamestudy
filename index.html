@@ -9,6 +9,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* The digit "4" - and only "4" - renders in VT323 wherever the
+           'Digit4' family leads the font stack. */
+        @font-face {
+            font-family: 'Digit4';
+            src: url('vt323-latin.woff2') format('woff2');
+            unicode-range: U+34;
+            font-display: swap;
+        }
         :root {
             --bg: #F9F9F6;        /* same as --surface */
             --surface: #F9F9F6;
@@ -27,7 +35,7 @@
             padding: 0;
         }
         body {
-            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Digit4', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg);
             color: var(--ink);
             min-height: 100vh;
@@ -53,7 +61,7 @@
         }
         h1 .mark {
             display: block;
-            font-family: 'Silkscreen', 'Courier New', monospace;
+            font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
             font-weight: 700;
             font-size: clamp(1.4rem, 4vw, 2.69rem);
             text-transform: uppercase;
@@ -63,7 +71,7 @@
         h1 .sub {
             display: block;
             margin-top: 0.6rem;
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Digit4', 'Inter', system-ui, sans-serif;
             font-weight: 500;
             font-size: clamp(0.8rem, 1.8vw, 1rem);
             letter-spacing: 0.02em;
@@ -124,7 +132,7 @@
             justify-content: center;
             width: clamp(118px, 39vw, 150px);
             height: 48px;
-            font-family: 'Silkscreen', 'Courier New', monospace;
+            font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
             font-size: 15px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
