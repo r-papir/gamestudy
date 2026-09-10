@@ -90,7 +90,8 @@
         #grid {
             display: inline-grid;
             /* grid-template-columns/rows are set inline by initGrid(), since
-               the framed (12x12) vs unframed (8x8) size is dynamic. */
+               the framed size (10x10 or 12x12, per level) vs unframed (8x8)
+               is dynamic. */
             gap: 2px;
             background-color: #e0e0e0;
             padding: 2px;
@@ -127,10 +128,12 @@
             display: none;
         }
 
-        /* Sits in the same top-left slot as #restart-button; the two are never
-           shown at the same time (skip while playing, restart once complete). */
+        /* Bottom-right corner. Shown while playing, hidden once the game is
+           complete (then #restart-button appears top-left in its place). */
         #skip-button {
-            left: 20px;
+            top: auto;
+            bottom: 20px;
+            right: 20px;
             display: block;
         }
 
@@ -190,23 +193,23 @@
         */
 
         .cell {
-            width: 90px;
-            height: 90px;
+            width: 72px;
+            height: 72px;
             border: 1px solid #e0e0e0;
             box-sizing: border-box;
             background-color: #FFFFFF;
         }
 
-        /* Energy frame - a two-cell-wide ring of cells (two concentric layers)
-           around the 8x8 play area (not part of the actual game grid). Each
-           move empties one frame cell, sweeping clockwise from the top-left
-           corner (outer layer first, then inner); the filled color matches
-           the old energy bar's fill. Only exists in the DOM while the energy
-           constraint is enabled - initGrid() omits it entirely when disabled,
-           and the grid shrinks back to just 8x8. */
+        /* Energy frame - a ring of cells around the 8x8 play area (not part of
+           the actual game grid), 1 or 2 cells thick per level. Each move
+           empties one frame cell, sweeping clockwise (outermost ring first,
+           then inward); the filled color matches the old energy bar's fill.
+           Only exists in the DOM while the energy constraint is enabled -
+           initGrid() omits it entirely when disabled, and the grid shrinks
+           back to just 8x8. */
         .frame-cell {
-            width: 90px;
-            height: 90px;
+            width: 72px;
+            height: 72px;
             border: 1px solid #e0e0e0;
             box-sizing: border-box;
             background-color: #1a1a1a;
@@ -423,18 +426,18 @@
         // it was caught, stops shifting, and shows a persistent "collected"
         // marker in both visibility modes.
         //
-        // Energy: a two-cell-wide frame ring (two concentric layers) is drawn
-        // around the 8x8 play area (not part of the actual game grid) whenever
-        // the energy constraint is enabled, making the whole rendered grid
-        // 12x12. Each move empties one frame cell, sweeping clockwise from the
-        // top-left corner - the outer layer first, then the inner layer - so
-        // the two layers together give ~2x the moves of a single ring; blocked
-        // presses don't count. Energy resets to full (frame fully refilled)
-        // each level. If it empties before every token is collected, the level
-        // restarts from scratch. A toggle button (top-left) can disable the
-        // constraint entirely - the frame disappears and the grid shrinks back
-        // to just 8x8, moves then cost no energy and never trigger a restart;
-        // it resets back to enabled (frame back on) every level.
+        // Energy: a frame ring is drawn around the 8x8 play area (not part of
+        // the actual game grid) whenever the energy constraint is enabled. Its
+        // thickness is per-level - level.energyLayers (default 1): 1 cell thick
+        // = 10x10 rendered grid / 36 moves, 2 cells thick = 12x12 / 80 moves.
+        // Each move empties one frame cell, sweeping clockwise - the outermost
+        // ring first, then inward; blocked presses don't count. Energy resets
+        // to full (frame fully refilled) each level. If it empties before every
+        // token is collected, the level restarts from scratch. A toggle button
+        // (top-left) can disable the constraint entirely - the frame disappears
+        // and the grid shrinks back to just 8x8, moves then cost no energy and
+        // never trigger a restart; it resets back to enabled (frame back on)
+        // every level.
         //
         // Objective: collect every token. The level completes automatically
         // once every token is collected.
@@ -446,13 +449,15 @@
         // Coordinates are 1-based: columns and rows run 1..GRID_SIZE, (1,1) is the
         // top-left cell.
 
-        // Energy frame: a two-cell-wide ring (two concentric layers) around the
-        // 8x8 play area, making the whole rendered grid OUTER_SIZE x OUTER_SIZE
-        // while the energy constraint is enabled. The frame is not part of the
-        // actual game grid - it's drawn (in initGrid) and colored (in
-        // updateEnergyFrame) purely to represent energy, in outer (1-based,
-        // 1..OUTER_SIZE) coordinates distinct from the game's own 1..GRID_SIZE.
-        const OUTER_SIZE = GRID_SIZE + 4;
+        // Energy frame: a ring of cells around the 8x8 play area, `energyLayers`
+        // cells thick, making the whole rendered grid outerSize x outerSize
+        // (outerSize = GRID_SIZE + 2 * layers) while the energy constraint is
+        // enabled. The frame is not part of the actual game grid - it's drawn
+        // (in initGrid) and colored (in updateEnergyFrame) purely to represent
+        // energy, in outer (1-based, 1..outerSize) coordinates distinct from the
+        // game's own 1..GRID_SIZE. `energyLayers` is per-level (level.energyLayers,
+        // default ENERGY_LAYERS_DEFAULT): 1 layer = 36 moves, 2 layers = 80.
+        const ENERGY_LAYERS_DEFAULT = 1;
 
         // One rectangular ring of cells in outer coordinates, clockwise from
         // its top-left corner (min,min): across the top, down the right side,
@@ -466,19 +471,18 @@
             return cells;
         }
 
-        // The frame's cells, drained in order: the outer layer (44 cells)
-        // clockwise from (1,1), then the inner layer (36 cells) clockwise from
-        // (2,2). Two layers ~= double the moves of a single ring.
-        function buildFramePerimeter(size) {
-            return [
-                ...buildRing(1, size),
-                ...buildRing(2, size - 1)
-            ];
+        // Geometry for a frame `layers` cells thick. `cells` is the drain order:
+        // the outermost ring first (clockwise from its top-left corner), then
+        // each ring inward. `outerSize` is the full rendered grid dimension;
+        // `max` (= cells.length) is the moves allowed that level before restart.
+        function energyGeometry(layers) {
+            const outerSize = GRID_SIZE + 2 * layers;
+            const cells = [];
+            for (let k = 0; k < layers; k++) {
+                cells.push(...buildRing(1 + k, outerSize - k));
+            }
+            return { layers: layers, outerSize: outerSize, cells: cells, max: cells.length };
         }
-        const FRAME_CELLS = buildFramePerimeter(OUTER_SIZE);
-
-        // One frame cell = one move of energy.
-        const ENERGY_MAX = FRAME_CELLS.length; // moves allowed per level before it restarts
 
         // Which [dx, dy] each arrow key applies to the ego vehicle.
         const MOVE_FOR_KEY = {
@@ -500,7 +504,13 @@
             //                    collected, collectedAt }, ...] (1-based)
             tokens: [],
             moveCount: 0,   // ego moves this level (blocked presses excluded)
-            energyRemaining: ENERGY_MAX, // resets to ENERGY_MAX on every loadLevel
+            // Energy geometry - all four reset from the level's energyLayers on
+            // every loadLevel (see energyGeometry).
+            energyLayers: ENERGY_LAYERS_DEFAULT,
+            energyOuterSize: GRID_SIZE + 2 * ENERGY_LAYERS_DEFAULT,
+            energyFrameCells: energyGeometry(ENERGY_LAYERS_DEFAULT).cells,
+            energyMax: energyGeometry(ENERGY_LAYERS_DEFAULT).max,
+            energyRemaining: energyGeometry(ENERGY_LAYERS_DEFAULT).max,
             energyEnabled: true,         // resets to true on every loadLevel
             colors: {}
         };
@@ -702,6 +712,7 @@
                 id: 4,
                 name: "Level 4",
                 isPlayable: true,
+                energyLayers: 2,   // double frame ring - 80 moves (levels 1-3 use 1 ring / 36)
                 egoStart: { x: 5, y: 8 },
                 platform: rectCells(4, 4, 2, 2),
                 tokens: [
@@ -766,30 +777,32 @@
         // ---------------------------------------------------------------
 
         // Builds (or rebuilds) the #grid DOM. When the energy constraint is
-        // enabled, renders OUTER_SIZE x OUTER_SIZE: the two-cell-wide frame ring
-        // plus the inner GRID_SIZE x GRID_SIZE play area, each game cell keeping
-        // its usual id (`cell-x-y`, 1..GRID_SIZE) regardless of the frame. When
-        // disabled, renders just the GRID_SIZE x GRID_SIZE play area with no
-        // frame, shrinking the whole grid back down.
+        // enabled, renders energyOuterSize x energyOuterSize: the frame ring
+        // (energyLayers cells thick) plus the inner GRID_SIZE x GRID_SIZE play
+        // area, each game cell keeping its usual id (`cell-x-y`, 1..GRID_SIZE)
+        // regardless of the frame. When disabled, renders just the
+        // GRID_SIZE x GRID_SIZE play area with no frame, shrinking back down.
         function initGrid() {
             const gridElement = document.getElementById('grid');
             gridElement.innerHTML = '';
             const showFrame = gameState.energyEnabled;
-            const size = showFrame ? OUTER_SIZE : GRID_SIZE;
-            gridElement.style.gridTemplateColumns = `repeat(${size}, 90px)`;
-            gridElement.style.gridTemplateRows = `repeat(${size}, 90px)`;
+            const layers = gameState.energyLayers;
+            const outerSize = gameState.energyOuterSize;
+            const size = showFrame ? outerSize : GRID_SIZE;
+            gridElement.style.gridTemplateColumns = `repeat(${size}, 72px)`;
+            gridElement.style.gridTemplateRows = `repeat(${size}, 72px)`;
             for (let y = 1; y <= size; y++) {
                 for (let x = 1; x <= size; x++) {
                     const cell = document.createElement('div');
-                    // The frame is two cells thick, so the play area sits at
-                    // outer coords 3..OUTER_SIZE-2.
-                    const isFrame = showFrame && (x <= 2 || y <= 2 || x >= OUTER_SIZE - 1 || y >= OUTER_SIZE - 1);
+                    // The frame is `layers` cells thick, so the play area sits
+                    // at outer coords (layers+1)..(outerSize-layers).
+                    const isFrame = showFrame && (x <= layers || y <= layers || x > outerSize - layers || y > outerSize - layers);
                     if (isFrame) {
                         cell.className = 'frame-cell';
                         cell.id = `frame-cell-${x}-${y}`;
                     } else {
-                        const gx = showFrame ? x - 2 : x;
-                        const gy = showFrame ? y - 2 : y;
+                        const gx = showFrame ? x - layers : x;
+                        const gy = showFrame ? y - layers : y;
                         cell.className = 'cell';
                         cell.id = `cell-${gx}-${gy}`;
                     }
@@ -833,7 +846,14 @@
                 };
             });
             gameState.moveCount = 0;
-            gameState.energyRemaining = ENERGY_MAX;
+            // Energy geometry is per-level: level.energyLayers (default 1)
+            // decides how thick the frame ring is and how many moves it buys.
+            const geom = energyGeometry(level.energyLayers || ENERGY_LAYERS_DEFAULT);
+            gameState.energyLayers = geom.layers;
+            gameState.energyOuterSize = geom.outerSize;
+            gameState.energyFrameCells = geom.cells;
+            gameState.energyMax = geom.max;
+            gameState.energyRemaining = geom.max;
             gameState.energyEnabled = true;
             gameState.colors = { ...level.colors };
 
@@ -912,7 +932,7 @@
             if (!track || !fill) return;
             const show = !!levels[currentLevelIndex] && gameState.energyEnabled;
             track.style.display = show ? 'block' : 'none';
-            const pct = Math.max(0, Math.min(1, gameState.energyRemaining / ENERGY_MAX)) * 100;
+            const pct = Math.max(0, Math.min(1, gameState.energyRemaining / gameState.energyMax)) * 100;
             fill.style.width = pct + '%';
         }
         */
@@ -920,12 +940,13 @@
         // Energy frame - the perimeter ring drawn by initGrid() when the
         // energy constraint is enabled. No numbers or labels: cells just go
         // from filled (#1a1a1a) to empty (#e0e0e0) as energy drains, in
-        // FRAME_CELLS order (clockwise from the top-left corner). A no-op
-        // while the frame doesn't exist in the DOM (constraint disabled).
+        // energyFrameCells order (outermost ring first, each clockwise from its
+        // top-left corner). A no-op while the frame doesn't exist in the DOM
+        // (constraint disabled).
         function updateEnergyFrame() {
             if (!gameState.energyEnabled) return;
-            const drained = ENERGY_MAX - gameState.energyRemaining;
-            FRAME_CELLS.forEach((c, i) => {
+            const drained = gameState.energyMax - gameState.energyRemaining;
+            gameState.energyFrameCells.forEach((c, i) => {
                 const cell = document.getElementById(`frame-cell-${c.x}-${c.y}`);
                 if (!cell) return;
                 cell.style.backgroundColor = i < drained ? '#e0e0e0' : '#1a1a1a';

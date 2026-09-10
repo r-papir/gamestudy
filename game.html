@@ -142,10 +142,12 @@
             display: none;
         }
 
-        /* Sits in the same top-left slot as #restart-button; the two are never
-           shown at the same time (skip while playing, restart once complete). */
+        /* Bottom-right corner. Shown while playing, hidden once the game is
+           complete (then #restart-button appears top-left in its place). */
         #skip-button {
-            left: 20px;
+            top: auto;
+            bottom: 20px;
+            right: 20px;
             display: block;
             font-size: 16px;
         }
