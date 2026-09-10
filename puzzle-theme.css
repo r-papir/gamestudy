@@ -90,9 +90,11 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
+    font-size: 15px;
+    font-weight: 700;
 }
 #dash-level {
-    font-size: 15px;
+    font-size: 18px;
 }
 #dash-home {
     display: inline-block;
@@ -131,9 +133,12 @@ body {
     font-size: 13px;
     padding: 7px 12px;
     border-radius: 9px;
+    background: var(--surface);   /* same as the page/light background */
+    color: var(--ink);
     box-shadow: 3px 3px 0 var(--ink);
 }
 #dashboard #download-button:hover {
+    background: #EFEFEA;
     box-shadow: 2px 2px 0 var(--ink);
 }
 #dashboard #download-button:active {
