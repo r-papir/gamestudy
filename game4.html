@@ -160,8 +160,7 @@
 
         /* Energy bar - a rounded meter directly under the grid, spanning its
            full width. Drains as the move budget is spent; running out before
-           the level is solved restarts it. Hidden on the tutorial (Level 1)
-           and once the game is complete. */
+           the level is solved restarts it. Hidden once the game is complete. */
         #energy-bar-track {
             width: 100%;
             height: 14px;
@@ -430,7 +429,7 @@
             pressCount: 0,            // arrow-key presses that moved a piece this level
             energyMax: 20,            // move budget for the level (per-level; see loadLevel)
             energyRemaining: 20,
-            energyEnabled: true,      // false on the tutorial (Level 1, which has no energyMax)
+            energyEnabled: true,      // per-level in loadLevel: on iff the level defines energyMax
             isPlayable: true,
             colors: { ego1: '#FFFFFF', ego2: '#FFFFFF', ego3: '#FFFFFF' }
         };
@@ -473,8 +472,8 @@
         //   ego1Cycle / ego2Cycle : [ [dx,dy], ... ] delta cycles (required; [] = that key does nothing)
         //   ego3Cycle             : [ [dx,dy], ... ] only if the level uses ego 3
         //   colors                : { ego1, ego2, ego3? }
-        //   energyMax             : move budget for the level; omit on the
-        //                           tutorial (Level 1) so it has no energy limit
+        //   energyMax             : move budget for the level (omit for no
+        //                           energy limit; all six levels set one)
         //
         // Levels are numbered 1..6; Level 1 is the tutorial. (The mechanic was
         // rewritten from mouse-click to keyboard and every level respecified for
@@ -499,6 +498,7 @@
                 id: 1,
                 name: "Level 1",
                 isPlayable: true,
+                energyMax: 6,   // exactly the solution length (6 Left presses)
                 ego1Start: { x: 1, y: 1 },
                 ego2Start: { x: 4, y: 4 },
                 ego1Cycle: [
@@ -543,7 +543,7 @@
                 id: 2,
                 name: "Level 2",
                 isPlayable: true,
-                energyMax: 20,   // TODO(budget): Rachel to set
+                energyMax: 12,
                 ego1Start: { x: 4, y: 2 },
                 ego2Start: { x: 2, y: 4 },
                 ego1Cycle: [
@@ -585,7 +585,7 @@
                 id: 3,
                 name: "Level 3",
                 isPlayable: true,
-                energyMax: 20,   // TODO(budget): Rachel to set
+                energyMax: 22,
                 ego1Start: { x: 4, y: 4 },
                 ego2Start: { x: 2, y: 2 },
                 ego1Cycle: [
@@ -664,7 +664,7 @@
                 id: 4,
                 name: "Level 4",
                 isPlayable: true,
-                energyMax: 20,   // TODO(budget): Rachel to set
+                energyMax: 27,
                 ego1Start: { x: 3, y: 5 },
                 ego2Start: { x: 2, y: 1 },
                 ego3Start: { x: 2, y: 2 },
@@ -726,7 +726,7 @@
                 id: 5,
                 name: "Level 5",
                 isPlayable: true,
-                energyMax: 20,   // TODO(budget): Rachel to set
+                energyMax: 36,
                 ego1Start: { x: 3, y: 4 },
                 ego2Start: { x: 5, y: 2 },
                 ego1Cycle: [
@@ -781,7 +781,7 @@
                 id: 6,
                 name: "Level 6",
                 isPlayable: true,
-                energyMax: 20,   // TODO(budget): Rachel to set
+                energyMax: 40,
                 ego1Start: { x: 3, y: 5 },
                 ego2Start: { x: 1, y: 1 },
                 ego3Start: { x: 5, y: 3 },
@@ -867,9 +867,9 @@
             gameState.ego2Step = 0;
             gameState.ego3Step = 0;
             gameState.pressCount = 0;
-            // Move budget: a level has one iff it defines energyMax. The
-            // tutorial (Level 1) has none, so energy is off there. Running the
-            // budget out before solving restarts the level.
+            // Move budget: energy is on iff the level defines energyMax (all
+            // six currently do - 6/12/22/27/36/40). Running the budget out
+            // before solving restarts the level.
             gameState.energyEnabled = level.energyMax != null;
             gameState.energyMax = level.energyMax || 20;
             gameState.energyRemaining = gameState.energyMax;
@@ -889,8 +889,8 @@
         }
 
         // Energy bar under the grid. Fill width tracks energyRemaining /
-        // energyMax; hidden on the tutorial (Level 1) and once the game is
-        // complete. Resets full each level (see loadLevel).
+        // energyMax; hidden once the game is complete (or on any level with no
+        // energyMax). Resets full each level (see loadLevel).
         function updateEnergyBar() {
             const track = document.getElementById('energy-bar-track');
             const fill = document.getElementById('energy-bar-fill');
@@ -1336,7 +1336,7 @@
         sessionData.movementCycles = levels.map(level => ({
             level: level.id,
             playable: level.isPlayable,
-            energyMax: (level.energyMax != null) ? level.energyMax : null,  // move budget; null on the tutorial (Level 1)
+            energyMax: (level.energyMax != null) ? level.energyMax : null,  // move budget for the level
             deltasRelativeTo: "current position of the moved piece at press time",
             ego1: level.ego1Cycle.map(step => [...step]),
             ego2: level.ego2Cycle.map(step => [...step]),
