@@ -4,91 +4,177 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Causal Reasoning Study</title>
+    <link rel="icon" href="mascot.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #F2EFE6;
+            --surface: #FBFAF5;
+            --ink: #1C1A17;
+            --ink-soft: #6B655B;
+            --primary: #C63D2E;
+            --primary-hover: #D95A49;
+            --primary-deep: #5E1A35;
+            --glitch-cyan: #28C7D6;   /* held in reserve - not used on the menu */
+            --glitch-magenta: #E7318C;
+            --grid-line: #DAD4C6;
+        }
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
         body {
-            font-family: "Trebuchet MS", sans-serif;
-            background: white;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 2rem;
+            padding: 2rem 1rem;
         }
         .title-wrap {
             width: 100%;
             display: flex;
+            align-items: center;
             justify-content: center;
-            margin-bottom: 1.2rem;
-        }
-        .container {
-            max-width: 500px;
-            width: 100%;
+            gap: 0.7rem;
+            margin-bottom: 1.75rem;
         }
         h1 {
             text-align: center;
-            color: #333;
-            font-size: clamp(1rem, 3vw, 2.19rem);
-            font-weight: 300;
-            font-family: "Trebuchet MS", sans-serif;
-            transform: scaleY(1.2);
-            letter-spacing: 0;
-            white-space: nowrap;
+            max-width: 30ch;
+        }
+        h1 .mark {
+            display: block;
+            font-family: 'Silkscreen', 'Courier New', monospace;
+            font-weight: 700;
+            font-size: clamp(1.4rem, 4vw, 2.4rem);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--ink);
+        }
+        h1 .sub {
+            display: block;
+            margin-top: 0.6rem;
+            font-family: 'Inter', system-ui, sans-serif;
+            font-weight: 500;
+            font-size: clamp(0.8rem, 1.8vw, 1rem);
+            letter-spacing: 0.02em;
+            color: var(--ink-soft);
+        }
+        .container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        /* The console panel - the puzzle menu styled like a handheld game deck. */
+        .console {
+            position: relative;
+            width: min(94vw, 460px);
+            background: var(--surface);
+            border: 3px solid var(--ink);
+            border-radius: 18px;
+            box-shadow: 10px 10px 0 var(--ink);
+            padding: 1.6rem 1.5rem 1.9rem;
+        }
+        /* Four PCB-pad dots just inside the panel edge. */
+        .console::before {
+            content: "";
+            position: absolute;
+            inset: 9px;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at center, var(--ink-soft) 45%, transparent 47%) 2px 2px / 7px 7px no-repeat,
+                radial-gradient(circle at center, var(--ink-soft) 45%, transparent 47%) calc(100% - 2px) 2px / 7px 7px no-repeat,
+                radial-gradient(circle at center, var(--ink-soft) 45%, transparent 47%) 2px calc(100% - 2px) / 7px 7px no-repeat,
+                radial-gradient(circle at center, var(--ink-soft) 45%, transparent 47%) calc(100% - 2px) calc(100% - 2px) / 7px 7px no-repeat;
+        }
+        .console-label {
+            font-family: 'Silkscreen', 'Courier New', monospace;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            text-align: center;
+            margin-bottom: 1.35rem;
+        }
+        /* Sits inline to the left of the STEP-Bench wordmark, aligned to it and
+           sized to match its height. */
+        .mascot {
+            align-self: flex-start;
+            margin-top: 0.15rem;
+            height: clamp(2rem, 5vw, 2.9rem);
+            width: auto;
+            flex-shrink: 0;
+            image-rendering: pixelated;
+            transform: rotate(-6deg);
+            filter: drop-shadow(2px 2px 0 rgba(28, 26, 23, 0.25));
         }
         .button-grid {
             display: flex;
             flex-direction: row;
-            justify-content: space-between;
-            width: 425px;
-            max-width: 100%;
-            margin: 1.5rem auto 0 auto;
+            justify-content: center;
+            gap: 1rem;
         }
         .button-grid .col {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1rem;
         }
         .button-grid a {
-            align-items: center;
-            background-color: #fee6e3;
-            border: 2.5px solid #111;
-            border-radius: 10px;
-            box-shadow: 7.5px 7.5px 0 #111;
-            color: #111;
-            cursor: pointer;
             display: flex;
-            font-size: 17.5px;
-            height: 55px;
+            align-items: center;
             justify-content: center;
-            width: 196.25px;
-            white-space: nowrap;
+            width: clamp(118px, 39vw, 150px);
+            height: 48px;
+            font-family: 'Silkscreen', 'Courier New', monospace;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
             text-align: center;
             text-decoration: none;
+            border: 3px solid var(--ink);
+            border-radius: 10px;
+            box-shadow: 4px 4px 0 var(--ink);
+            background: #FFFFFF;
+            color: var(--ink);
+            cursor: pointer;
             user-select: none;
             -webkit-user-select: none;
             touch-action: manipulation;
-            transition: box-shadow 0.2s ease-out, transform 0.2s ease-out;
+            transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, background-color 0.12s ease-out;
         }
-        .button-grid a:hover {
-            box-shadow: 0 0 0 #111;
-            transform: translate(7.5px, 7.5px);
-            background-color: #ffd0cb;
-        }
-        .button-grid a:active {
-            background-color: #ffdeda;
-        }
-        /* Puzzle buttons are bold; Consent Form / Recalibrate are not. */
         .button-grid a.puzzle {
-            font-weight: 700;
+            background: var(--primary);
+            color: #FBF3EE;
         }
-        /* Puzzle 6 / 7 / 8: styled like the rest but not yet wired to a page. */
+        .button-grid a:not(.placeholder):hover {
+            transform: translate(1px, 1px);
+            box-shadow: 3px 3px 0 var(--ink);
+        }
+        .button-grid a.puzzle:not(.placeholder):hover {
+            background: var(--primary-hover);
+        }
+        .button-grid a:not(.puzzle):not(.placeholder):hover {
+            background: #FFF3E6;
+        }
+        .button-grid a:not(.placeholder):active {
+            transform: translate(4px, 4px);
+            box-shadow: 0 0 0 var(--ink);
+        }
+        /* Puzzle 6 / 7 / 8: present but not yet wired to a page. */
         .button-grid a.placeholder {
+            background: var(--grid-line);
+            color: var(--ink-soft);
+            border-color: var(--ink-soft);
+            box-shadow: 2px 2px 0 var(--ink-soft);
             cursor: default;
+            pointer-events: none;
         }
         .top-right {
             position: fixed;
@@ -97,18 +183,18 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 0.5rem;
         }
         .credit {
-            font-size: 0.85rem;
-            color: #666;
+            font-size: 0.8rem;
+            color: var(--ink-soft);
             text-align: right;
+            line-height: 1.5;
         }
         .forg-logo {
             position: fixed;
             top: 1rem;
             left: calc(1rem + 3mm);
-            height: 179.4px;
+            height: 150px;
         }
         .eye-tracking-note {
             position: fixed;
@@ -116,8 +202,17 @@
             left: 0;
             right: 0;
             text-align: center;
-            font-size: 0.82rem;
-            color: #555;
+            font-size: 0.8rem;
+            color: var(--ink-soft);
+        }
+        @media (max-width: 720px) {
+            .top-right { display: none; }
+            .forg-logo { height: 96px; }
+        }
+        @media (max-width: 380px) {
+            .button-grid { flex-direction: column; align-items: center; }
+            .button-grid .col { width: 100%; align-items: center; }
+            .button-grid a { width: 100%; max-width: 240px; }
         }
     </style>
 </head>
@@ -130,24 +225,31 @@
         </div>
     </div>
     <div class="title-wrap">
-        <h1>STEP-Bench: Symbolic Temporal Exploratory Puzzle Benchmark</h1>
+        <img src="mascot.png" alt="" class="mascot" aria-hidden="true">
+        <h1>
+            <span class="mark">STEP-Bench</span>
+            <span class="sub">Symbolic Temporal Exploratory Puzzle Benchmark</span>
+        </h1>
     </div>
     <div class="container">
-        <div class="button-grid">
-            <div class="col">
-                <a class="puzzle" href="game.html">Puzzle 1</a>
-                <a class="puzzle" href="game3.html">Puzzle 3</a>
-                <a class="puzzle" href="game5.html">Puzzle 5</a>
-                <a class="puzzle placeholder">Puzzle 7</a>
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSedlcz0ve-XO_Z0gXhFjRt_OI06E5O-8QeN42FtWF31Xv4jSg/viewform?usp=sharing&ouid=115986184015024353625" target="_blank">Consent Form</a>
-            </div>
+        <div class="console">
+            <div class="console-label">Select a Puzzle</div>
+            <div class="button-grid">
+                <div class="col">
+                    <a class="puzzle" href="game.html">Puzzle 1</a>
+                    <a class="puzzle" href="game3.html">Puzzle 3</a>
+                    <a class="puzzle" href="game5.html">Puzzle 5</a>
+                    <a class="puzzle placeholder">Puzzle 7</a>
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSedlcz0ve-XO_Z0gXhFjRt_OI06E5O-8QeN42FtWF31Xv4jSg/viewform?usp=sharing&ouid=115986184015024353625" target="_blank">Consent Form</a>
+                </div>
 
-            <div class="col">
-                <a class="puzzle" href="game2new.html">Puzzle 2</a>
-                <a class="puzzle" href="game4.html">Puzzle 4</a>
-                <a class="puzzle placeholder">Puzzle 6</a>
-                <a class="puzzle placeholder">Puzzle 8</a>
-                <a href="calibration.html?force=true">Recalibrate</a>
+                <div class="col">
+                    <a class="puzzle" href="game2new.html">Puzzle 2</a>
+                    <a class="puzzle" href="game4.html">Puzzle 4</a>
+                    <a class="puzzle placeholder">Puzzle 6</a>
+                    <a class="puzzle placeholder">Puzzle 8</a>
+                    <a href="calibration.html?force=true">Recalibrate</a>
+                </div>
             </div>
         </div>
     </div>
