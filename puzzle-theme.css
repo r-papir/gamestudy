@@ -1,0 +1,77 @@
+/* Shared visual theme for the STEP-Bench puzzle pages - matches index.html.
+   Page chrome ONLY: body, fixed corner control buttons, the end-of-puzzle
+   completion card. Never styles the puzzle grid, cells, tokens, ripple,
+   energy frame, confetti, or any in-puzzle colour. Link this AFTER each
+   page's own <style> block so it wins any leftover conflicts. */
+
+:root {
+    --bg: #F9F9F6;
+    --surface: #F9F9F6;
+    --ink: #1C1A17;
+    --ink-soft: #6B655B;
+    --primary: #d15884;
+    --primary-hover: #e37f9b;
+    --grid-line: #D4D4CE;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg);
+    color: var(--ink);
+}
+
+/* Fixed corner controls - console keys, matching the homepage buttons.
+   Each page keeps its own position/display rules for these ids. */
+#restart-button,
+#skip-button,
+#download-button,
+#energy-toggle-button {
+    padding: 12px 18px;
+    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: #FFFFFF;
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 10px;
+    box-shadow: 4px 4px 0 var(--ink);
+    cursor: pointer;
+    transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, background-color 0.12s ease-out;
+}
+#restart-button:hover,
+#skip-button:hover,
+#download-button:hover,
+#energy-toggle-button:hover {
+    background: #F4F4EF;
+    transform: translate(1px, 1px);
+    box-shadow: 3px 3px 0 var(--ink);
+}
+#restart-button:active,
+#skip-button:active,
+#download-button:active,
+#energy-toggle-button:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0 0 0 var(--ink);
+}
+
+/* End-of-puzzle card - matches the homepage console panel. */
+.completion-overlay {
+    background: rgba(28, 26, 23, 0.55);
+}
+.completion-card {
+    background: var(--surface);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    box-shadow: 14px 16px 22px -6px rgba(28, 26, 23, 0.45);
+    font-family: 'Inter', system-ui, sans-serif;
+}
+.completion-card h2 {
+    font-family: 'Silkscreen', 'Courier New', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink);
+}
+.completion-card p {
+    color: var(--ink-soft);
+}
