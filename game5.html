@@ -231,89 +231,8 @@
 </head>
 <body>
     <script>
-    // ---- Puzzle 5 authorization gate ----
-    // Must be the first script on the page. If the visitor has not entered the
-    // authorization code this session, cover the page with a full-screen code
-    // prompt and set window.__puzzle5Unauthorized so the calibration check and
-    // the game "Start" block below do not run. On the correct code we store a
-    // session flag and reload for a clean start.
-    //
-    // This deliberately avoids document.open()/document.write(): those are a
-    // no-op when called from an inline script while the parser is still active
-    // (HTML spec: script nesting level > 0), which left the old gate injecting
-    // broken markup into a half-parsed page. An overlay appended to the DOM
-    // works regardless of parser state.
-    (function () {
-        var AUTH_CODE = 'ABCD';
-
-        var authorized = false;
-        try { authorized = sessionStorage.getItem('puzzle5Authorized') === 'true'; } catch (e) {}
-        if (authorized) return;
-
-        window.__puzzle5Unauthorized = true;
-
-        function buildGate() {
-            if (document.getElementById('p5-auth-overlay')) return;
-
-            var overlay = document.createElement('div');
-            overlay.id = 'p5-auth-overlay';
-            overlay.setAttribute('style', [
-                'position:fixed', 'inset:0', 'z-index:2147483647',
-                'display:flex', 'align-items:center', 'justify-content:center',
-                'background:#F9F9F6',
-                "font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
-            ].join(';'));
-            overlay.innerHTML =
-                '<div style="width:360px;max-width:88vw;text-align:center;padding:24px;">' +
-                '<h1 style="font-family:\'Silkscreen\',\'Courier New\',monospace;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1C1A17;font-size:1.5rem;margin:0 0 12px;">Puzzle 5</h1>' +
-                '<p style="color:#6B655B;font-size:0.95rem;margin:0 0 22px;">Enter the authorization code to continue.</p>' +
-                '<input id="p5-auth-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" ' +
-                'aria-label="Authorization code" ' +
-                'style="width:100%;box-sizing:border-box;padding:12px 14px;font-size:18px;font-family:inherit;' +
-                'text-align:center;letter-spacing:6px;text-transform:uppercase;border:3px solid #1C1A17;border-radius:10px;" />' +
-                '<div id="p5-auth-error" style="color:#c62828;font-size:14px;min-height:18px;margin:9px 0 0;"></div>' +
-                '<button id="p5-auth-btn" type="button" ' +
-                'style="margin-top:12px;width:100%;padding:12px;font-family:\'Silkscreen\',\'Courier New\',monospace;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:#FBF3EE;' +
-                'background:#d15884;border:3px solid #1C1A17;border-radius:10px;box-shadow:4px 4px 0 #1C1A17;cursor:pointer;">Continue</button>' +
-                '</div>';
-
-            (document.body || document.documentElement).appendChild(overlay);
-
-            var input = document.getElementById('p5-auth-input');
-            var errEl = document.getElementById('p5-auth-error');
-            var btn = document.getElementById('p5-auth-btn');
-
-            function submit() {
-                if (input.value.trim().toUpperCase() === AUTH_CODE) {
-                    try { sessionStorage.setItem('puzzle5Authorized', 'true'); } catch (e) {}
-                    window.location.reload();
-                } else {
-                    errEl.textContent = 'Incorrect code. Please try again.';
-                    input.value = '';
-                    input.focus();
-                }
-            }
-
-            btn.addEventListener('click', submit);
-            input.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') { e.preventDefault(); submit(); }
-            });
-            input.focus();
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', buildGate);
-        } else {
-            buildGate();
-        }
-    })();
-    </script>
-
-    <script>
     // Verify calibration before allowing game play
     (function() {
-        // Authorization gate runs first; don't calibrate an unauthorized visitor.
-        try { if (sessionStorage.getItem('puzzle5Authorized') !== 'true') return; } catch (e) { return; }
         var calibrated = sessionStorage.getItem('webgazerCalibrationComplete') === 'true';
         var skipped = sessionStorage.getItem('eyeTrackingSkipped') === 'true';
         if (!calibrated && !skipped) {
@@ -795,9 +714,6 @@
 
             const dashLevel = document.getElementById('dash-level');
             if (dashLevel) dashLevel.textContent = levelIndex + 1;
-            // Level 4's number is hard to read in bold Silkscreen - un-bold it.
-            const dashField = document.querySelector('#dashboard .dash-field');
-            if (dashField) dashField.classList.toggle('plain', levelIndex + 1 === 4);
 
             // Clear any lingering ripples from the previous level
             document.getElementById('ripple-container').innerHTML = '';
@@ -1359,12 +1275,7 @@
         // ---------------------------------------------------------------
         // Start
         // ---------------------------------------------------------------
-        // The authorization gate at the top of <body> sets this flag when the
-        // visitor has not entered the code yet. Don't build the grid, load a
-        // level, or start audio/S3 recording until they have. Entering the
-        // correct code stores a session flag and reloads, and this block then
-        // runs normally.
-        if (!window.__puzzle5Unauthorized) {
+        {  // (passcode gate removed 2026-09-10 - always runs)
 
         levels = [
             level1(),
@@ -1447,7 +1358,7 @@
             }
         });
 
-        } // end authorized-only Start block
+        } // end start block
     </script>
 
     <script>

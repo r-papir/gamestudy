@@ -5,13 +5,15 @@
    Link this AFTER each page's own <style> block so it wins any leftover
    conflicts. */
 
-/* The digit "4" - and only "4" - renders in VT323 wherever the 'Digit4'
-   family leads the font stack. Everything else falls through to the next
-   family. */
+/* The digit "4" - and ONLY "4" - renders in VT323 wherever the 'Digit4'
+   family leads the font stack (just the dashboard: the Level readout and the
+   puzzle dropdown). size-adjust makes that one glyph a couple px larger than
+   its neighbours; nothing else's font, weight, or size is touched. */
 @font-face {
     font-family: 'Digit4';
     src: url('vt323-latin.woff2') format('woff2');
     unicode-range: U+34;
+    size-adjust: 115%;   /* the "4" renders ~2px larger than its neighbours; tune here */
     font-display: swap;
 }
 
@@ -27,7 +29,7 @@
 
 body {
     box-sizing: border-box;
-    font-family: 'Digit4', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg);
     color: var(--ink);
     /* Sit the content near the top (instructions first, then the grid)
@@ -44,7 +46,7 @@ body {
 #skip-button,
 #download-button {
     padding: 12px 18px;
-    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Silkscreen', 'Courier New', monospace;
     font-size: 12px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -119,11 +121,6 @@ body {
     gap: 6px;
     font-size: 16px;
     font-weight: 700;
-}
-/* game5 toggles this on when the current level is 4 - bold Silkscreen "4"
-   is hard to read. */
-#dashboard .dash-field.plain {
-    font-weight: 400;
 }
 #dash-level {
     font-size: 20px;
@@ -214,7 +211,7 @@ body {
     top: 50%;
     right: 12px;                 /* OFF: thumb left, label right */
     transform: translateY(-50%);
-    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Silkscreen', 'Courier New', monospace;
     font-size: 9px;
     letter-spacing: 0.5px;
     color: #000;
@@ -271,10 +268,10 @@ body {
     border: 3px solid var(--ink);
     border-radius: 18px;
     box-shadow: 14px 16px 22px -6px rgba(28, 26, 23, 0.45);
-    font-family: 'Digit4', 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
 }
 .completion-card h2 {
-    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Silkscreen', 'Courier New', monospace;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--ink);
@@ -289,7 +286,7 @@ body {
     justify-content: center;
 }
 .card-btn {
-    font-family: 'Digit4', 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Silkscreen', 'Courier New', monospace;
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
