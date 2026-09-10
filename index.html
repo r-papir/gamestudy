@@ -35,7 +35,9 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 2rem 1rem;
+            /* Extra bottom padding nudges the centred content up slightly
+               without un-centering it. */
+            padding: 1rem 1rem 4rem;
         }
         .title-wrap {
             width: 100%;
@@ -53,7 +55,7 @@
             display: block;
             font-family: 'Silkscreen', 'Courier New', monospace;
             font-weight: 700;
-            font-size: clamp(1.4rem, 4vw, 2.56rem);
+            font-size: clamp(1.4rem, 4vw, 2.69rem);
             text-transform: uppercase;
             letter-spacing: 1px;
             color: var(--ink);
