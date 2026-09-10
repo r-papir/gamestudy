@@ -337,16 +337,13 @@
     <div id="dashboard">
         <a id="dash-home" href="index.html">Home</a>
         <span class="dash-sep"></span>
-        <label class="dash-field">
-            <span>Puzzle</span>
-            <select id="dash-puzzle" aria-label="Switch puzzle">
-                <option value="game.html">Puzzle 1</option>
-                <option value="game2new.html">Puzzle 2</option>
-                <option value="game3.html">Puzzle 3</option>
-                <option value="game4.html">Puzzle 4</option>
-                <option value="game5.html" selected>Puzzle 5</option>
-            </select>
-        </label>
+        <select id="dash-puzzle" aria-label="Switch puzzle">
+            <option value="game.html">Puzzle 1</option>
+            <option value="game2new.html">Puzzle 2</option>
+            <option value="game3.html">Puzzle 3</option>
+            <option value="game4.html">Puzzle 4</option>
+            <option value="game5.html" selected>Puzzle 5</option>
+        </select>
         <span class="dash-sep"></span>
         <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
         <span class="dash-sep"></span>
@@ -1484,18 +1481,27 @@
         // before navigating away.
         (function () {
             var select = document.getElementById('dash-puzzle');
+            var home = document.getElementById('dash-home');
             var overlay = document.getElementById('quit-overlay');
-            if (!select || !overlay) return;
+            if (!overlay) return;
             var CURRENT = 'game5.html';
             var pending = null;
 
-            select.addEventListener('change', function () {
-                var target = this.value;
-                this.value = CURRENT;                 // revert until confirmed
-                if (!target || target === CURRENT) return;
+            function askQuit(target) {
                 pending = target;
                 overlay.hidden = false;
                 requestAnimationFrame(function () { overlay.classList.add('visible'); });
+            }
+
+            if (select) select.addEventListener('change', function () {
+                var target = this.value;
+                this.value = CURRENT;                 // revert until confirmed
+                if (target && target !== CURRENT) askQuit(target);
+            });
+
+            if (home) home.addEventListener('click', function (e) {
+                e.preventDefault();
+                askQuit(home.getAttribute('href') || 'index.html');
             });
 
             document.getElementById('quit-confirm').addEventListener('click', function () {
