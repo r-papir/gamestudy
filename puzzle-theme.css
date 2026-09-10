@@ -55,6 +55,18 @@ body {
     box-shadow: 0 0 0 var(--ink);
 }
 
+/* Skip Level and the audio Start Recording button use the soft blurred
+   drop shadow from the homepage menu panel instead of the hard offset.
+   (Skip keeps its hover/active translate from the rule above.) */
+#skip-button,
+#skip-button:hover,
+.audio-recorder-btn {
+    box-shadow: 14px 16px 22px -6px rgba(28, 26, 23, 0.45);
+}
+#skip-button:active {
+    box-shadow: 8px 10px 14px -6px rgba(28, 26, 23, 0.45);
+}
+
 /* --- Floating dashboard (top-left) --- */
 #dashboard {
     position: fixed;

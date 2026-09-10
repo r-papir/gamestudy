@@ -89,9 +89,7 @@
 
         #grid {
             display: inline-grid;
-            /* grid-template-columns/rows are set inline by initGrid(), since
-               the framed size (10x10 or 12x12, per level) vs unframed (8x8)
-               is dynamic. */
+            /* grid-template-columns/rows are set inline by initGrid() (8x8). */
             gap: 2px;
             background-color: #e0e0e0;
             padding: 2px;
@@ -138,26 +136,27 @@
             text-align: right;
         }
 
-        /* OLD energy bar (2026-09-04..2026-09-05) - superseded by the
-           perimeter energy frame below, per the professor's suggestion. Kept
-           here, inactive, in case we want it back.
+        /* Energy bar - a rounded meter directly under the grid, spanning its
+           full width. Drains (fill width %) as energy is spent; hidden while
+           the energy constraint is off. Replaced the perimeter frame on
+           2026-09-10. */
         #energy-bar-track {
-            margin: 0 4% 12px;
-            height: 16px;
+            width: 100%;
+            height: 14px;
+            margin-top: 10px;
+            box-sizing: border-box;
             background-color: #e0e0e0;
-            border: 3px solid #1a1a1a;
+            border: 3px solid var(--ink);
             border-radius: 999px;
             overflow: hidden;
             display: none;
         }
-
         #energy-bar-fill {
             height: 100%;
             width: 100%;
-            background-color: #1a1a1a;
+            background-color: var(--primary);
             transition: width 0.15s ease-out;
         }
-        */
 
         .cell {
             width: 72px;
@@ -167,13 +166,8 @@
             background-color: #FFFFFF;
         }
 
-        /* Energy frame - a ring of cells around the 8x8 play area (not part of
-           the actual game grid), 1 or 2 cells thick per level. Each move
-           empties one frame cell, sweeping clockwise (outermost ring first,
-           then inward); the filled color matches the old energy bar's fill.
-           Only exists in the DOM while the energy constraint is enabled -
-           initGrid() omits it entirely when disabled, and the grid shrinks
-           back to just 8x8. */
+        /* --- Perimeter energy frame - DISABLED 2026-09-10, replaced by the
+           energy bar above. Kept for reference.
         .frame-cell {
             width: 72px;
             height: 72px;
@@ -181,6 +175,7 @@
             box-sizing: border-box;
             background-color: #1a1a1a;
         }
+        --- */
 
         /* Hide WebGazer camera elements during gameplay */
         #webgazerVideoFeed,
@@ -358,13 +353,10 @@
         Use the arrow keys to discover the controls, rules, and objective.
     </div>
     <div id="game-container">
-        <!-- OLD energy bar - superseded by the perimeter energy frame drawn
-             into #grid itself. Kept, inactive, in case we want it back.
-        <div id="energy-bar-track"><div id="energy-bar-fill"></div></div>
-        -->
         <div id="grid-wrapper">
             <div id="ripple-container"></div>
             <div id="grid"></div>
+            <div id="energy-bar-track"><div id="energy-bar-fill"></div></div>
         </div>
     </div>
     <button id="restart-button">Start Over</button>
@@ -770,15 +762,25 @@
         // Grid / rendering
         // ---------------------------------------------------------------
 
-        // Builds (or rebuilds) the #grid DOM. When the energy constraint is
-        // enabled, renders energyOuterSize x energyOuterSize: the frame ring
-        // (energyLayers cells thick) plus the inner GRID_SIZE x GRID_SIZE play
-        // area, each game cell keeping its usual id (`cell-x-y`, 1..GRID_SIZE)
-        // regardless of the frame. When disabled, renders just the
-        // GRID_SIZE x GRID_SIZE play area with no frame, shrinking back down.
+        // Builds (or rebuilds) the #grid DOM: a plain GRID_SIZE x GRID_SIZE
+        // play area. Energy is now shown by the bar under the grid, not a
+        // perimeter frame (see the disabled renderer below).
         function initGrid() {
             const gridElement = document.getElementById('grid');
             gridElement.innerHTML = '';
+            gridElement.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 72px)`;
+            gridElement.style.gridTemplateRows = `repeat(${GRID_SIZE}, 72px)`;
+            for (let y = 1; y <= GRID_SIZE; y++) {
+                for (let x = 1; x <= GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    gridElement.appendChild(cell);
+                }
+            }
+
+            /* --- Perimeter energy-frame renderer - DISABLED 2026-09-10,
+               replaced by the energy bar. Kept for reference.
             const showFrame = gameState.energyEnabled;
             const layers = gameState.energyLayers;
             const outerSize = gameState.energyOuterSize;
@@ -788,8 +790,6 @@
             for (let y = 1; y <= size; y++) {
                 for (let x = 1; x <= size; x++) {
                     const cell = document.createElement('div');
-                    // The frame is `layers` cells thick, so the play area sits
-                    // at outer coords (layers+1)..(outerSize-layers).
                     const isFrame = showFrame && (x <= layers || y <= layers || x > outerSize - layers || y > outerSize - layers);
                     if (isFrame) {
                         cell.className = 'frame-cell';
@@ -803,6 +803,7 @@
                     gridElement.appendChild(cell);
                 }
             }
+            --- */
         }
 
         function loadLevel(levelIndex) {
@@ -858,12 +859,12 @@
             instructionsElement.innerHTML = BLURB;
             instructionsElement.style.display = 'block';
 
-            // The previous level may have ended with the frame toggled off;
-            // rebuild the grid so a new level always starts framed.
+            // The previous level may have ended with energy toggled off;
+            // rebuild the grid and restore the energy bar for the new level.
             initGrid();
             renderGrid();
             updateEnergyToggleButton();
-            updateEnergyFrame();
+            updateEnergyBar();
 
             const gridElement = document.getElementById('grid');
             gridElement.classList.remove('fade-out');
@@ -922,10 +923,10 @@
             if (label) label.textContent = 'Energy: ' + (gameState.energyEnabled ? 'On' : 'Off');
         }
 
-        // OLD energy bar - superseded by the perimeter energy frame. Kept,
-        // inactive, in case we want it back (the #energy-bar-track/-fill
-        // elements it targets are commented out of the HTML/CSS too).
-        /*
+        // Energy bar - the rounded meter under the grid. Fill width tracks
+        // energyRemaining / energyMax; the whole bar is hidden while the
+        // energy constraint is off or the game is complete. No-op if the
+        // elements aren't in the DOM.
         function updateEnergyBar() {
             const track = document.getElementById('energy-bar-track');
             const fill = document.getElementById('energy-bar-fill');
@@ -935,14 +936,9 @@
             const pct = Math.max(0, Math.min(1, gameState.energyRemaining / gameState.energyMax)) * 100;
             fill.style.width = pct + '%';
         }
-        */
 
-        // Energy frame - the perimeter ring drawn by initGrid() when the
-        // energy constraint is enabled. No numbers or labels: cells just go
-        // from filled (#1a1a1a) to empty (#e0e0e0) as energy drains, in
-        // energyFrameCells order (outermost ring first, each clockwise from its
-        // top-left corner). A no-op while the frame doesn't exist in the DOM
-        // (constraint disabled).
+        /* --- Perimeter energy frame renderer - DISABLED 2026-09-10, replaced
+           by updateEnergyBar. Kept for reference.
         function updateEnergyFrame() {
             if (!gameState.energyEnabled) return;
             const drained = gameState.energyMax - gameState.energyRemaining;
@@ -952,6 +948,7 @@
                 cell.style.backgroundColor = i < drained ? '#e0e0e0' : '#1a1a1a';
             });
         }
+        --- */
 
         // ---------------------------------------------------------------
         // Interaction (keyboard only)
@@ -1021,7 +1018,7 @@
             evt.tokensAfter = gameState.tokens.map(tokenSnapshot);
 
             renderGrid();
-            updateEnergyFrame();
+            updateEnergyBar();
 
             if (allCollected) {
                 handleWin();
@@ -1093,7 +1090,7 @@
                     document.getElementById('skip-button').style.display = 'none';
                     document.getElementById('restart-button').style.display = 'block';
                     updateEnergyToggleButton();
-                    updateEnergyFrame();
+                    updateEnergyBar();
                     handleGameComplete();
                     showCompletionMessage('5');
                 }
@@ -1236,7 +1233,7 @@
             initGrid();   // frame appears/disappears - the grid DOM must be rebuilt
             renderGrid(); // repaint platform/tokens/ego into the rebuilt cells
             updateEnergyToggleButton();
-            updateEnergyFrame();
+            updateEnergyBar();
         });
 
         // Skip button - advance to the next level without solving it. Mirrors
@@ -1265,7 +1262,7 @@
                     document.getElementById('skip-button').style.display = 'none';
                     document.getElementById('restart-button').style.display = 'block';
                     updateEnergyToggleButton();
-                    updateEnergyFrame();
+                    updateEnergyBar();
                     handleGameComplete();
                     showCompletionMessage('5');
                 }
