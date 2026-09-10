@@ -488,7 +488,7 @@
             // every uncollected token steps one cell along a fixed loop on each
             // ego move.
             //
-            //   Token A - alwaysVisible (both modes). Loop from (3,2):
+            //   Token A - hidden unless the ego is on the platform. Loop from (3,2):
             //     (3,2) -> (3,3) -> (2,3) -> (2,2) -> repeat
             //   Token B - hidden unless the ego is on the platform; keeps
             //   shifting while hidden. Loop from (6,6):
@@ -505,7 +505,7 @@
                 tokens: [
                     {
                         start: { x: 3, y: 2 },
-                        alwaysVisible: true,
+                        alwaysVisible: false,
                         loop: [ { x: 3, y: 2 }, { x: 3, y: 3 }, { x: 2, y: 3 }, { x: 2, y: 2 } ]
                     },
                     {
@@ -528,7 +528,7 @@
             //   (2,6) -> (3,7) -> (4,6) -> (5,7) -> (4,6) -> (3,7) -> (2,6)
             //   -> (1,7) -> repeat
             //
-            // Token 2 - NOT hidden (alwaysVisible), magenta. Closed loop
+            // Token 2 - hidden, magenta. Closed loop
             // (counter-clockwise):
             //   (7,2) -> (6,2) -> (6,3) -> (7,3) -> repeat
             //
@@ -555,7 +555,7 @@
                     },
                     {
                         start: { x: 7, y: 2 },
-                        alwaysVisible: true,
+                        alwaysVisible: false,
                         loop: [ { x: 6, y: 3 }, { x: 7, y: 3 }, { x: 7, y: 2 }, { x: 6, y: 2 } ],
                         color: '#882255'  // magenta
                     },
