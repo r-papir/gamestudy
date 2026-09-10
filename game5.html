@@ -90,7 +90,7 @@
         #grid {
             display: inline-grid;
             /* grid-template-columns/rows are set inline by initGrid(), since
-               the framed (10x10) vs unframed (8x8) size is dynamic. */
+               the framed (12x12) vs unframed (8x8) size is dynamic. */
             gap: 2px;
             background-color: #e0e0e0;
             padding: 2px;
@@ -197,12 +197,13 @@
             background-color: #FFFFFF;
         }
 
-        /* Energy frame - a one-cell-wide ring of cells around the 8x8 play
-           area (not part of the actual game grid). Each move empties one
-           frame cell, sweeping clockwise from the top-left corner; the
-           filled color matches the old energy bar's fill. Only exists in the
-           DOM while the energy constraint is enabled - initGrid() omits it
-           entirely when disabled, and the grid shrinks back to just 8x8. */
+        /* Energy frame - a two-cell-wide ring of cells (two concentric layers)
+           around the 8x8 play area (not part of the actual game grid). Each
+           move empties one frame cell, sweeping clockwise from the top-left
+           corner (outer layer first, then inner); the filled color matches
+           the old energy bar's fill. Only exists in the DOM while the energy
+           constraint is enabled - initGrid() omits it entirely when disabled,
+           and the grid shrinks back to just 8x8. */
         .frame-cell {
             width: 90px;
             height: 90px;
@@ -422,17 +423,18 @@
         // it was caught, stops shifting, and shows a persistent "collected"
         // marker in both visibility modes.
         //
-        // Energy: a one-cell-wide frame ring is drawn around the 8x8 play
-        // area (not part of the actual game grid) whenever the energy
-        // constraint is enabled, making the whole rendered grid 10x10. Each
-        // move empties one frame cell, sweeping clockwise from the top-left
-        // corner; blocked presses don't count. Energy resets to full (frame
-        // fully refilled) each level. If it empties before every token is
-        // collected, the level restarts from scratch. A toggle button
-        // (top-left) can disable the constraint entirely - the frame
-        // disappears and the grid shrinks back to just 8x8, moves then cost
-        // no energy and never trigger a restart; it resets back to enabled
-        // (frame back on) every level.
+        // Energy: a two-cell-wide frame ring (two concentric layers) is drawn
+        // around the 8x8 play area (not part of the actual game grid) whenever
+        // the energy constraint is enabled, making the whole rendered grid
+        // 12x12. Each move empties one frame cell, sweeping clockwise from the
+        // top-left corner - the outer layer first, then the inner layer - so
+        // the two layers together give ~2x the moves of a single ring; blocked
+        // presses don't count. Energy resets to full (frame fully refilled)
+        // each level. If it empties before every token is collected, the level
+        // restarts from scratch. A toggle button (top-left) can disable the
+        // constraint entirely - the frame disappears and the grid shrinks back
+        // to just 8x8, moves then cost no energy and never trigger a restart;
+        // it resets back to enabled (frame back on) every level.
         //
         // Objective: collect every token. The level completes automatically
         // once every token is collected.
@@ -444,24 +446,34 @@
         // Coordinates are 1-based: columns and rows run 1..GRID_SIZE, (1,1) is the
         // top-left cell.
 
-        // Energy frame: a one-cell-wide ring around the 8x8 play area,
-        // making the whole rendered grid OUTER_SIZE x OUTER_SIZE while the
-        // energy constraint is enabled. The frame is not part of the actual
-        // game grid - it's drawn (in initGrid) and colored (in
+        // Energy frame: a two-cell-wide ring (two concentric layers) around the
+        // 8x8 play area, making the whole rendered grid OUTER_SIZE x OUTER_SIZE
+        // while the energy constraint is enabled. The frame is not part of the
+        // actual game grid - it's drawn (in initGrid) and colored (in
         // updateEnergyFrame) purely to represent energy, in outer (1-based,
         // 1..OUTER_SIZE) coordinates distinct from the game's own 1..GRID_SIZE.
-        const OUTER_SIZE = GRID_SIZE + 2;
+        const OUTER_SIZE = GRID_SIZE + 4;
 
-        // The frame's 36 cells in outer coordinates, clockwise starting at
-        // the top-left corner (1,1): across the top, down the right side,
+        // One rectangular ring of cells in outer coordinates, clockwise from
+        // its top-left corner (min,min): across the top, down the right side,
         // back across the bottom, up the left side.
-        function buildFramePerimeter(size) {
+        function buildRing(min, max) {
             const cells = [];
-            for (let x = 1; x <= size; x++) cells.push({ x: x, y: 1 });
-            for (let y = 2; y <= size; y++) cells.push({ x: size, y: y });
-            for (let x = size - 1; x >= 1; x--) cells.push({ x: x, y: size });
-            for (let y = size - 1; y >= 2; y--) cells.push({ x: 1, y: y });
+            for (let x = min; x <= max; x++) cells.push({ x: x, y: min });
+            for (let y = min + 1; y <= max; y++) cells.push({ x: max, y: y });
+            for (let x = max - 1; x >= min; x--) cells.push({ x: x, y: max });
+            for (let y = max - 1; y >= min + 1; y--) cells.push({ x: min, y: y });
             return cells;
+        }
+
+        // The frame's cells, drained in order: the outer layer (44 cells)
+        // clockwise from (1,1), then the inner layer (36 cells) clockwise from
+        // (2,2). Two layers ~= double the moves of a single ring.
+        function buildFramePerimeter(size) {
+            return [
+                ...buildRing(1, size),
+                ...buildRing(2, size - 1)
+            ];
         }
         const FRAME_CELLS = buildFramePerimeter(OUTER_SIZE);
 
@@ -754,9 +766,9 @@
         // ---------------------------------------------------------------
 
         // Builds (or rebuilds) the #grid DOM. When the energy constraint is
-        // enabled, renders OUTER_SIZE x OUTER_SIZE: the frame ring plus the
-        // inner GRID_SIZE x GRID_SIZE play area, each game cell keeping its
-        // usual id (`cell-x-y`, 1..GRID_SIZE) regardless of the frame. When
+        // enabled, renders OUTER_SIZE x OUTER_SIZE: the two-cell-wide frame ring
+        // plus the inner GRID_SIZE x GRID_SIZE play area, each game cell keeping
+        // its usual id (`cell-x-y`, 1..GRID_SIZE) regardless of the frame. When
         // disabled, renders just the GRID_SIZE x GRID_SIZE play area with no
         // frame, shrinking the whole grid back down.
         function initGrid() {
@@ -769,13 +781,15 @@
             for (let y = 1; y <= size; y++) {
                 for (let x = 1; x <= size; x++) {
                     const cell = document.createElement('div');
-                    const isFrame = showFrame && (x === 1 || x === OUTER_SIZE || y === 1 || y === OUTER_SIZE);
+                    // The frame is two cells thick, so the play area sits at
+                    // outer coords 3..OUTER_SIZE-2.
+                    const isFrame = showFrame && (x <= 2 || y <= 2 || x >= OUTER_SIZE - 1 || y >= OUTER_SIZE - 1);
                     if (isFrame) {
                         cell.className = 'frame-cell';
                         cell.id = `frame-cell-${x}-${y}`;
                     } else {
-                        const gx = showFrame ? x - 1 : x;
-                        const gy = showFrame ? y - 1 : y;
+                        const gx = showFrame ? x - 2 : x;
+                        const gy = showFrame ? y - 2 : y;
                         cell.className = 'cell';
                         cell.id = `cell-${gx}-${gy}`;
                     }
