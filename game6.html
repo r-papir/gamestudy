@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEP-Bench — Puzzle 6</title>
+    <link rel="icon" href="mascot.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            text-align: center;
+            position: relative;
+        }
+
+        #instructions {
+            margin-bottom: 20px;
+            font-size: 18px;
+            padding: 15px;
+            color: var(--ink);
+            border-radius: 8px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #instructions.fade-out {
+            opacity: 0;
+        }
+
+        #grid {
+            display: inline-grid;
+            grid-template-columns: repeat(6, 72px);
+            grid-template-rows: repeat(6, 72px);
+            gap: 2px;
+            background-color: #e0e0e0;
+            padding: 2px;
+            border: 3px solid #e0e0e0;
+            opacity: 1;
+            transition: opacity 0.8s ease-in-out;
+        }
+
+        #grid.fade-out {
+            opacity: 0;
+        }
+
+        .cell {
+            width: 72px;
+            height: 72px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            background-color: #FFFFFF;
+            transition: all 0.2s ease;
+        }
+
+        #ripple-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            border: 10px solid #32CD32;
+            opacity: 0;
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0;
+            }
+            10% {
+                width: 50px;
+                height: 50px;
+                opacity: 0.8;
+            }
+            100% {
+                width: 550px;
+                height: 550px;
+                opacity: 0;
+            }
+        }
+
+        #button-container {
+            display: none;
+        }
+
+        /* Appearance comes from puzzle-theme.css; position only. */
+        #restart-button, #skip-button {
+            position: fixed;
+            z-index: 1000;
+        }
+
+        /* Bottom-left, shown only once the game is complete. */
+        #restart-button {
+            left: 20px;
+            bottom: 20px;
+            display: none;
+        }
+
+        /* Bottom-right corner, shown while playing - needed to advance past
+           the empty placeholder levels (2, 3, 5), which have no ego cell and
+           so nothing for the arrow keys to do. */
+        #skip-button {
+            right: 20px;
+            bottom: 20px;
+            display: block;
+        }
+
+        .audio-recorder-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            text-align: right;
+        }
+
+        /* Hide WebGazer camera elements during gameplay */
+        #webgazerVideoFeed,
+        #webgazerVideoCanvas,
+        #webgazerFaceFeedbackBox,
+        #webgazerGazeDot {
+            display: none !important;
+        }
+
+        .completion-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            cursor: pointer;
+        }
+        .completion-overlay.visible { opacity: 1; }
+        .completion-card {
+            padding: 48px 56px;
+            text-align: center;
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .completion-overlay.visible .completion-card { transform: scale(1); }
+        .completion-card h2 {
+            margin: 0 0 12px;
+            font-size: 28px;
+        }
+        .completion-card p {
+            margin: 0;
+            font-size: 16px;
+        }
+        .confetti-piece {
+            position: fixed;
+            top: -10px;
+            width: 10px;
+            height: 14px;
+            z-index: 10000;
+            opacity: 1;
+            animation: confetti-fall linear forwards;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            85% { opacity: 1; }
+            100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+    <link rel="stylesheet" href="puzzle-theme.css">
+</head>
+<body>
+    <script>
+    // Verify calibration before allowing game play
+    (function() {
+        var calibrated = sessionStorage.getItem('webgazerCalibrationComplete') === 'true';
+        var skipped = sessionStorage.getItem('eyeTrackingSkipped') === 'true';
+        if (!calibrated && !skipped) {
+            var returnUrl = encodeURIComponent(window.location.pathname);
+            window.location.href = 'calibration.html?return=' + returnUrl;
+        }
+    })();
+    </script>
+
+    <div id="dashboard">
+        <div class="dash-row">
+            <a id="dash-home" href="index.html">Home</a>
+            <span class="dash-sep"></span>
+            <select id="dash-puzzle" aria-label="Switch puzzle">
+                <option value="game.html">Puzzle 1</option>
+                <option value="game2new.html">Puzzle 2</option>
+                <option value="game3.html">Puzzle 3</option>
+                <option value="game4.html">Puzzle 4</option>
+                <option value="game5.html">Puzzle 5</option>
+                <option value="game6.html" selected>Puzzle 6</option>
+            </select>
+            <span class="dash-sep"></span>
+            <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
+        </div>
+        <div class="dash-row">
+            <button id="download-button">Download Data</button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        There are no instructions for this game, intentionally.<br>Use the arrow keys and space bar to discover the controls, rules, and objective.
+    </div>
+    <div id="game-container">
+        <div id="ripple-container"></div>
+        <div id="grid"></div>
+    </div>
+    <button id="restart-button">Start Over</button>
+    <button id="skip-button">Skip Level</button>
+
+    <div id="quit-overlay" class="completion-overlay quit-overlay" hidden>
+        <div class="completion-card">
+            <h2>Quit puzzle?</h2>
+            <div class="card-actions">
+                <button type="button" class="card-btn" id="quit-confirm">Quit</button>
+                <button type="button" class="card-btn" id="quit-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="webgazer.js"></script>
+    <script src="audio-recorder.js"></script>
+    <script src="s3-uploader.js"></script>
+    <script>S3Uploader.setApiUrl('https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod');</script>
+    <script>
+        // Get or generate shared 4-digit session code (persists across all games in same session)
+        let sessionCode = sessionStorage.getItem('gameSessionCode');
+        if (!sessionCode) {
+            sessionCode = String(Math.floor(1000 + Math.random() * 9000));
+            sessionStorage.setItem('gameSessionCode', sessionCode);
+        }
+
+        // ===========================
+        // PUZZLE 6 - 6x6 grid, "latent obligation" magnet-drag puzzle
+        // ===========================
+        // Three kinds of pieces:
+        //   - ego   : the player's vehicle, moved one cell at a time with the
+        //             arrow keys (no diagonals, no wrap - the grid edge blocks).
+        //   - object: collectible. Captured Peg-Solitaire style - the ego must
+        //             be orthogonally adjacent to it and press the arrow key
+        //             that jumps IT (ego -> object -> the empty cell beyond, in
+        //             a straight line). If the landing cell is blocked or off
+        //             the grid, the jump (and the whole move) is illegal and
+        //             the ego does not move at all. A collected object is
+        //             removed from the board immediately.
+        //   - block : an obstacle. It can also be jumped over the same way,
+        //             but nothing is collected and the block does not move -
+        //             it just lets the ego land on the far side. Blocks never
+        //             move on their own.
+        //
+        // Space bar toggles the "magnet" state (on/off). This state is NEVER
+        // shown to the player anywhere in the UI - it is a "latent obligation":
+        // the only way to know whether it is on is to probe the environment
+        // (walk the ego next to a block and see whether it starts following).
+        // While magnet is ON and the ego is (or becomes) orthogonally adjacent
+        // to a block, that block instantly LATCHES onto the ego at whichever
+        // side it was adjacent on, and from then on it translates in lock-step
+        // with every ego move (dragged/pushed, never jumped or collected)
+        // until magnet is switched back OFF, which drops it wherever it is.
+        // Only one block can be attached at a time.
+        //
+        // Every ego move that actually succeeds (normal step, jump, or drag -
+        // a blocked press does not count) triggers exactly one deterministic
+        // reaction step from every remaining object cell (turn-based, as in
+        // Puzzle 5 / game5.html). Two movement algorithms are used, chosen per
+        // object (see MOVE_RANDOM / MOVE_EVADE below):
+        //   - 'random' (Level 1 only): ignores the ego entirely - picks a
+        //     uniformly random legal orthogonal step each turn.
+        //   - 'evade'  (Level 4 onward): a "chase state" that flees the ego.
+        //     GREEDY EVASION ALGORITHM: a one-ply greedy heuristic (steepest-
+        //     ascent hill-climbing restricted to a single step) - the object
+        //     considers staying put plus each legal orthogonal step, and picks
+        //     whichever candidate maximizes Manhattan distance to the ego,
+        //     breaking ties randomly. This full evaluation only runs while the
+        //     object is "at risk" (Manhattan distance to the ego <= 2, i.e. one
+        //     step from entering the ego's Von Neumann neighborhood); otherwise
+        //     it is in "scatter mode" and takes a uniformly random legal step,
+        //     same as 'random'.
+        // ===========================
+
+        const BLURB = 'There are no instructions for this game, intentionally.<br>Use the arrow keys and space bar to discover the controls, rules, and objective.';
+
+        const GRID_SIZE = 6;
+        // Coordinates are 1-based: columns and rows run 1..GRID_SIZE, (1,1) is
+        // the top-left cell. No wrap - off-grid is simply blocked.
+
+        const MOVE_FOR_KEY = {
+            ArrowUp:    { dx: 0, dy: -1 },
+            ArrowDown:  { dx: 0, dy: 1 },
+            ArrowLeft:  { dx: -1, dy: 0 },
+            ArrowRight: { dx: 1, dy: 0 }
+        };
+
+        const MOVE_RANDOM = 'random';
+        const MOVE_EVADE = 'evade';
+        const EVADE_RISK_DISTANCE = 2; // Manhattan distance at/under which an 'evade' object switches from scatter to greedy flight
+
+        // Game state
+        let levels = [];
+        let currentLevelIndex = 0;
+        let isTransitioning = false; // Prevent overlapping level transitions
+        let gameState = {
+            isPlayable: false,
+            hadObjects: false,       // did this level start with >=1 object cell (guards the win check on blank levels)
+            egoPos: { x: 1, y: 1 },
+            objects: [],             // [{ x, y, movement }, ...] - movement: 'random' | 'evade'
+            blocks: [],              // [{ x, y }, ...]
+            magnetOn: false,         // NEVER surfaced in the UI - latent by design
+            attached: null,          // { blockIndex, offset: {dx, dy} } while a block is latched, else null
+            moveCount: 0,
+            colors: {}
+        };
+
+        // Data collection
+        let sessionData = {
+            game: "Game 6",
+            legend: {
+                "E": "Empty - background cell",
+                "V": "Vehicle - the player's ego cell",
+                "O": "Object - an uncollected collectible cell",
+                "B": "Block - an obstacle cell; can be jumped over (nothing collected) or magnet-dragged, never collected itself"
+            },
+            coordinates: {
+                "grid": "6x6 grid",
+                "origin": "(1,1) is the top-left corner (1-based)",
+                "x": "column, increases left to right (1-6)",
+                "y": "row, increases top to bottom (1-6)",
+                "movement": "Arrow keys move the ego one cell (Up/Down/Left/Right), no diagonals, no wrap - off the grid edge is blocked and does not count as a move.",
+                "jump": "If the target cell holds an object or block, and the cell two steps further in the same direction is empty and in bounds, the ego jumps there in one move; an object jumped this way is collected and removed, a block jumped this way is untouched. If the landing cell is not free, the whole move is illegal and the ego does not move.",
+                "magnet": "Space bar toggles a hidden magnet state (never shown in the UI). While on, a block that is or becomes orthogonally adjacent to the ego latches to that side of the ego and is dragged/pushed in lock-step with every ego move until magnet is toggled off again. Only one block can be attached at a time.",
+                "reaction": "Every ego move that actually succeeds (step, jump, or drag) triggers exactly one deterministic step from each remaining object cell - see sessionData.objectAlgorithms for which algorithm each level's objects use."
+            },
+            sessionStart: new Date().toISOString(),
+            events: []
+        };
+
+        // ---------------------------------------------------------------
+        // Level definitions - each level is fully self-contained here
+        //
+        // Schema:
+        //   egoStart : { x, y }                 ego start cell (required)
+        //   objects  : [ { start:{x,y}, movement }, ... ]  (required; [] = none)
+        //              movement: 'random' (Level 1) or 'evade' (Level 4+)
+        //   blocks   : [ { x, y }, ... ]         (required; [] = none)
+        //   colors   : { ego, object, block }
+        // ---------------------------------------------------------------
+
+        function level1() {
+            // Tutorial level. One object cell, no blocks. The object moves
+            // with the 'random' algorithm - it ignores the ego completely, so
+            // there is nothing to evade here; the player just has to catch it
+            // with a Peg-Solitaire jump.
+            return {
+                id: 1,
+                name: "Level 1",
+                isPlayable: true,
+                egoStart: { x: 6, y: 1 },
+                objects: [
+                    { start: { x: 2, y: 4 }, movement: MOVE_RANDOM }
+                ],
+                blocks: [],
+                colors: {
+                    ego: '#332288',    // violet
+                    object: '#CC6677', // rose
+                    block: '#D3D3D3'   // grey (unused this level)
+                }
+            };
+        }
+
+        // Empty placeholder level - blank white 6x6 grid, no ego/object/block
+        // cells; arrow keys and space bar do nothing. Advance via Skip Level.
+        function blankLevel(id) {
+            return {
+                id: id,
+                name: "Level " + id,
+                isPlayable: false,
+                egoStart: { x: 1, y: 1 },
+                objects: [],
+                blocks: [],
+                colors: {
+                    ego: '#FFFFFF',
+                    object: '#FFFFFF',
+                    block: '#FFFFFF'
+                }
+            };
+        }
+
+        function level4() {
+            // First level with a block cell. The object cell now uses the
+            // 'evade' (greedy chase-state) algorithm instead of 'random'. The
+            // block at (5,4) sits beside the object at (4,3) - the player will
+            // likely need the magnet to drag it out of (or into) the way of a
+            // jump.
+            return {
+                id: 4,
+                name: "Level 4",
+                isPlayable: true,
+                egoStart: { x: 3, y: 4 },
+                objects: [
+                    { start: { x: 4, y: 3 }, movement: MOVE_EVADE }
+                ],
+                blocks: [
+                    { x: 5, y: 4 }
+                ],
+                colors: {
+                    ego: '#44AA99',    // teal
+                    object: '#DDCC77', // gold
+                    block: '#882255'   // magenta
+                }
+            };
+        }
+
+        // ---------------------------------------------------------------
+        // Grid / rendering
+        // ---------------------------------------------------------------
+
+        function initGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            for (let y = 1; y <= GRID_SIZE; y++) {
+                for (let x = 1; x <= GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        function loadLevel(levelIndex) {
+            if (levelIndex >= levels.length) {
+                return;
+            }
+
+            const dashLevel = document.getElementById('dash-level');
+            if (dashLevel) dashLevel.textContent = levelIndex + 1;
+
+            document.getElementById('ripple-container').innerHTML = '';
+
+            const level = levels[levelIndex];
+
+            gameState.isPlayable = level.isPlayable;
+            gameState.egoPos = { ...level.egoStart };
+            gameState.objects = level.objects.map(o => ({ x: o.start.x, y: o.start.y, movement: o.movement }));
+            gameState.blocks = level.blocks.map(b => ({ x: b.x, y: b.y }));
+            gameState.hadObjects = level.objects.length > 0;
+            gameState.magnetOn = false;
+            gameState.attached = null;
+            gameState.moveCount = 0;
+            gameState.colors = { ...level.colors };
+
+            const instructionsElement = document.getElementById('instructions');
+            instructionsElement.innerHTML = BLURB;
+            instructionsElement.style.display = 'block';
+
+            initGrid();
+            renderGrid();
+
+            const gridElement = document.getElementById('grid');
+            gridElement.classList.remove('fade-out');
+            instructionsElement.classList.remove('fade-out');
+        }
+
+        function renderGrid() {
+            for (let y = 1; y <= GRID_SIZE; y++) {
+                for (let x = 1; x <= GRID_SIZE; x++) {
+                    const cell = document.getElementById(`cell-${x}-${y}`);
+                    cell.style.backgroundColor = '#FFFFFF';
+                }
+            }
+
+            if (!gameState.isPlayable) return;
+
+            const c = gameState.colors;
+
+            for (const b of gameState.blocks) {
+                const cell = document.getElementById(`cell-${b.x}-${b.y}`);
+                if (cell) cell.style.backgroundColor = c.block;
+            }
+            for (const o of gameState.objects) {
+                const cell = document.getElementById(`cell-${o.x}-${o.y}`);
+                if (cell) cell.style.backgroundColor = c.object;
+            }
+            const e = gameState.egoPos;
+            document.getElementById(`cell-${e.x}-${e.y}`).style.backgroundColor = c.ego;
+        }
+
+        // ---------------------------------------------------------------
+        // Helpers
+        // ---------------------------------------------------------------
+
+        function inBounds(x, y) {
+            return x >= 1 && x <= GRID_SIZE && y >= 1 && y <= GRID_SIZE;
+        }
+
+        function objectIndexAt(x, y) {
+            return gameState.objects.findIndex(o => o.x === x && o.y === y);
+        }
+
+        function blockIndexAt(x, y) {
+            return gameState.blocks.findIndex(b => b.x === x && b.y === y);
+        }
+
+        function manhattan(a, b) {
+            return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        }
+
+        // ---------------------------------------------------------------
+        // Interaction (keyboard only)
+        // ---------------------------------------------------------------
+
+        document.addEventListener('keydown', (e) => {
+            if (isTransitioning) return;
+            if (currentLevelIndex >= levels.length) return;
+            if (!gameState.isPlayable) return;
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (e.repeat) return;
+                toggleMagnet();
+                return;
+            }
+
+            const delta = MOVE_FOR_KEY[e.key];
+            if (delta) {
+                e.preventDefault();
+                if (e.repeat) return;
+                attemptEgoMove(delta.dx, delta.dy, e.key);
+                return;
+            }
+
+            if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                logEvent('restart_level', {});
+                loadLevel(currentLevelIndex);
+            }
+        });
+
+        // Space bar: flip the (invisible) magnet state. Turning it on tries to
+        // latch onto a block the ego is already touching; turning it off drops
+        // whatever is currently attached right where it stands.
+        function toggleMagnet() {
+            gameState.magnetOn = !gameState.magnetOn;
+            logEvent('magnet_toggle', { magnetOn: gameState.magnetOn });
+            if (gameState.magnetOn) {
+                tryAttach();
+            } else {
+                gameState.attached = null;
+            }
+        }
+
+        // Latches the ego onto the first block found in its Von Neumann
+        // neighborhood (up/down/left/right, distance 1), recording the
+        // relative offset (block - ego) that must be preserved on every drag.
+        // No-op if already attached or nothing is adjacent.
+        function tryAttach() {
+            if (gameState.attached !== null) return;
+            const ego = gameState.egoPos;
+            for (let i = 0; i < gameState.blocks.length; i++) {
+                const b = gameState.blocks[i];
+                if (manhattan(ego, b) === 1) {
+                    gameState.attached = { blockIndex: i, offset: { dx: b.x - ego.x, dy: b.y - ego.y } };
+                    return;
+                }
+            }
+        }
+
+        function attemptEgoMove(dx, dy, key) {
+            if (gameState.magnetOn && gameState.attached !== null) {
+                dragMove(dx, dy, key);
+            } else {
+                soloMove(dx, dy, key);
+            }
+        }
+
+        // Ordinary ego movement (no block currently attached): one step into
+        // an empty cell, or a Peg-Solitaire jump over a single object/block
+        // cell in that direction if the far cell is empty and in bounds.
+        // Otherwise the whole move is illegal and nothing happens.
+        function soloMove(dx, dy, key) {
+            const ego = gameState.egoPos;
+            const tx = ego.x + dx, ty = ego.y + dy;
+
+            if (!inBounds(tx, ty)) {
+                logEvent('blocked', { key });
+                return;
+            }
+
+            const objIdx = objectIndexAt(tx, ty);
+            const blkIdx = blockIndexAt(tx, ty);
+
+            let landed = null;
+            let collectedIdx = -1;
+
+            if (objIdx === -1 && blkIdx === -1) {
+                landed = { x: tx, y: ty };
+            } else {
+                const lx = ego.x + 2 * dx, ly = ego.y + 2 * dy;
+                if (inBounds(lx, ly) && objectIndexAt(lx, ly) === -1 && blockIndexAt(lx, ly) === -1) {
+                    landed = { x: lx, y: ly };
+                    if (objIdx !== -1) collectedIdx = objIdx;
+                }
+            }
+
+            if (!landed) {
+                logEvent('blocked', { key });
+                return;
+            }
+
+            ego.x = landed.x;
+            ego.y = landed.y;
+
+            if (collectedIdx !== -1) {
+                gameState.objects.splice(collectedIdx, 1);
+                logEvent('collect', { key });
+            } else if (objIdx !== -1 || blkIdx !== -1) {
+                logEvent('jump', { key });
+            } else {
+                logEvent('move', { key });
+            }
+
+            if (gameState.magnetOn && gameState.attached === null) tryAttach();
+
+            afterEgoMoved();
+        }
+
+        // Dragging a latched block: ego and the attached block translate by
+        // the same [dx,dy], preserving their offset exactly. The whole move is
+        // illegal (nothing happens to either piece) unless both destinations
+        // are in bounds and unoccupied by anything other than the pair itself.
+        function dragMove(dx, dy, key) {
+            const ego = gameState.egoPos;
+            const att = gameState.attached;
+            const block = gameState.blocks[att.blockIndex];
+
+            const newEgo = { x: ego.x + dx, y: ego.y + dy };
+            const newBlock = { x: block.x + dx, y: block.y + dy };
+
+            if (!inBounds(newEgo.x, newEgo.y) || !inBounds(newBlock.x, newBlock.y)) {
+                logEvent('blocked', { key });
+                return;
+            }
+
+            const blocksAt = (x, y) => gameState.blocks.some((b, i) => i !== att.blockIndex && b.x === x && b.y === y);
+
+            if (objectIndexAt(newEgo.x, newEgo.y) !== -1 || blocksAt(newEgo.x, newEgo.y) ||
+                objectIndexAt(newBlock.x, newBlock.y) !== -1 || blocksAt(newBlock.x, newBlock.y)) {
+                logEvent('blocked', { key });
+                return;
+            }
+
+            ego.x = newEgo.x; ego.y = newEgo.y;
+            block.x = newBlock.x; block.y = newBlock.y;
+
+            logEvent('drag', { key });
+
+            afterEgoMoved();
+        }
+
+        function afterEgoMoved() {
+            gameState.moveCount++;
+            moveObjects();
+            renderGrid();
+            checkWin();
+        }
+
+        // Every remaining object takes exactly one deterministic step,
+        // processed one at a time so two objects can't swap onto each other's
+        // cell in the same turn. See the algorithm notes at the top of the
+        // file for 'random' vs 'evade'.
+        function moveObjects() {
+            for (const obj of gameState.objects) {
+                const candidates = [[0, -1], [0, 1], [-1, 0], [1, 0]].filter(([ddx, ddy]) => {
+                    const nx = obj.x + ddx, ny = obj.y + ddy;
+                    if (!inBounds(nx, ny)) return false;
+                    if (nx === gameState.egoPos.x && ny === gameState.egoPos.y) return false;
+                    if (blockIndexAt(nx, ny) !== -1) return false;
+                    if (gameState.objects.some(o => o !== obj && o.x === nx && o.y === ny)) return false;
+                    return true;
+                });
+
+                let choice = null; // null = stay in place
+
+                if (obj.movement === MOVE_EVADE && manhattan(obj, gameState.egoPos) <= EVADE_RISK_DISTANCE) {
+                    // GREEDY EVASION ALGORITHM: one-ply greedy heuristic
+                    // (steepest-ascent hill-climbing restricted to a single
+                    // step). Evaluates staying put plus every legal orthogonal
+                    // step and takes whichever maximizes Manhattan distance to
+                    // the ego, breaking ties uniformly at random.
+                    let bestDist = manhattan(obj, gameState.egoPos); // staying put
+                    let bestMoves = [null];
+                    for (const [ddx, ddy] of candidates) {
+                        const nd = manhattan({ x: obj.x + ddx, y: obj.y + ddy }, gameState.egoPos);
+                        if (nd > bestDist) {
+                            bestDist = nd;
+                            bestMoves = [[ddx, ddy]];
+                        } else if (nd === bestDist) {
+                            bestMoves.push([ddx, ddy]);
+                        }
+                    }
+                    choice = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+                } else if (candidates.length > 0) {
+                    // 'random' (Level 1), or 'evade' in scatter mode (not at
+                    // risk): a uniformly random legal step, ignoring the ego.
+                    choice = candidates[Math.floor(Math.random() * candidates.length)];
+                }
+
+                if (choice) {
+                    obj.x += choice[0];
+                    obj.y += choice[1];
+                }
+            }
+        }
+
+        function checkWin() {
+            if (gameState.isPlayable && gameState.hadObjects && gameState.objects.length === 0) {
+                handleWin();
+            }
+        }
+
+        function handleWin() {
+            isTransitioning = true;
+
+            createRipple();
+
+            const gridElement = document.getElementById('grid');
+            const instructionsElement = document.getElementById('instructions');
+            gridElement.classList.add('fade-out');
+            instructionsElement.classList.add('fade-out');
+
+            setTimeout(() => {
+                currentLevelIndex++;
+                isTransitioning = false;
+                if (currentLevelIndex < levels.length) {
+                    loadLevel(currentLevelIndex);
+                } else {
+                    gridElement.classList.remove('fade-out');
+                    instructionsElement.classList.remove('fade-out');
+                    document.getElementById('skip-button').style.display = 'none';
+                    document.getElementById('restart-button').style.display = 'block';
+                    handleGameComplete();
+                    showCompletionMessage('6');
+                }
+            }, 1000);
+        }
+
+        function showCompletionMessage(puzzleLabel) {
+            const overlay = document.createElement('div');
+            overlay.className = 'completion-overlay';
+            overlay.innerHTML = '<div class="completion-card">' +
+                '<h2>Congratulations!</h2>' +
+                '<p>You completed all levels of Puzzle ' + puzzleLabel + '.</p>' +
+                '</div>';
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+
+            const colors = ['#e53935','#1e88e5','#43a047','#fdd835','#8e24aa','#fb8c00','#00acc1'];
+            for (let i = 0; i < 80; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+                piece.style.animationDelay = Math.random() * 1.5 + 's';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.width = (6 + Math.random() * 8) + 'px';
+                piece.style.height = (8 + Math.random() * 10) + 'px';
+                document.body.appendChild(piece);
+            }
+
+            overlay.addEventListener('click', () => {
+                overlay.classList.remove('visible');
+                setTimeout(() => {
+                    overlay.remove();
+                    document.querySelectorAll('.confetti-piece').forEach(p => p.remove());
+                }, 500);
+            });
+        }
+
+        function createRipple() {
+            const container = document.getElementById('ripple-container');
+
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const ripple = document.createElement('div');
+                    ripple.className = 'ripple';
+                    ripple.style.animation = 'ripple 1s ease-out';
+                    container.appendChild(ripple);
+
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 1000);
+                }, i * 200);
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Logging
+        // ---------------------------------------------------------------
+
+        function generateGameStateMatrix() {
+            // matrix is a plain 0-based array; coordinates are 1-based, so
+            // index with -1. 'E' empty, 'B' block, 'O' object, 'V' ego. Ego
+            // is written last so it wins a shared cell (mid-jump snapshots).
+            const matrix = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('E'));
+            if (gameState.isPlayable) {
+                for (const b of gameState.blocks) matrix[b.y - 1][b.x - 1] = 'B';
+                for (const o of gameState.objects) matrix[o.y - 1][o.x - 1] = 'O';
+                matrix[gameState.egoPos.y - 1][gameState.egoPos.x - 1] = 'V';
+            }
+            return matrix;
+        }
+
+        function currentLevelId() {
+            const lvl = levels[currentLevelIndex];
+            return lvl ? lvl.id : currentLevelIndex;
+        }
+
+        function logEvent(outcome, detail) {
+            // outcome: 'move' | 'jump' | 'collect' | 'drag' | 'blocked' |
+            //          'magnet_toggle' | 'win' | 'skip_level' | 'restart_level'
+            // detail.magnetOn is only present for 'magnet_toggle' events - this
+            // is the one place the true magnet state is ever recorded; it is
+            // never rendered in the UI.
+            detail = detail || {};
+            sessionData.events.push({
+                timestamp: new Date().toISOString(),
+                level: currentLevelId(),
+                key: detail.key || null,
+                outcome: outcome,
+                magnetOn: (detail.magnetOn != null) ? detail.magnetOn : gameState.magnetOn,
+                attached: gameState.attached ? { ...gameState.attached } : null,
+                moveCountBefore: gameState.moveCount,
+                egoPosBefore: { ...gameState.egoPos },
+                objectsBefore: gameState.objects.map(o => ({ x: o.x, y: o.y, movement: o.movement })),
+                blocksBefore: gameState.blocks.map(b => ({ ...b })),
+                gameStateBefore: generateGameStateMatrix()
+            });
+        }
+
+        // ---------------------------------------------------------------
+        // Buttons
+        // ---------------------------------------------------------------
+
+        document.getElementById('restart-button').addEventListener('click', () => {
+            currentLevelIndex = 0;
+            isTransitioning = false;
+            document.getElementById('restart-button').style.display = 'none';
+            document.getElementById('skip-button').style.display = 'block';
+            loadLevel(currentLevelIndex);
+        });
+
+        // Skip button - advance to the next level without solving it. Needed
+        // for the empty placeholder levels (2, 3, 5), which have no ego cell
+        // for the arrow keys to move. Mirrors the win transition (same fade +
+        // timing) but logs 'skip_level' and skips the ripple.
+        document.getElementById('skip-button').addEventListener('click', () => {
+            if (isTransitioning) return;
+            if (currentLevelIndex >= levels.length) return;
+
+            logEvent('skip_level', {});
+            isTransitioning = true;
+
+            const gridElement = document.getElementById('grid');
+            const instructionsElement = document.getElementById('instructions');
+            gridElement.classList.add('fade-out');
+            instructionsElement.classList.add('fade-out');
+
+            setTimeout(() => {
+                currentLevelIndex++;
+                isTransitioning = false;
+                if (currentLevelIndex < levels.length) {
+                    loadLevel(currentLevelIndex);
+                } else {
+                    gridElement.classList.remove('fade-out');
+                    instructionsElement.classList.remove('fade-out');
+                    document.getElementById('skip-button').style.display = 'none';
+                    document.getElementById('restart-button').style.display = 'block';
+                    handleGameComplete();
+                    showCompletionMessage('6');
+                }
+            }, 1000);
+        });
+
+        document.getElementById('download-button').addEventListener('click', () => {
+            const participantId = AudioRecorder.promptParticipantId();
+            if (participantId === null) return;
+
+            sessionData.sessionEnd = new Date().toISOString();
+
+            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+                ? AudioRecorder.getTranscription()
+                : [];
+
+            let dataStr = JSON.stringify(sessionData, null, 2);
+
+            // Post-process to compress gameStateBefore arrays into compact rows
+            dataStr = dataStr.replace(
+                /"gameStateBefore":\s*\[\s*\[\s*("[A-Z0-9]",?\s*)+\]\s*(,\s*\[\s*("[A-Z0-9]",?\s*)+\]\s*)*\]/g,
+                (match) => {
+                    const cells = match.match(/"[A-Z0-9]"/g);
+                    if (!cells) return match;
+
+                    const rows = [];
+                    for (let i = 0; i < cells.length; i += GRID_SIZE) {
+                        rows.push('[' + cells.slice(i, i + GRID_SIZE).join(',') + ']');
+                    }
+
+                    return '"gameStateBefore": [\n        ' + rows.join(',\n        ') + '\n      ]';
+                }
+            );
+
+            const dateStr = AudioRecorder.formatDateMMDDYYYY();
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${participantId}_g6_gamestate_${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
+                AudioRecorder.exportRecording(participantId, 'g6');
+            }
+        });
+
+        // ---------------------------------------------------------------
+        // S3 upload
+        // ---------------------------------------------------------------
+
+        function showUploadStatus(message, type) {
+            let statusEl = document.getElementById('upload-status');
+            if (!statusEl) {
+                statusEl = document.createElement('div');
+                statusEl.id = 'upload-status';
+                statusEl.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #333; color: white; border-radius: 8px; z-index: 1000; font-family: sans-serif; font-size: 14px; transition: opacity 0.3s;';
+                document.body.appendChild(statusEl);
+            }
+            statusEl.textContent = message;
+            statusEl.style.background = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#1565c0';
+        }
+
+        async function handleGameComplete() {
+            sessionData.sessionEnd = new Date().toISOString();
+            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+                ? AudioRecorder.getTranscription()
+                : [];
+
+            const recorderState = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getState)
+                ? AudioRecorder.getState()
+                : { gazeData: [], audioChunks: [] };
+
+            const eyeTrackingData = {
+                game: sessionData.game,
+                dataType: 'eye-tracking',
+                sessionStart: sessionData.sessionStart,
+                sessionEnd: sessionData.sessionEnd,
+                gaze: recorderState.gazeData || []
+            };
+
+            if (typeof S3Uploader === 'undefined' || !S3Uploader.getApiUrl()) {
+                console.log('S3Uploader not configured. Skipping upload.');
+                return;
+            }
+
+            showUploadStatus('Uploading session data...', 'uploading');
+
+            const result = await S3Uploader.upload(
+                sessionCode,
+                sessionData.game,
+                sessionData,
+                eyeTrackingData,
+                recorderState.audioChunks,
+                (status) => showUploadStatus(status, 'uploading')
+            );
+
+            if (result.success) {
+                showUploadStatus('Data uploaded successfully!', 'success');
+                setTimeout(() => {
+                    const statusEl = document.getElementById('upload-status');
+                    if (statusEl) statusEl.style.opacity = '0';
+                }, 3000);
+            } else {
+                showUploadStatus('Upload failed. Use Download button as backup.', 'error');
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Start
+        // ---------------------------------------------------------------
+
+        levels = [
+            level1(),
+            blankLevel(2),
+            blankLevel(3),
+            level4(),
+            blankLevel(5)
+        ];
+
+        // Per-level object movement algorithms, for the data.
+        sessionData.objectAlgorithms = levels.map(level => ({
+            level: level.id,
+            playable: level.isPlayable,
+            objects: level.objects.map(o => ({ start: { ...o.start }, movement: o.movement })),
+            blocks: level.blocks.map(b => ({ ...b }))
+        }));
+
+        initGrid();
+        loadLevel(0);
+
+        // Initialize audio recorder
+        AudioRecorder.init({
+            gamePrefix: 'puzzle-game6',
+            gameName: 'Game 6',
+            getGameState: function() {
+                return {
+                    level: currentLevelId(),
+                    egoPos: { ...gameState.egoPos },
+                    objects: gameState.objects.map(o => ({ x: o.x, y: o.y, movement: o.movement })),
+                    blocks: gameState.blocks.map(b => ({ ...b })),
+                    magnetOn: gameState.magnetOn,
+                    attached: gameState.attached ? { ...gameState.attached } : null,
+                    moveCount: gameState.moveCount,
+                    isPlayable: gameState.isPlayable,
+                    gameStateMatrix: generateGameStateMatrix()
+                };
+            },
+            screenToGrid: function(screenX, screenY) {
+                const grid = document.getElementById('grid');
+                const rect = grid.getBoundingClientRect();
+
+                if (screenX < rect.left || screenX > rect.right ||
+                    screenY < rect.top || screenY > rect.bottom) {
+                    return null;
+                }
+
+                const cellWidth = rect.width / GRID_SIZE;
+                const cellHeight = rect.height / GRID_SIZE;
+                const gridX = Math.floor((screenX - rect.left) / cellWidth) + 1;
+                const gridY = Math.floor((screenY - rect.top) / cellHeight) + 1;
+
+                return { x: Math.min(gridX, GRID_SIZE), y: Math.min(gridY, GRID_SIZE) };
+            },
+            insertBeforeSelector: '#dashboard',
+            onRecordingStart: () => {
+                S3Uploader.startBackups(sessionCode, 'Game 6', () => AudioRecorder.getState().audioChunks);
+            },
+            onRecordingStop: () => {
+                S3Uploader.stopBackups();
+            }
+        });
+    </script>
+
+    <script>
+        // Dashboard puzzle switcher - confirm with a "Quit puzzle?" dialog
+        // before navigating away (Home included).
+        (function () {
+            var select = document.getElementById('dash-puzzle');
+            var home = document.getElementById('dash-home');
+            var overlay = document.getElementById('quit-overlay');
+            if (!overlay) return;
+            var CURRENT = 'game6.html';
+            var pending = null;
+
+            function askQuit(target) {
+                pending = target;
+                overlay.hidden = false;
+                requestAnimationFrame(function () { overlay.classList.add('visible'); });
+            }
+
+            if (select) select.addEventListener('change', function () {
+                var target = this.value;
+                this.value = CURRENT;
+                if (target && target !== CURRENT) askQuit(target);
+            });
+
+            if (home) home.addEventListener('click', function (e) {
+                e.preventDefault();
+                askQuit(home.getAttribute('href') || 'index.html');
+            });
+
+            document.getElementById('quit-confirm').addEventListener('click', function () {
+                if (pending) window.location.href = pending;
+            });
+            document.getElementById('quit-cancel').addEventListener('click', function () {
+                overlay.classList.remove('visible');
+                setTimeout(function () { overlay.hidden = true; }, 400);
+                pending = null;
+            });
+        })();
+    </script>
+</body>
+</html>
