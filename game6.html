@@ -301,10 +301,6 @@
         //     step from entering the ego's Von Neumann neighborhood); otherwise
         //     it is in "scatter mode" and takes a uniformly random legal step,
         //     same as 'random'.
-        // Neither algorithm's "legal step" filter considers block cells at
-        // all - blocks are invisible to object pathing, so an object may
-        // freely move onto (and share a cell with) one. Only the ego cell and
-        // other object cells are obstacles for this purpose.
         // ===========================
 
         const BLURB = 'There are no instructions for this game, intentionally.<br>Use the arrow keys and space bar to discover the controls, rules, and objective.';
@@ -696,18 +692,14 @@
         // Every remaining object takes exactly one deterministic step,
         // processed one at a time so two objects can't swap onto each other's
         // cell in the same turn. See the algorithm notes at the top of the
-        // file for 'random' vs 'evade'. Neither algorithm considers block
-        // cells at all - a block is invisible to the object's pathing, so an
-        // object may freely step onto (and share a cell with) a block. The
-        // ego's jump/collect logic already handles that overlap correctly:
-        // jumping over a shared cell collects the object and leaves the block
-        // in place.
+        // file for 'random' vs 'evade'.
         function moveObjects() {
             for (const obj of gameState.objects) {
                 const candidates = [[0, -1], [0, 1], [-1, 0], [1, 0]].filter(([ddx, ddy]) => {
                     const nx = obj.x + ddx, ny = obj.y + ddy;
                     if (!inBounds(nx, ny)) return false;
                     if (nx === gameState.egoPos.x && ny === gameState.egoPos.y) return false;
+                    if (blockIndexAt(nx, ny) !== -1) return false;
                     if (gameState.objects.some(o => o !== obj && o.x === nx && o.y === ny)) return false;
                     return true;
                 });
