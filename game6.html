@@ -287,20 +287,35 @@
         // Every ego move that actually succeeds (normal step, jump, or drag -
         // a blocked press does not count) triggers exactly one deterministic
         // reaction step from every remaining object cell (turn-based, as in
-        // Puzzle 5 / game5.html). Two movement algorithms are used, chosen per
-        // object (see MOVE_RANDOM / MOVE_EVADE below):
-        //   - 'random' (Level 1 only): ignores the ego entirely - picks a
-        //     uniformly random legal orthogonal step each turn.
+        // Puzzle 5 / game5.html). Nothing in object movement is random - every
+        // choice, including every tie, is resolved by a single fixed direction
+        // priority, DIR_PRIORITY (Up > Down > Left > Right; staying put is the
+        // last resort). Two movement types are used, chosen per object (see
+        // MOVE_RANDOM / MOVE_EVADE below):
+        //   - 'random' (Level 1 only): ignores the ego entirely - takes the
+        //     highest-priority legal orthogonal step each turn. (The name is
+        //     legacy from an earlier random-walk version; it is fully
+        //     deterministic now, like everything else here.)
         //   - 'evade'  (Level 4 onward): a "chase state" that flees the ego.
         //     GREEDY EVASION ALGORITHM: a one-ply greedy heuristic (steepest-
         //     ascent hill-climbing restricted to a single step) - the object
         //     considers staying put plus each legal orthogonal step, and picks
         //     whichever candidate maximizes Manhattan distance to the ego,
-        //     breaking ties randomly. This full evaluation only runs while the
-        //     object is "at risk" (Manhattan distance to the ego <= 2, i.e. one
-        //     step from entering the ego's Von Neumann neighborhood); otherwise
-        //     it is in "scatter mode" and takes a uniformly random legal step,
-        //     same as 'random'.
+        //     breaking any tie via DIR_PRIORITY. This full evaluation only
+        //     runs while the object is "at risk" (Manhattan distance to the
+        //     ego <= 2, i.e. one step from entering the ego's Von Neumann
+        //     neighborhood); otherwise it is in "scatter mode" and takes the
+        //     highest-priority legal step, same as 'random'.
+        //
+        //     NO-BACKWARD-ESCAPE RULE: while the object is orthogonally
+        //     adjacent to the ego (distance exactly 1), it is additionally
+        //     forbidden from continuing straight past itself, away from the
+        //     ego, on the ego's own row/column. That exact cell is always
+        //     where a jump would need to land, so without this rule the
+        //     object could always flee into the one cell a capture requires,
+        //     making every capture structurally impossible (verified by
+        //     exhaustive search before this rule was added - see git history).
+        //     It may still flee to either of the two perpendicular cells.
         // ===========================
 
         const BLURB = 'There are no instructions for this game, intentionally.<br>Use the arrow keys and space bar to discover the controls, rules, and objective.';
@@ -319,6 +334,22 @@
         const MOVE_RANDOM = 'random';
         const MOVE_EVADE = 'evade';
         const EVADE_RISK_DISTANCE = 2; // Manhattan distance at/under which an 'evade' object switches from scatter to greedy flight
+
+        // Fixed direction priority (Up > Down > Left > Right) used to resolve
+        // every choice and tie in object movement. There is no Math.random()
+        // anywhere in object movement - this is the only tie-break rule.
+        const DIR_PRIORITY = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+        // Picks the highest-priority move from a list of [dx,dy] candidates
+        // (which may include `null` for "stay"). Returns null only if `null`
+        // was the sole entry in `moves`.
+        function pickByPriority(moves) {
+            for (const [pdx, pdy] of DIR_PRIORITY) {
+                const match = moves.find(m => m && m[0] === pdx && m[1] === pdy);
+                if (match) return match;
+            }
+            return null;
+        }
 
         // Game state
         let levels = [];
@@ -695,7 +726,7 @@
         // file for 'random' vs 'evade'.
         function moveObjects() {
             for (const obj of gameState.objects) {
-                const candidates = [[0, -1], [0, 1], [-1, 0], [1, 0]].filter(([ddx, ddy]) => {
+                let candidates = [[0, -1], [0, 1], [-1, 0], [1, 0]].filter(([ddx, ddy]) => {
                     const nx = obj.x + ddx, ny = obj.y + ddy;
                     if (!inBounds(nx, ny)) return false;
                     if (nx === gameState.egoPos.x && ny === gameState.egoPos.y) return false;
@@ -707,11 +738,23 @@
                 let choice = null; // null = stay in place
 
                 if (obj.movement === MOVE_EVADE && manhattan(obj, gameState.egoPos) <= EVADE_RISK_DISTANCE) {
+                    // NO-BACKWARD-ESCAPE RULE (see the file-header comment for
+                    // why): while orthogonally adjacent to the ego, drop the
+                    // one candidate that continues straight past the object,
+                    // away from the ego, on the ego's own row/column - that is
+                    // always exactly the cell a capturing jump needs to land
+                    // on. The two perpendicular candidates, if legal, remain.
+                    if (manhattan(obj, gameState.egoPos) === 1) {
+                        const awayDx = Math.sign(obj.x - gameState.egoPos.x);
+                        const awayDy = Math.sign(obj.y - gameState.egoPos.y);
+                        candidates = candidates.filter(([ddx, ddy]) => !(ddx === awayDx && ddy === awayDy));
+                    }
+
                     // GREEDY EVASION ALGORITHM: one-ply greedy heuristic
                     // (steepest-ascent hill-climbing restricted to a single
-                    // step). Evaluates staying put plus every legal orthogonal
-                    // step and takes whichever maximizes Manhattan distance to
-                    // the ego, breaking ties uniformly at random.
+                    // step). Evaluates staying put plus every remaining legal
+                    // orthogonal step and takes whichever maximizes Manhattan
+                    // distance to the ego, breaking any tie via DIR_PRIORITY.
                     let bestDist = manhattan(obj, gameState.egoPos); // staying put
                     let bestMoves = [null];
                     for (const [ddx, ddy] of candidates) {
@@ -723,11 +766,11 @@
                             bestMoves.push([ddx, ddy]);
                         }
                     }
-                    choice = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+                    choice = pickByPriority(bestMoves);
                 } else if (candidates.length > 0) {
                     // 'random' (Level 1), or 'evade' in scatter mode (not at
-                    // risk): a uniformly random legal step, ignoring the ego.
-                    choice = candidates[Math.floor(Math.random() * candidates.length)];
+                    // risk): the highest-priority legal step, ignoring the ego.
+                    choice = pickByPriority(candidates);
                 }
 
                 if (choice) {
