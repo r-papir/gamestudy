@@ -122,7 +122,7 @@
         }
 
         /* Bottom-right corner, shown while playing - needed to advance past
-           the empty placeholder levels (2, 3, 5), which have no ego cell and
+           the empty placeholder levels (3, 5), which have no ego cell and
            so nothing for the arrow keys to do. */
         #skip-button {
             right: 20px;
@@ -295,7 +295,7 @@
         // priority, DIR_PRIORITY (Up > Down > Left > Right; staying put is the
         // last resort). Three movement types exist, chosen per object (see
         // MOVE_CYCLE / MOVE_RANDOM / MOVE_EVADE below):
-        //   - 'cycle'  (Level 1 only): ignores the ego entirely - follows a
+        //   - 'cycle'  (Levels 1-2): ignores the ego entirely - follows a
         //     fixed, scripted loop of cells (the object's `path`), advancing
         //     exactly one cell along the loop per ego move and wrapping from
         //     the last cell back to the first. If the next cell on the loop
@@ -406,10 +406,12 @@
         // Schema:
         //   egoStart : { x, y }                 ego start cell (required)
         //   objects  : [ { start:{x,y}, movement, path? }, ... ]  (required; [] = none)
-        //              movement: 'cycle' (Level 1), 'random' (unused) or 'evade' (Level 4+)
+        //              movement: 'cycle' (Levels 1-2), 'random' (unused) or 'evade' (Level 4+)
         //              path: [ {x,y}, ... ] - required for 'cycle' only; the loop the
         //                    object walks, in order. `start` must be one of its cells.
-        //   blocks   : [ { x, y }, ... ]         (required; [] = none)
+        //   blocks   : [ { x, y, color? }, ... ] (required; [] = none)
+        //              color: optional per-block fill; falls back to colors.block.
+        //                     The color travels with the block when it is dragged.
         //   colors   : { ego, object, block }
         // ---------------------------------------------------------------
 
@@ -442,6 +444,49 @@
                     ego: '#332288',    // violet
                     object: '#CC6677', // rose
                     block: '#D3D3D3'   // grey (unused this level)
+                }
+            };
+        }
+
+        function level2() {
+            // Same mechanics as Level 1 ('cycle' object, ignores the ego), but
+            // the object is fenced into the two-cell pocket (4,3)/(4,4) by a
+            // ring of ten block cells, so the player has to discover the
+            // magnet and drag a block out of the ring before a jump is
+            // possible. The object just bounces between the two pocket cells:
+            //
+            //   (4,4) -> (4,3) -> (4,4) -> ...
+            //
+            // Every block has its own color (palette shared with game3.html)
+            // so the player can tell which block they have moved.
+            return {
+                id: 2,
+                name: "Level 2",
+                isPlayable: true,
+                egoStart: { x: 1, y: 6 },
+                objects: [
+                    {
+                        start: { x: 4, y: 4 },
+                        movement: MOVE_CYCLE,
+                        path: [ { x: 4, y: 4 }, { x: 4, y: 3 } ]
+                    }
+                ],
+                blocks: [
+                    { x: 3, y: 2, color: '#44AA99' }, // teal
+                    { x: 3, y: 3, color: '#DDCC77' }, // gold
+                    { x: 3, y: 4, color: '#ff9b4f' }, // orange
+                    { x: 3, y: 5, color: '#BBCC33' }, // olive
+                    { x: 4, y: 2, color: '#ADD8E6' }, // light blue
+                    { x: 4, y: 5, color: '#882255' }, // wine
+                    { x: 5, y: 2, color: '#33FF66' }, // green
+                    { x: 5, y: 3, color: '#00CCFF' }, // cyan
+                    { x: 5, y: 4, color: '#D3D3D3' }, // grey
+                    { x: 5, y: 5, color: '#88CCEE' }  // sky
+                ],
+                colors: {
+                    ego: '#332288',    // violet (as Level 1)
+                    object: '#CC6677', // rose   (as Level 1)
+                    block: '#D3D3D3'   // fallback only - every block above sets its own color
                 }
             };
         }
@@ -529,7 +574,7 @@
                 }
                 return obj;
             });
-            gameState.blocks = level.blocks.map(b => ({ x: b.x, y: b.y }));
+            gameState.blocks = level.blocks.map(b => (b.color ? { x: b.x, y: b.y, color: b.color } : { x: b.x, y: b.y }));
             gameState.hadObjects = level.objects.length > 0;
             gameState.magnetOn = false;
             gameState.attached = null;
@@ -562,7 +607,7 @@
 
             for (const b of gameState.blocks) {
                 const cell = document.getElementById(`cell-${b.x}-${b.y}`);
-                if (cell) cell.style.backgroundColor = c.block;
+                if (cell) cell.style.backgroundColor = b.color || c.block;
             }
             for (const o of gameState.objects) {
                 const cell = document.getElementById(`cell-${o.x}-${o.y}`);
@@ -969,7 +1014,7 @@
         });
 
         // Skip button - advance to the next level without solving it. Needed
-        // for the empty placeholder levels (2, 3, 5), which have no ego cell
+        // for the empty placeholder levels (3, 5), which have no ego cell
         // for the arrow keys to move. Mirrors the win transition (same fade +
         // timing) but logs 'skip_level' and skips the ripple.
         document.getElementById('skip-button').addEventListener('click', () => {
@@ -1119,7 +1164,7 @@
 
         levels = [
             level1(),
-            blankLevel(2),
+            level2(),
             blankLevel(3),
             level4(),
             blankLevel(5)
