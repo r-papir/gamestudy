@@ -157,13 +157,14 @@
             box-sizing: border-box;
         }
 
-        /* Hide WebGazer camera elements during gameplay */
+        /* EYE TRACKING DISABLED (2026-09-16): WebGazer camera-element hiding rules.
         #webgazerVideoFeed,
         #webgazerVideoCanvas,
         #webgazerFaceFeedbackBox,
         #webgazerGazeDot {
             display: none !important;
         }
+        */
 
         .completion-overlay {
             position: fixed;
@@ -210,6 +211,7 @@
     <link rel="stylesheet" href="puzzle-theme.css">
 </head>
 <body>
+    <!-- EYE TRACKING DISABLED (2026-09-16): pre-game calibration gate (redirected to calibration.html).
     <script>
     // Verify calibration before allowing game play
     (function() {
@@ -221,6 +223,7 @@
         }
     })();
     </script>
+    -->
 
     <div id="dashboard">
         <div class="dash-row">
@@ -260,7 +263,7 @@
         </div>
     </div>
 
-    <script src="webgazer.js"></script>
+    <!-- EYE TRACKING DISABLED (2026-09-16): <script src="webgazer.js"></script> -->
     <script src="audio-recorder.js"></script>
     <script src="s3-uploader.js"></script>
     <script>S3Uploader.setApiUrl('https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod');</script>
@@ -763,10 +766,12 @@
             // Add session end time
             sessionData.sessionEnd = new Date().toISOString();
 
-            // Include transcription data from audio recorder (with safety check)
-            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
-                ? AudioRecorder.getTranscription()
-                : [];
+            // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): transcription is no longer collected; key kept as [] so the log schema is unchanged.
+            // // Include transcription data from audio recorder (with safety check)
+            // sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+            //     ? AudioRecorder.getTranscription()
+            //     : [];
+            sessionData.transcription = [];
 
             // Convert to JSON with standard formatting first
             let dataStr = JSON.stringify(sessionData, null, 2);
@@ -803,10 +808,11 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Export eye-tracking and audio files
-            if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
-                AudioRecorder.exportRecording(participantId, 'gA');
-            }
+            // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16): separate eye-tracking + audio downloads.
+            // // Export eye-tracking and audio files
+            // if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
+            //     AudioRecorder.exportRecording(participantId, 'gA');
+            // }
         });
 
         // S3 Upload Functions
@@ -825,22 +831,25 @@
         async function handleGameComplete() {
             // Prepare session data
             sessionData.sessionEnd = new Date().toISOString();
-            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
-                ? AudioRecorder.getTranscription()
-                : [];
+            // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): transcription is no longer collected; key kept as [] so the log schema is unchanged.
+            // sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+            //     ? AudioRecorder.getTranscription()
+            //     : [];
+            sessionData.transcription = [];
 
-            // Get eye tracking and audio data from AudioRecorder
-            const recorderState = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getState)
-                ? AudioRecorder.getState()
-                : { gazeData: [], audioChunks: [] };
+            // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16): no gaze or audio data is gathered for upload.
+            // // Get eye tracking and audio data from AudioRecorder
+            // const recorderState = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getState)
+            //     ? AudioRecorder.getState()
+            //     : { gazeData: [], audioChunks: [] };
 
-            const eyeTrackingData = {
-                game: sessionData.game,
-                dataType: 'eye-tracking',
-                sessionStart: sessionData.sessionStart,
-                sessionEnd: sessionData.sessionEnd,
-                gaze: recorderState.gazeData || []
-            };
+            // const eyeTrackingData = {
+            //     game: sessionData.game,
+            //     dataType: 'eye-tracking',
+            //     sessionStart: sessionData.sessionStart,
+            //     sessionEnd: sessionData.sessionEnd,
+            //     gaze: recorderState.gazeData || []
+            // };
 
             // Check if S3Uploader is configured
             if (typeof S3Uploader === 'undefined' || !S3Uploader.getApiUrl()) {
@@ -855,8 +864,10 @@
                 sessionCode,
                 sessionData.game,
                 sessionData,
-                eyeTrackingData,
-                recorderState.audioChunks,
+                // eyeTrackingData,             // EYE TRACKING DISABLED (2026-09-16)
+                // recorderState.audioChunks,   // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+                null,  // eye-tracking data (disabled)
+                null,  // audio chunks (disabled)
                 (status) => showUploadStatus(status, 'uploading')
             );
 
@@ -1088,30 +1099,31 @@
                     gameStateMatrix: generateGameStateMatrix()
                 };
             },
-            screenToGrid: function(screenX, screenY) {
-                const grid = document.getElementById('grid');
-                const rect = grid.getBoundingClientRect();
+            // EYE TRACKING DISABLED (2026-09-16): gaze-to-grid conversion for WebGazer.
+            // screenToGrid: function(screenX, screenY) {
+            //     const grid = document.getElementById('grid');
+            //     const rect = grid.getBoundingClientRect();
 
-                // Check if point is within grid bounds
-                if (screenX < rect.left || screenX > rect.right ||
-                    screenY < rect.top || screenY > rect.bottom) {
-                    return null; // Off grid
-                }
+            //     // Check if point is within grid bounds
+            //     if (screenX < rect.left || screenX > rect.right ||
+            //         screenY < rect.top || screenY > rect.bottom) {
+            //         return null; // Off grid
+            //     }
 
-                // Convert to grid coordinates (1-6 for 6x6 grid, 1-based)
-                const cellWidth = rect.width / 6;
-                const cellHeight = rect.height / 6;
-                const gridX = Math.floor((screenX - rect.left) / cellWidth) + 1;
-                const gridY = Math.floor((screenY - rect.top) / cellHeight) + 1;
+            //     // Convert to grid coordinates (1-6 for 6x6 grid, 1-based)
+            //     const cellWidth = rect.width / 6;
+            //     const cellHeight = rect.height / 6;
+            //     const gridX = Math.floor((screenX - rect.left) / cellWidth) + 1;
+            //     const gridY = Math.floor((screenY - rect.top) / cellHeight) + 1;
 
-                return { x: Math.min(gridX, 6), y: Math.min(gridY, 6) };
-            },
+            //     return { x: Math.min(gridX, 6), y: Math.min(gridY, 6) };
+            // },
             insertBeforeSelector: '#dashboard',
             onRecordingStart: () => {
-                S3Uploader.startBackups(sessionCode, 'Game A', () => AudioRecorder.getState().audioChunks);
+                // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): S3Uploader.startBackups(sessionCode, 'Game A', () => AudioRecorder.getState().audioChunks);
             },
             onRecordingStop: () => {
-                S3Uploader.stopBackups();
+                // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): S3Uploader.stopBackups();
             }
         });
 

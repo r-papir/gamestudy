@@ -2,6 +2,9 @@
  * Audio Recording Module for Game Study
  * Provides audio recording with speech transcription and eye tracking functionality
  *
+ * NOTE (2026-09-16): eye tracking, microphone audio, and speech transcription are
+ * DISABLED (commented out). Only gameplay keystroke/gamestate logs are recorded.
+ *
  * Usage:
  * 1. Include WebGazer: <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
  * 2. Include this script: <script src="audio-recorder.js"></script>
@@ -18,15 +21,17 @@ const AudioRecorder = (function() {
         pausedElapsed: 0,       // Total time spent paused (ms)
         pauseStartTime: null,   // When the current pause began
         keystrokes: [],
-        audioData: null,
-        transcription: [],
-        mediaRecorder: null,
-        recognition: null,
-        audioChunks: [],
+        // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+        // audioData: null,
+        // transcription: [],
+        // mediaRecorder: null,
+        // recognition: null,
+        // audioChunks: [],
         gameId: null,
         actionCounter: 0,
-        gazeData: [],           // Array of [x, y, timestamp] tuples
-        webgazerStarted: false
+        // EYE TRACKING DISABLED (2026-09-16)
+        // gazeData: [],           // Array of [x, y, timestamp] tuples
+        // webgazerStarted: false
     };
 
     // Configuration - can be overridden by init()
@@ -36,7 +41,8 @@ const AudioRecorder = (function() {
         onKeystroke: null,         // Optional callback when keystroke is recorded
         onRecordingStart: null,    // Optional callback when recording starts
         onRecordingStop: null,     // Optional callback when recording stops
-        screenToGrid: null,        // Function to convert screen (x,y) to grid coords, returns {x, y} or null if off-grid
+        // EYE TRACKING DISABLED (2026-09-16)
+        // screenToGrid: null,        // Function to convert screen (x,y) to grid coords, returns {x, y} or null if off-grid
         keyActionMap: {},          // Map of key names to semantic action names (e.g., {'ArrowUp': 'move_chunk_up'})
         insertBeforeSelector: null, // CSS selector - insert UI before this element (e.g., '#download-button')
     };
@@ -64,88 +70,91 @@ const AudioRecorder = (function() {
         });
     }
 
-    // Initialize WebGazer
-    async function initWebGazer() {
-        if (typeof webgazer === 'undefined') {
-            console.warn('WebGazer not loaded. Eye tracking will be disabled.');
-            return false;
-        }
+    // EYE TRACKING DISABLED (2026-09-16): WebGazer initialisation and gaze listener.
+    // // Initialize WebGazer
+    // async function initWebGazer() {
+    //     if (typeof webgazer === 'undefined') {
+    //         console.warn('WebGazer not loaded. Eye tracking will be disabled.');
+    //         return false;
+    //     }
 
-        try {
-            // Clear any potentially corrupted localStorage data first
-            localStorage.removeItem('webgazerGlobalData');
+    //     try {
+    //         // Clear any potentially corrupted localStorage data first
+    //         localStorage.removeItem('webgazerGlobalData');
 
-            // Configure WebGazer BEFORE calling begin()
-            // Disable saving across sessions to prevent loading corrupted data
-            webgazer.saveDataAcrossSessions(false);
+    //         // Configure WebGazer BEFORE calling begin()
+    //         // Disable saving across sessions to prevent loading corrupted data
+    //         webgazer.saveDataAcrossSessions(false);
 
-            await webgazer.begin();
+    //         await webgazer.begin();
 
-            webgazer.setGazeListener((data, timestamp) => {
-                if (data && state.isRecording && !state.isPaused) {
-                    const relativeTimestamp = getElapsedTime();
+    //         webgazer.setGazeListener((data, timestamp) => {
+    //             if (data && state.isRecording && !state.isPaused) {
+    //                 const relativeTimestamp = getElapsedTime();
 
-                    // Convert to grid coordinates if screenToGrid function provided
-                    if (config.screenToGrid) {
-                        const gridPos = config.screenToGrid(data.x, data.y);
-                        if (gridPos) {
-                            // On grid: store as [gridX, gridY, timestamp]
-                            state.gazeData.push([gridPos.x, gridPos.y, relativeTimestamp]);
-                        } else {
-                            // Off grid: store as [null, null, timestamp]
-                            state.gazeData.push([null, null, relativeTimestamp]);
-                        }
-                    } else {
-                        // No conversion function, store raw screen coords
-                        state.gazeData.push([
-                            Math.round(data.x),
-                            Math.round(data.y),
-                            relativeTimestamp
-                        ]);
-                    }
-                }
-            });
+    //                 // Convert to grid coordinates if screenToGrid function provided
+    //                 if (config.screenToGrid) {
+    //                     const gridPos = config.screenToGrid(data.x, data.y);
+    //                     if (gridPos) {
+    //                         // On grid: store as [gridX, gridY, timestamp]
+    //                         state.gazeData.push([gridPos.x, gridPos.y, relativeTimestamp]);
+    //                     } else {
+    //                         // Off grid: store as [null, null, timestamp]
+    //                         state.gazeData.push([null, null, relativeTimestamp]);
+    //                     }
+    //                 } else {
+    //                     // No conversion function, store raw screen coords
+    //                     state.gazeData.push([
+    //                         Math.round(data.x),
+    //                         Math.round(data.y),
+    //                         relativeTimestamp
+    //                     ]);
+    //                 }
+    //             }
+    //         });
 
-            // Hide video preview and prediction points for cleaner UI
-            webgazer.showVideoPreview(false);
-            webgazer.showPredictionPoints(false);
-            state.webgazerStarted = true;
-            console.log('WebGazer initialized successfully');
-            return true;
-        } catch (error) {
-            console.error('Failed to initialize WebGazer:', error);
-            return false;
-        }
-    }
+    //         // Hide video preview and prediction points for cleaner UI
+    //         webgazer.showVideoPreview(false);
+    //         webgazer.showPredictionPoints(false);
+    //         state.webgazerStarted = true;
+    //         console.log('WebGazer initialized successfully');
+    //         return true;
+    //     } catch (error) {
+    //         console.error('Failed to initialize WebGazer:', error);
+    //         return false;
+    //     }
+    // }
 
-    // Pause/resume WebGazer based on recording state
-    function setWebGazerActive(active) {
-        if (!state.webgazerStarted || typeof webgazer === 'undefined') return;
+    // EYE TRACKING DISABLED (2026-09-16): WebGazer pause/resume.
+    // // Pause/resume WebGazer based on recording state
+    // function setWebGazerActive(active) {
+    //     if (!state.webgazerStarted || typeof webgazer === 'undefined') return;
 
-        if (active) {
-            webgazer.resume();
-        } else {
-            webgazer.pause();
-        }
-    }
+    //     if (active) {
+    //         webgazer.resume();
+    //     } else {
+    //         webgazer.pause();
+    //     }
+    // }
 
-    // Find nearby speech for reasoning context
-    function findNearbyReasoning(actionTimestamp) {
-        const speechBefore = state.transcription.filter(t =>
-            t.timestamp <= actionTimestamp &&
-            (actionTimestamp - t.timestamp) <= 3000
-        );
+    // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): speech-to-action matching used only by the (disabled) export.
+    // // Find nearby speech for reasoning context
+    // function findNearbyReasoning(actionTimestamp) {
+    //     const speechBefore = state.transcription.filter(t =>
+    //         t.timestamp <= actionTimestamp &&
+    //         (actionTimestamp - t.timestamp) <= 3000
+    //     );
 
-        const speechAfter = state.transcription.filter(t =>
-            t.timestamp > actionTimestamp &&
-            (t.timestamp - actionTimestamp) <= 1000
-        );
+    //     const speechAfter = state.transcription.filter(t =>
+    //         t.timestamp > actionTimestamp &&
+    //         (t.timestamp - actionTimestamp) <= 1000
+    //     );
 
-        const allSpeech = [...speechBefore, ...speechAfter]
-            .sort((a, b) => Math.abs(a.timestamp - actionTimestamp) - Math.abs(b.timestamp - actionTimestamp));
+    //     const allSpeech = [...speechBefore, ...speechAfter]
+    //         .sort((a, b) => Math.abs(a.timestamp - actionTimestamp) - Math.abs(b.timestamp - actionTimestamp));
 
-        return allSpeech.length > 0 ? allSpeech[0].text : "No speech detected";
-    }
+    //     return allSpeech.length > 0 ? allSpeech[0].text : "No speech detected";
+    // }
 
     // Record a keystroke event
     function recordKeystroke(key, action, timestamp) {
@@ -169,99 +178,101 @@ const AudioRecorder = (function() {
     // Start recording
     async function startRecording() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): microphone capture (MediaRecorder) and Web Speech API transcription.
+            // const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-            // Setup MediaRecorder for audio (32kbps Opus for smaller files)
-            const mimeType = 'audio/webm;codecs=opus';
-            const recorderOptions = MediaRecorder.isTypeSupported(mimeType)
-                ? { mimeType, audioBitsPerSecond: 32000 }
-                : {};
-            state.mediaRecorder = new MediaRecorder(stream, recorderOptions);
-            state.audioChunks = [];
+            // // Setup MediaRecorder for audio (32kbps Opus for smaller files)
+            // const mimeType = 'audio/webm;codecs=opus';
+            // const recorderOptions = MediaRecorder.isTypeSupported(mimeType)
+            //     ? { mimeType, audioBitsPerSecond: 32000 }
+            //     : {};
+            // state.mediaRecorder = new MediaRecorder(stream, recorderOptions);
+            // state.audioChunks = [];
 
-            state.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    state.audioChunks.push(event.data);
-                    console.log('Audio chunk added, total chunks:', state.audioChunks.length);
-                }
-            };
+            // state.mediaRecorder.ondataavailable = (event) => {
+            //     if (event.data.size > 0) {
+            //         state.audioChunks.push(event.data);
+            //         console.log('Audio chunk added, total chunks:', state.audioChunks.length);
+            //     }
+            // };
 
-            state.mediaRecorder.onstop = () => {
-                console.log('MediaRecorder stopped, total audio chunks:', state.audioChunks.length);
-            };
+            // state.mediaRecorder.onstop = () => {
+            //     console.log('MediaRecorder stopped, total audio chunks:', state.audioChunks.length);
+            // };
 
-            // Setup Web Speech API for transcription
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                state.recognition = new SpeechRecognition();
-                state.recognition.continuous = true;
-                state.recognition.interimResults = true;
-                state.recognition.lang = 'en-US';
+            // // Setup Web Speech API for transcription
+            // if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            //     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            //     state.recognition = new SpeechRecognition();
+            //     state.recognition.continuous = true;
+            //     state.recognition.interimResults = true;
+            //     state.recognition.lang = 'en-US';
 
-                state.recognition.onstart = () => {
-                    updateStatusMessage('Speech recognition active');
-                };
+            //     state.recognition.onstart = () => {
+            //         updateStatusMessage('Speech recognition active');
+            //     };
 
-                state.recognition.onresult = (event) => {
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        const transcript = event.results[i][0].transcript;
-                        const timestamp = getElapsedTime();
-                        const isFinal = event.results[i].isFinal;
-                        const confidence = event.results[i][0].confidence;
+            //     state.recognition.onresult = (event) => {
+            //         for (let i = event.resultIndex; i < event.results.length; i++) {
+            //             const transcript = event.results[i][0].transcript;
+            //             const timestamp = getElapsedTime();
+            //             const isFinal = event.results[i].isFinal;
+            //             const confidence = event.results[i][0].confidence;
 
-                        if (isFinal) {
-                            state.transcription.push({
-                                text: transcript,
-                                timestamp: timestamp,
-                                confidence: confidence
-                            });
-                            updateStatusMessage(`Transcribed: "${transcript.substring(0, 30)}${transcript.length > 30 ? '...' : ''}"`);
-                        }
-                    }
-                };
+            //             if (isFinal) {
+            //                 state.transcription.push({
+            //                     text: transcript,
+            //                     timestamp: timestamp,
+            //                     confidence: confidence
+            //                 });
+            //                 updateStatusMessage(`Transcribed: "${transcript.substring(0, 30)}${transcript.length > 30 ? '...' : ''}"`);
+            //             }
+            //         }
+            //     };
 
-                state.recognition.onerror = (event) => {
-                    console.error('Speech recognition error:', event.error);
-                    updateStatusMessage(`Speech error: ${event.error}`);
-                };
+            //     state.recognition.onerror = (event) => {
+            //         console.error('Speech recognition error:', event.error);
+            //         updateStatusMessage(`Speech error: ${event.error}`);
+            //     };
 
-                state.recognition.onend = () => {
-                    if (state.isRecording && !state.isPaused) {
-                        setTimeout(() => {
-                            try {
-                                state.recognition.start();
-                            } catch (e) {
-                                console.error('Failed to restart speech recognition:', e);
-                            }
-                        }, 100);
-                    }
-                };
+            //     state.recognition.onend = () => {
+            //         if (state.isRecording && !state.isPaused) {
+            //             setTimeout(() => {
+            //                 try {
+            //                     state.recognition.start();
+            //                 } catch (e) {
+            //                     console.error('Failed to restart speech recognition:', e);
+            //                 }
+            //             }, 100);
+            //         }
+            //     };
 
-                try {
-                    state.recognition.start();
-                } catch (e) {
-                    console.error('Failed to start speech recognition:', e);
-                    updateStatusMessage('Speech recognition failed to start');
-                }
-            } else {
-                updateStatusMessage('Speech recognition not supported');
-            }
+            //     try {
+            //         state.recognition.start();
+            //     } catch (e) {
+            //         console.error('Failed to start speech recognition:', e);
+            //         updateStatusMessage('Speech recognition failed to start');
+            //     }
+            // } else {
+            //     updateStatusMessage('Speech recognition not supported');
+            // }
 
-            // Start recording
-            state.mediaRecorder.start(1000);
+            // // Start recording
+            // state.mediaRecorder.start(1000);
             state.isRecording = true;
             state.isPaused = false;
             state.pausedElapsed = 0;
             state.pauseStartTime = null;
             state.startTime = Date.now();
             state.keystrokes = [];
-            state.transcription = [];
-            state.gazeData = [];
+            // state.transcription = [];   // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+            // state.gazeData = [];        // EYE TRACKING DISABLED (2026-09-16)
             state.gameId = generateGameId();
             state.actionCounter = 0;
 
-            // Resume WebGazer if available
-            setWebGazerActive(true);
+            // EYE TRACKING DISABLED (2026-09-16)
+            // // Resume WebGazer if available
+            // setWebGazerActive(true);
 
             updateRecordingUI();
 
@@ -277,13 +288,14 @@ const AudioRecorder = (function() {
             state.pauseStartTime = null;
             state.startTime = Date.now();
             state.keystrokes = [];
-            state.transcription = [];
-            state.gazeData = [];
+            // state.transcription = [];   // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+            // state.gazeData = [];        // EYE TRACKING DISABLED (2026-09-16)
             state.gameId = generateGameId();
             state.actionCounter = 0;
 
-            // Resume WebGazer if available
-            setWebGazerActive(true);
+            // EYE TRACKING DISABLED (2026-09-16)
+            // // Resume WebGazer if available
+            // setWebGazerActive(true);
 
             updateRecordingUI();
 
@@ -296,23 +308,25 @@ const AudioRecorder = (function() {
         state.isRecording = false;
         state.isPaused = false;
 
-        if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-            // Resume first if paused, so pending data is flushed
-            if (state.mediaRecorder.state === 'paused') {
-                state.mediaRecorder.resume();
-            }
-            // Request any pending data before stopping
-            state.mediaRecorder.requestData();
-            state.mediaRecorder.stop();
-            state.mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }
+        // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+        // if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+        //     // Resume first if paused, so pending data is flushed
+        //     if (state.mediaRecorder.state === 'paused') {
+        //         state.mediaRecorder.resume();
+        //     }
+        //     // Request any pending data before stopping
+        //     state.mediaRecorder.requestData();
+        //     state.mediaRecorder.stop();
+        //     state.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        // }
+        //
+        // if (state.recognition) {
+        //     state.recognition.stop();
+        // }
 
-        if (state.recognition) {
-            state.recognition.stop();
-        }
-
-        // Pause WebGazer
-        setWebGazerActive(false);
+        // EYE TRACKING DISABLED (2026-09-16)
+        // // Pause WebGazer
+        // setWebGazerActive(false);
 
         updateRecordingUI();
 
@@ -335,22 +349,24 @@ const AudioRecorder = (function() {
         state.isPaused = true;
         state.pauseStartTime = Date.now();
 
-        // Pause MediaRecorder (audio won't include paused time)
-        if (state.mediaRecorder && state.mediaRecorder.state === 'recording') {
-            state.mediaRecorder.pause();
-        }
+        // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+        // // Pause MediaRecorder (audio won't include paused time)
+        // if (state.mediaRecorder && state.mediaRecorder.state === 'recording') {
+        //     state.mediaRecorder.pause();
+        // }
+        //
+        // // Stop speech recognition during pause
+        // if (state.recognition) {
+        //     try {
+        //         state.recognition.stop();
+        //     } catch (e) {
+        //         console.error('Failed to stop speech recognition on pause:', e);
+        //     }
+        // }
 
-        // Stop speech recognition during pause
-        if (state.recognition) {
-            try {
-                state.recognition.stop();
-            } catch (e) {
-                console.error('Failed to stop speech recognition on pause:', e);
-            }
-        }
-
-        // Pause eye tracking
-        setWebGazerActive(false);
+        // EYE TRACKING DISABLED (2026-09-16)
+        // // Pause eye tracking
+        // setWebGazerActive(false);
 
         updateRecordingUI();
     }
@@ -364,22 +380,24 @@ const AudioRecorder = (function() {
         state.pauseStartTime = null;
         state.isPaused = false;
 
-        // Resume MediaRecorder
-        if (state.mediaRecorder && state.mediaRecorder.state === 'paused') {
-            state.mediaRecorder.resume();
-        }
+        // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+        // // Resume MediaRecorder
+        // if (state.mediaRecorder && state.mediaRecorder.state === 'paused') {
+        //     state.mediaRecorder.resume();
+        // }
+        //
+        // // Restart speech recognition
+        // if (state.recognition) {
+        //     try {
+        //         state.recognition.start();
+        //     } catch (e) {
+        //         console.error('Failed to restart speech recognition on resume:', e);
+        //     }
+        // }
 
-        // Restart speech recognition
-        if (state.recognition) {
-            try {
-                state.recognition.start();
-            } catch (e) {
-                console.error('Failed to restart speech recognition on resume:', e);
-            }
-        }
-
-        // Resume eye tracking
-        setWebGazerActive(true);
+        // EYE TRACKING DISABLED (2026-09-16)
+        // // Resume eye tracking
+        // setWebGazerActive(true);
 
         updateRecordingUI();
     }
@@ -418,7 +436,8 @@ const AudioRecorder = (function() {
                 elements.pauseBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18"/><rect x="14" y="3" width="5" height="18"/></svg>';
                 elements.pauseBtn.title = 'Pause recording';
                 elements.pauseBtn.style.display = 'inline-block';
-                elements.statusDiv.textContent = 'Recording gameplay and audio...';
+                // elements.statusDiv.textContent = 'Recording gameplay and audio...';   // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+                elements.statusDiv.textContent = 'Recording gameplay...';
                 elements.statusDiv.classList.add('active');
                 elements.statusDiv.classList.remove('paused');
             }
@@ -427,12 +446,18 @@ const AudioRecorder = (function() {
             elements.recordBtn.classList.remove('recording');
             elements.pauseBtn.style.display = 'none';
 
-            if (state.keystrokes.length > 0 || state.gazeData.length > 0) {
-                const transcriptCount = state.transcription.length;
-                const gazeCount = state.gazeData.length;
-                elements.statusDiv.textContent = `Recording complete. ${state.keystrokes.length} actions, ${transcriptCount} speech, ${gazeCount} gaze points.`;
+            // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16): speech and gaze counts no longer exist.
+            // if (state.keystrokes.length > 0 || state.gazeData.length > 0) {
+            //     const transcriptCount = state.transcription.length;
+            //     const gazeCount = state.gazeData.length;
+            //     elements.statusDiv.textContent = `Recording complete. ${state.keystrokes.length} actions, ${transcriptCount} speech, ${gazeCount} gaze points.`;
+            // } else {
+            //     elements.statusDiv.textContent = 'Ready to record gameplay and audio';
+            // }
+            if (state.keystrokes.length > 0) {
+                elements.statusDiv.textContent = `Recording complete. ${state.keystrokes.length} actions.`;
             } else {
-                elements.statusDiv.textContent = 'Ready to record gameplay and audio';
+                elements.statusDiv.textContent = 'Ready to record gameplay';
             }
             elements.statusDiv.classList.remove('active');
             elements.statusDiv.classList.remove('paused');
@@ -475,176 +500,177 @@ const AudioRecorder = (function() {
         }
     }
 
-    // Export recording
-    function exportRecording(participantId, gameLabel) {
-        if (state.keystrokes.length === 0 && state.gazeData.length === 0 && state.audioChunks.length === 0) {
-            alert('No recording data to export');
-            return;
-        }
+    // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16): exportRecording only ever downloaded the eye-tracking JSON and audio .webm; the gamestate log is written by each game page.
+    // // Export recording
+    // function exportRecording(participantId, gameLabel) {
+    //     if (state.keystrokes.length === 0 && state.gazeData.length === 0 && state.audioChunks.length === 0) {
+    //         alert('No recording data to export');
+    //         return;
+    //     }
 
-        const dateStr = formatDateMMDDYYYY();
-        const prefix = participantId && gameLabel ? `${participantId}_${gameLabel}` : config.gamePrefix;
+    //     const dateStr = formatDateMMDDYYYY();
+    //     const prefix = participantId && gameLabel ? `${participantId}_${gameLabel}` : config.gamePrefix;
 
-        // Create export object for game states, speech, and movement data (no gaze)
-        const exportData = {
-            game: config.gameName || config.gamePrefix,
-            sessionStart: new Date(state.startTime).toISOString(),
-            sessionEnd: new Date().toISOString(),
-            gameId: state.gameId,
-            duration: Date.now() - state.startTime,
-            events: state.keystrokes.map((ks, idx) => ({
-                timestamp: new Date(state.startTime + ks.timestamp).toISOString(),
-                level: ks.gameState.level || 1,
-                key: ks.key,
-                action: ks.action,
-                gameStateBefore: ks.gameState.gameStateMatrix || null,
-                selectedChunkPosition: ks.gameState.selectedChunkPosition || null,
-                vehiclePos: ks.gameState.vehiclePos || null,
-                goalPos: ks.gameState.goalPos || null,
-                // Include original fields from gameFrames
-                actionId: idx,
-                reasoning: findNearbyReasoning(ks.timestamp),
-                guid: generateGuid()
-            })),
-            transcription: state.transcription.map(t => ({
-                timestamp: new Date(state.startTime + t.timestamp).toISOString(),
-                text: t.text,
-                confidence: t.confidence
-            }))
-        };
+    //     // Create export object for game states, speech, and movement data (no gaze)
+    //     const exportData = {
+    //         game: config.gameName || config.gamePrefix,
+    //         sessionStart: new Date(state.startTime).toISOString(),
+    //         sessionEnd: new Date().toISOString(),
+    //         gameId: state.gameId,
+    //         duration: Date.now() - state.startTime,
+    //         events: state.keystrokes.map((ks, idx) => ({
+    //             timestamp: new Date(state.startTime + ks.timestamp).toISOString(),
+    //             level: ks.gameState.level || 1,
+    //             key: ks.key,
+    //             action: ks.action,
+    //             gameStateBefore: ks.gameState.gameStateMatrix || null,
+    //             selectedChunkPosition: ks.gameState.selectedChunkPosition || null,
+    //             vehiclePos: ks.gameState.vehiclePos || null,
+    //             goalPos: ks.gameState.goalPos || null,
+    //             // Include original fields from gameFrames
+    //             actionId: idx,
+    //             reasoning: findNearbyReasoning(ks.timestamp),
+    //             guid: generateGuid()
+    //         })),
+    //         transcription: state.transcription.map(t => ({
+    //             timestamp: new Date(state.startTime + t.timestamp).toISOString(),
+    //             text: t.text,
+    //             confidence: t.confidence
+    //         }))
+    //     };
 
-        // Create separate export object for eye-tracking data
-        const eyeTrackingData = {
-            game: config.gameName || config.gamePrefix,
-            dataType: "eye-tracking",
-            sessionStart: new Date(state.startTime).toISOString(),
-            sessionEnd: new Date().toISOString(),
-            gameId: state.gameId,
-            duration: Date.now() - state.startTime,
-            gaze: state.gazeData.map(g => ({
-                x: g[0],
-                y: g[1],
-                timestamp: new Date(state.startTime + g[2]).toISOString()
-            }))
-        };
+    //     // Create separate export object for eye-tracking data
+    //     const eyeTrackingData = {
+    //         game: config.gameName || config.gamePrefix,
+    //         dataType: "eye-tracking",
+    //         sessionStart: new Date(state.startTime).toISOString(),
+    //         sessionEnd: new Date().toISOString(),
+    //         gameId: state.gameId,
+    //         duration: Date.now() - state.startTime,
+    //         gaze: state.gazeData.map(g => ({
+    //             x: g[0],
+    //             y: g[1],
+    //             timestamp: new Date(state.startTime + g[2]).toISOString()
+    //         }))
+    //     };
 
-        // Custom JSON stringify that keeps grid rows on single lines
-        function formatExportData(data) {
-            const lines = [];
-            lines.push('{');
-            lines.push(`  "game": ${JSON.stringify(data.game)},`);
-            lines.push(`  "sessionStart": ${JSON.stringify(data.sessionStart)},`);
-            lines.push(`  "sessionEnd": ${JSON.stringify(data.sessionEnd)},`);
-            lines.push(`  "gameId": ${JSON.stringify(data.gameId)},`);
-            lines.push(`  "duration": ${data.duration},`);
+    //     // Custom JSON stringify that keeps grid rows on single lines
+    //     function formatExportData(data) {
+    //         const lines = [];
+    //         lines.push('{');
+    //         lines.push(`  "game": ${JSON.stringify(data.game)},`);
+    //         lines.push(`  "sessionStart": ${JSON.stringify(data.sessionStart)},`);
+    //         lines.push(`  "sessionEnd": ${JSON.stringify(data.sessionEnd)},`);
+    //         lines.push(`  "gameId": ${JSON.stringify(data.gameId)},`);
+    //         lines.push(`  "duration": ${data.duration},`);
 
-            // Events array
-            lines.push('  "events": [');
-            data.events.forEach((event, i) => {
-                lines.push('    {');
-                lines.push(`      "timestamp": ${JSON.stringify(event.timestamp)},`);
-                lines.push(`      "level": ${event.level},`);
-                lines.push(`      "key": ${JSON.stringify(event.key)},`);
-                lines.push(`      "action": ${JSON.stringify(event.action)},`);
+    //         // Events array
+    //         lines.push('  "events": [');
+    //         data.events.forEach((event, i) => {
+    //             lines.push('    {');
+    //             lines.push(`      "timestamp": ${JSON.stringify(event.timestamp)},`);
+    //             lines.push(`      "level": ${event.level},`);
+    //             lines.push(`      "key": ${JSON.stringify(event.key)},`);
+    //             lines.push(`      "action": ${JSON.stringify(event.action)},`);
 
-                // Format gameStateBefore with each row on one line
-                if (event.gameStateBefore && Array.isArray(event.gameStateBefore)) {
-                    lines.push('      "gameStateBefore": [');
-                    event.gameStateBefore.forEach((row, rowIdx) => {
-                        const comma = rowIdx < event.gameStateBefore.length - 1 ? ',' : '';
-                        lines.push(`        ${JSON.stringify(row)}${comma}`);
-                    });
-                    lines.push('      ],');
-                } else {
-                    lines.push(`      "gameStateBefore": null,`);
-                }
+    //             // Format gameStateBefore with each row on one line
+    //             if (event.gameStateBefore && Array.isArray(event.gameStateBefore)) {
+    //                 lines.push('      "gameStateBefore": [');
+    //                 event.gameStateBefore.forEach((row, rowIdx) => {
+    //                     const comma = rowIdx < event.gameStateBefore.length - 1 ? ',' : '';
+    //                     lines.push(`        ${JSON.stringify(row)}${comma}`);
+    //                 });
+    //                 lines.push('      ],');
+    //             } else {
+    //                 lines.push(`      "gameStateBefore": null,`);
+    //             }
 
-                lines.push(`      "selectedChunkPosition": ${JSON.stringify(event.selectedChunkPosition)},`);
-                lines.push(`      "vehiclePos": ${JSON.stringify(event.vehiclePos)},`);
-                lines.push(`      "goalPos": ${JSON.stringify(event.goalPos)},`);
-                lines.push(`      "actionId": ${event.actionId},`);
-                lines.push(`      "reasoning": ${JSON.stringify(event.reasoning)},`);
-                lines.push(`      "guid": ${JSON.stringify(event.guid)}`);
+    //             lines.push(`      "selectedChunkPosition": ${JSON.stringify(event.selectedChunkPosition)},`);
+    //             lines.push(`      "vehiclePos": ${JSON.stringify(event.vehiclePos)},`);
+    //             lines.push(`      "goalPos": ${JSON.stringify(event.goalPos)},`);
+    //             lines.push(`      "actionId": ${event.actionId},`);
+    //             lines.push(`      "reasoning": ${JSON.stringify(event.reasoning)},`);
+    //             lines.push(`      "guid": ${JSON.stringify(event.guid)}`);
 
-                const eventComma = i < data.events.length - 1 ? ',' : '';
-                lines.push(`    }${eventComma}`);
-            });
-            lines.push('  ],');
+    //             const eventComma = i < data.events.length - 1 ? ',' : '';
+    //             lines.push(`    }${eventComma}`);
+    //         });
+    //         lines.push('  ],');
 
-            // Transcription array
-            lines.push('  "transcription": [');
-            data.transcription.forEach((t, i) => {
-                const comma = i < data.transcription.length - 1 ? ',' : '';
-                lines.push(`    {`);
-                lines.push(`      "timestamp": ${JSON.stringify(t.timestamp)},`);
-                lines.push(`      "text": ${JSON.stringify(t.text)},`);
-                lines.push(`      "confidence": ${t.confidence}`);
-                lines.push(`    }${comma}`);
-            });
-            lines.push('  ]');
+    //         // Transcription array
+    //         lines.push('  "transcription": [');
+    //         data.transcription.forEach((t, i) => {
+    //             const comma = i < data.transcription.length - 1 ? ',' : '';
+    //             lines.push(`    {`);
+    //             lines.push(`      "timestamp": ${JSON.stringify(t.timestamp)},`);
+    //             lines.push(`      "text": ${JSON.stringify(t.text)},`);
+    //             lines.push(`      "confidence": ${t.confidence}`);
+    //             lines.push(`    }${comma}`);
+    //         });
+    //         lines.push('  ]');
 
-            lines.push('}');
-            return lines.join('\n');
-        }
+    //         lines.push('}');
+    //         return lines.join('\n');
+    //     }
 
-        // Format eye-tracking data
-        function formatEyeTrackingData(data) {
-            const lines = [];
-            lines.push('{');
-            lines.push(`  "game": ${JSON.stringify(data.game)},`);
-            lines.push(`  "dataType": ${JSON.stringify(data.dataType)},`);
-            lines.push(`  "sessionStart": ${JSON.stringify(data.sessionStart)},`);
-            lines.push(`  "sessionEnd": ${JSON.stringify(data.sessionEnd)},`);
-            lines.push(`  "gameId": ${JSON.stringify(data.gameId)},`);
-            lines.push(`  "duration": ${data.duration},`);
+    //     // Format eye-tracking data
+    //     function formatEyeTrackingData(data) {
+    //         const lines = [];
+    //         lines.push('{');
+    //         lines.push(`  "game": ${JSON.stringify(data.game)},`);
+    //         lines.push(`  "dataType": ${JSON.stringify(data.dataType)},`);
+    //         lines.push(`  "sessionStart": ${JSON.stringify(data.sessionStart)},`);
+    //         lines.push(`  "sessionEnd": ${JSON.stringify(data.sessionEnd)},`);
+    //         lines.push(`  "gameId": ${JSON.stringify(data.gameId)},`);
+    //         lines.push(`  "duration": ${data.duration},`);
 
-            // Gaze array
-            lines.push('  "gaze": [');
-            data.gaze.forEach((g, i) => {
-                const comma = i < data.gaze.length - 1 ? ',' : '';
-                lines.push(`    {`);
-                lines.push(`      "x": ${g.x !== null ? g.x : 'null'},`);
-                lines.push(`      "y": ${g.y !== null ? g.y : 'null'},`);
-                lines.push(`      "timestamp": ${JSON.stringify(g.timestamp)}`);
-                lines.push(`    }${comma}`);
-            });
-            lines.push('  ]');
+    //         // Gaze array
+    //         lines.push('  "gaze": [');
+    //         data.gaze.forEach((g, i) => {
+    //             const comma = i < data.gaze.length - 1 ? ',' : '';
+    //             lines.push(`    {`);
+    //             lines.push(`      "x": ${g.x !== null ? g.x : 'null'},`);
+    //             lines.push(`      "y": ${g.y !== null ? g.y : 'null'},`);
+    //             lines.push(`      "timestamp": ${JSON.stringify(g.timestamp)}`);
+    //             lines.push(`    }${comma}`);
+    //         });
+    //         lines.push('  ]');
 
-            lines.push('}');
-            return lines.join('\n');
-        }
+    //         lines.push('}');
+    //         return lines.join('\n');
+    //     }
 
-        // Download eye-tracking data as separate file
-        if (state.gazeData.length > 0) {
-            const eyeTrackingString = formatEyeTrackingData(eyeTrackingData);
-            const eyeTrackingBlob = new Blob([eyeTrackingString], { type: 'application/json' });
-            const eyeTrackingUrl = URL.createObjectURL(eyeTrackingBlob);
-            const eyeTrackingLink = document.createElement('a');
-            eyeTrackingLink.href = eyeTrackingUrl;
-            eyeTrackingLink.download = `${prefix}_eyetracking_${dateStr}.json`;
-            document.body.appendChild(eyeTrackingLink);
-            eyeTrackingLink.click();
-            document.body.removeChild(eyeTrackingLink);
-            URL.revokeObjectURL(eyeTrackingUrl);
-        }
+    //     // Download eye-tracking data as separate file
+    //     if (state.gazeData.length > 0) {
+    //         const eyeTrackingString = formatEyeTrackingData(eyeTrackingData);
+    //         const eyeTrackingBlob = new Blob([eyeTrackingString], { type: 'application/json' });
+    //         const eyeTrackingUrl = URL.createObjectURL(eyeTrackingBlob);
+    //         const eyeTrackingLink = document.createElement('a');
+    //         eyeTrackingLink.href = eyeTrackingUrl;
+    //         eyeTrackingLink.download = `${prefix}_eyetracking_${dateStr}.json`;
+    //         document.body.appendChild(eyeTrackingLink);
+    //         eyeTrackingLink.click();
+    //         document.body.removeChild(eyeTrackingLink);
+    //         URL.revokeObjectURL(eyeTrackingUrl);
+    //     }
 
-        // Download audio if available
-        if (state.audioChunks.length > 0) {
-            const audioBlob = new Blob(state.audioChunks, { type: 'audio/webm' });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audioLink = document.createElement('a');
-            audioLink.href = audioUrl;
-            audioLink.download = `${prefix}_audio_${dateStr}.webm`;
-            document.body.appendChild(audioLink);
-            audioLink.click();
-            document.body.removeChild(audioLink);
-            URL.revokeObjectURL(audioUrl);
-        }
+    //     // Download audio if available
+    //     if (state.audioChunks.length > 0) {
+    //         const audioBlob = new Blob(state.audioChunks, { type: 'audio/webm' });
+    //         const audioUrl = URL.createObjectURL(audioBlob);
+    //         const audioLink = document.createElement('a');
+    //         audioLink.href = audioUrl;
+    //         audioLink.download = `${prefix}_audio_${dateStr}.webm`;
+    //         document.body.appendChild(audioLink);
+    //         audioLink.click();
+    //         document.body.removeChild(audioLink);
+    //         URL.revokeObjectURL(audioUrl);
+    //     }
 
-        const audioMsg = state.audioChunks.length > 0 ? '\n- Audio recording (.webm)' : '';
-        const gazeMsg = state.gazeData.length > 0 ? `\n- Eye-tracking data (${state.gazeData.length} gaze points)` : '';
-        alert(`Exported!${gazeMsg}${audioMsg}`);
-    }
+    //     const audioMsg = state.audioChunks.length > 0 ? '\n- Audio recording (.webm)' : '';
+    //     const gazeMsg = state.gazeData.length > 0 ? `\n- Eye-tracking data (${state.gazeData.length} gaze points)` : '';
+    //     alert(`Exported!${gazeMsg}${audioMsg}`);
+    // }
 
     // Create and inject the recording UI
     function createUI() {
@@ -764,7 +790,8 @@ const AudioRecorder = (function() {
         // Create status div
         elements.statusDiv = document.createElement('div');
         elements.statusDiv.className = 'audio-recorder-status';
-        elements.statusDiv.textContent = 'Ready to record gameplay and audio';
+        // elements.statusDiv.textContent = 'Ready to record gameplay and audio';   // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+        elements.statusDiv.textContent = 'Ready to record gameplay';
 
         // Assemble container
         elements.container.appendChild(elements.recordBtn);
@@ -799,24 +826,25 @@ const AudioRecorder = (function() {
         // Setup keyboard listeners
         setupKeyboardListeners();
 
-        // Initialize WebGazer (async, non-blocking)
-        initWebGazer().then(success => {
-            if (success) {
-                if (state.isRecording && !state.isPaused) {
-                    // Recording already started before WebGazer was ready — keep it active
-                    setWebGazerActive(true);
-                } else {
-                    // Pause until recording starts
-                    setWebGazerActive(false);
-                }
-                updateStatusMessage('Ready to record (eye tracking enabled)');
-            } else {
-                if (elements.statusDiv) {
-                    elements.statusDiv.textContent = '⚠ Eye tracking unavailable — try reloading the page';
-                    elements.statusDiv.style.color = '#c62828';
-                }
-            }
-        });
+        // EYE TRACKING DISABLED (2026-09-16): WebGazer bootstrap and the 'Eye tracking unavailable' status message.
+        // // Initialize WebGazer (async, non-blocking)
+        // initWebGazer().then(success => {
+        //     if (success) {
+        //         if (state.isRecording && !state.isPaused) {
+        //             // Recording already started before WebGazer was ready — keep it active
+        //             setWebGazerActive(true);
+        //         } else {
+        //             // Pause until recording starts
+        //             setWebGazerActive(false);
+        //         }
+        //         updateStatusMessage('Ready to record (eye tracking enabled)');
+        //     } else {
+        //         if (elements.statusDiv) {
+        //             elements.statusDiv.textContent = '⚠ Eye tracking unavailable — try reloading the page';
+        //             elements.statusDiv.style.color = '#c62828';
+        //         }
+        //     }
+        // });
 
         // Insert UI into page
         let inserted = false;
@@ -869,21 +897,22 @@ const AudioRecorder = (function() {
             stopRecording,
             pauseRecording,
             resumeRecording,
-            exportRecording,
+            // exportRecording,   // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
             isRecording: () => state.isRecording,
             isPaused: () => state.isPaused,
             getContainer: () => elements.container
         };
     }
 
-    // Get transcription data for inclusion in game's JSON export
-    function getTranscription() {
-        return state.transcription.map(t => ({
-            timestamp: state.startTime ? new Date(state.startTime + t.timestamp).toISOString() : new Date(t.timestamp).toISOString(),
-            text: t.text,
-            confidence: t.confidence
-        }));
-    }
+    // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): transcript accessor.
+    // // Get transcription data for inclusion in game's JSON export
+    // function getTranscription() {
+    //     return state.transcription.map(t => ({
+    //         timestamp: state.startTime ? new Date(state.startTime + t.timestamp).toISOString() : new Date(t.timestamp).toISOString(),
+    //         text: t.text,
+    //         confidence: t.confidence
+    //     }));
+    // }
 
     // Public API
     return {
@@ -897,11 +926,11 @@ const AudioRecorder = (function() {
         isRecording: () => state.isRecording,
         isPaused: () => state.isPaused,
         getState: () => ({ ...state }),
-        getTranscription,
+        // getTranscription,   // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
         promptParticipantId,
         formatDateMMDDYYYY,
         pauseRecording,
-        resumeRecording,
-        exportRecording
+        resumeRecording
+        // exportRecording     // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
     };
 })();

@@ -177,13 +177,14 @@
         }
         --- */
 
-        /* Hide WebGazer camera elements during gameplay */
+        /* EYE TRACKING DISABLED (2026-09-16): WebGazer camera-element hiding rules.
         #webgazerVideoFeed,
         #webgazerVideoCanvas,
         #webgazerFaceFeedbackBox,
         #webgazerGazeDot {
             display: none !important;
         }
+        */
 
         .completion-overlay {
             position: fixed;
@@ -230,6 +231,7 @@
     <link rel="stylesheet" href="puzzle-theme.css">
 </head>
 <body>
+    <!-- EYE TRACKING DISABLED (2026-09-16): pre-game calibration gate (redirected to calibration.html).
     <script>
     // Verify calibration before allowing game play
     (function() {
@@ -241,6 +243,7 @@
         }
     })();
     </script>
+    -->
 
     <div id="dashboard">
         <div class="dash-row">
@@ -292,7 +295,7 @@
         </div>
     </div>
 
-    <script src="webgazer.js"></script>
+    <!-- EYE TRACKING DISABLED (2026-09-16): <script src="webgazer.js"></script> -->
     <script src="audio-recorder.js"></script>
     <script src="s3-uploader.js"></script>
     <script>S3Uploader.setApiUrl('https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod');</script>
@@ -1172,10 +1175,12 @@
 
             sessionData.sessionEnd = new Date().toISOString();
 
-            // Include transcription data from audio recorder (with safety check)
-            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
-                ? AudioRecorder.getTranscription()
-                : [];
+            // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): transcription is no longer collected; key kept as [] so the log schema is unchanged.
+            // // Include transcription data from audio recorder (with safety check)
+            // sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+            //     ? AudioRecorder.getTranscription()
+            //     : [];
+            sessionData.transcription = [];
 
             let dataStr = JSON.stringify(sessionData, null, 2);
 
@@ -1206,10 +1211,11 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Export eye-tracking and audio files
-            if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
-                AudioRecorder.exportRecording(participantId, 'g5');
-            }
+            // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16): separate eye-tracking + audio downloads.
+            // // Export eye-tracking and audio files
+            // if (typeof AudioRecorder !== 'undefined' && AudioRecorder.exportRecording) {
+            //     AudioRecorder.exportRecording(participantId, 'g5');
+            // }
         });
 
         // ---------------------------------------------------------------
@@ -1230,21 +1236,24 @@
 
         async function handleGameComplete() {
             sessionData.sessionEnd = new Date().toISOString();
-            sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
-                ? AudioRecorder.getTranscription()
-                : [];
+            // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): transcription is no longer collected; key kept as [] so the log schema is unchanged.
+            // sessionData.transcription = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getTranscription)
+            //     ? AudioRecorder.getTranscription()
+            //     : [];
+            sessionData.transcription = [];
 
-            const recorderState = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getState)
-                ? AudioRecorder.getState()
-                : { gazeData: [], audioChunks: [] };
+            // EYE TRACKING DISABLED (2026-09-16) / AUDIO/TRANSCRIPTION DISABLED (2026-09-16): no gaze or audio data is gathered for upload.
+            // const recorderState = (typeof AudioRecorder !== 'undefined' && AudioRecorder.getState)
+            //     ? AudioRecorder.getState()
+            //     : { gazeData: [], audioChunks: [] };
 
-            const eyeTrackingData = {
-                game: sessionData.game,
-                dataType: 'eye-tracking',
-                sessionStart: sessionData.sessionStart,
-                sessionEnd: sessionData.sessionEnd,
-                gaze: recorderState.gazeData || []
-            };
+            // const eyeTrackingData = {
+            //     game: sessionData.game,
+            //     dataType: 'eye-tracking',
+            //     sessionStart: sessionData.sessionStart,
+            //     sessionEnd: sessionData.sessionEnd,
+            //     gaze: recorderState.gazeData || []
+            // };
 
             if (typeof S3Uploader === 'undefined' || !S3Uploader.getApiUrl()) {
                 console.log('S3Uploader not configured. Skipping upload.');
@@ -1257,8 +1266,10 @@
                 sessionCode,
                 sessionData.game,
                 sessionData,
-                eyeTrackingData,
-                recorderState.audioChunks,
+                // eyeTrackingData,             // EYE TRACKING DISABLED (2026-09-16)
+                // recorderState.audioChunks,   // AUDIO/TRANSCRIPTION DISABLED (2026-09-16)
+                null,  // eye-tracking data (disabled)
+                null,  // audio chunks (disabled)
                 (status) => showUploadStatus(status, 'uploading')
             );
 
@@ -1326,36 +1337,37 @@
                     gameStateMatrix: generateGameStateMatrix()
                 };
             },
-            screenToGrid: function(screenX, screenY) {
-                // Measured off the play-area corner cells rather than #grid
-                // itself, since #grid also contains the (non-game) energy
-                // frame ring whenever the energy constraint is enabled.
-                const topLeft = document.getElementById(`cell-1-1`);
-                const bottomRight = document.getElementById(`cell-${GRID_SIZE}-${GRID_SIZE}`);
-                if (!topLeft || !bottomRight) return null;
-                const tl = topLeft.getBoundingClientRect();
-                const br = bottomRight.getBoundingClientRect();
-                const rect = { left: tl.left, top: tl.top, right: br.right, bottom: br.bottom };
+            // EYE TRACKING DISABLED (2026-09-16): gaze-to-grid conversion for WebGazer.
+            // screenToGrid: function(screenX, screenY) {
+            //     // Measured off the play-area corner cells rather than #grid
+            //     // itself, since #grid also contains the (non-game) energy
+            //     // frame ring whenever the energy constraint is enabled.
+            //     const topLeft = document.getElementById(`cell-1-1`);
+            //     const bottomRight = document.getElementById(`cell-${GRID_SIZE}-${GRID_SIZE}`);
+            //     if (!topLeft || !bottomRight) return null;
+            //     const tl = topLeft.getBoundingClientRect();
+            //     const br = bottomRight.getBoundingClientRect();
+            //     const rect = { left: tl.left, top: tl.top, right: br.right, bottom: br.bottom };
 
-                if (screenX < rect.left || screenX > rect.right ||
-                    screenY < rect.top || screenY > rect.bottom) {
-                    return null; // Off grid
-                }
+            //     if (screenX < rect.left || screenX > rect.right ||
+            //         screenY < rect.top || screenY > rect.bottom) {
+            //         return null; // Off grid
+            //     }
 
-                const cellWidth = (rect.right - rect.left) / GRID_SIZE;
-                const cellHeight = (rect.bottom - rect.top) / GRID_SIZE;
-                // 1-based grid coordinates (1..GRID_SIZE)
-                const gridX = Math.floor((screenX - rect.left) / cellWidth) + 1;
-                const gridY = Math.floor((screenY - rect.top) / cellHeight) + 1;
+            //     const cellWidth = (rect.right - rect.left) / GRID_SIZE;
+            //     const cellHeight = (rect.bottom - rect.top) / GRID_SIZE;
+            //     // 1-based grid coordinates (1..GRID_SIZE)
+            //     const gridX = Math.floor((screenX - rect.left) / cellWidth) + 1;
+            //     const gridY = Math.floor((screenY - rect.top) / cellHeight) + 1;
 
-                return { x: Math.min(gridX, GRID_SIZE), y: Math.min(gridY, GRID_SIZE) };
-            },
+            //     return { x: Math.min(gridX, GRID_SIZE), y: Math.min(gridY, GRID_SIZE) };
+            // },
             insertBeforeSelector: '#dashboard',
             onRecordingStart: () => {
-                S3Uploader.startBackups(sessionCode, 'Game 5', () => AudioRecorder.getState().audioChunks);
+                // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): S3Uploader.startBackups(sessionCode, 'Game 5', () => AudioRecorder.getState().audioChunks);
             },
             onRecordingStop: () => {
-                S3Uploader.stopBackups();
+                // AUDIO/TRANSCRIPTION DISABLED (2026-09-16): S3Uploader.stopBackups();
             }
         });
 

@@ -145,10 +145,11 @@
             background: var(--primary);
             color: #FBF3EE;
         }
-        /* Recalibrate keeps the smaller label. */
+        /* EYE TRACKING DISABLED (2026-09-16): Recalibrate button styling (kept the smaller label).
         .button-grid a:not(.puzzle) {
             font-size: 12px;
         }
+        */
         .button-grid a:not(.placeholder):hover {
             transform: translate(1px, 1px);
             box-shadow: 3px 3px 0 var(--ink);
@@ -156,9 +157,11 @@
         .button-grid a.puzzle:not(.placeholder):hover {
             background: var(--primary-hover);
         }
+        /* EYE TRACKING DISABLED (2026-09-16): Recalibrate hover styling.
         .button-grid a:not(.puzzle):not(.placeholder):hover {
             background: #F4F4EF;
         }
+        */
         .button-grid a:not(.placeholder):active {
             transform: translate(4px, 4px);
             box-shadow: 0 0 0 var(--ink);
@@ -193,6 +196,7 @@
             width: 260px;
             height: auto;
         }
+        /* EYE TRACKING DISABLED (2026-09-16): footer note styling.
         .eye-tracking-note {
             position: fixed;
             bottom: 1.5rem;
@@ -202,6 +206,7 @@
             font-size: 0.8rem;
             color: var(--ink-soft);
         }
+        */
         @media (max-width: 720px) {
             .top-right { display: none; }
             .site-logo { width: 180px; }
@@ -244,12 +249,14 @@
                     <a class="puzzle" href="game4.html">Puzzle 4</a>
                     <a class="puzzle" href="game6.html">Puzzle 6</a>
                     <a class="puzzle placeholder">Puzzle 8</a>
-                    <a href="calibration.html?force=true">Recalibrate</a>
+                    <!-- EYE TRACKING DISABLED (2026-09-16): <a href="calibration.html?force=true">Recalibrate</a> -->
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- EYE TRACKING DISABLED (2026-09-16):
     <p class="eye-tracking-note">* To skip eye-tracking calibration, click <em>"Continue without eye tracking"</em> when prompted.</p>
+    -->
 </body>
 </html>
