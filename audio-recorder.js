@@ -419,7 +419,7 @@ const AudioRecorder = (function() {
         if (!elements.recordBtn) return;
 
         if (state.isRecording) {
-            elements.recordBtn.textContent = 'Stop Recording';
+            elements.recordBtn.textContent = 'STOP';
             elements.recordBtn.classList.add('recording');
 
             if (state.isPaused) {
@@ -442,7 +442,7 @@ const AudioRecorder = (function() {
                 elements.statusDiv.classList.remove('paused');
             }
         } else {
-            elements.recordBtn.textContent = 'Start Recording';
+            elements.recordBtn.textContent = 'RECORD';
             elements.recordBtn.classList.remove('recording');
             elements.pauseBtn.style.display = 'none';
 
@@ -684,24 +684,29 @@ const AudioRecorder = (function() {
                 z-index: 1000;
                 text-align: right;
             }
+            /* Idle and paused: same pink console key as the dashboard Home
+               button (puzzle-theme.css #dash-home). Live recording: red + pulse. */
             .audio-recorder-btn {
-                background-color: #333;
-                border: 2px solid #555;
-                color: white;
+                background-color: var(--primary, #d15884);
+                border: 3px solid var(--ink, #1C1A17);
+                color: #FBF3EE;
                 padding: 10px 20px;
                 margin: 0 5px;
-                border-radius: 5px;
+                border-radius: 9px;
                 cursor: pointer;
-                font-family: inherit;
-                font-size: 16px;
+                font-family: 'Silkscreen', 'Courier New', monospace;
+                font-size: 12px;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
                 min-width: 140px;
+                transition: background-color 0.12s ease-out;
             }
             .audio-recorder-btn:hover {
-                background-color: #555;
+                background-color: var(--primary-hover, #e37f9b);
             }
-            .audio-recorder-btn.recording {
+            .audio-recorder-btn.recording,
+            .audio-recorder-btn.recording:hover {
                 background-color: #ff0000;
-                border-color: #ff3333;
                 animation: audio-recorder-pulse 1.5s infinite;
                 will-change: opacity;
             }
@@ -758,7 +763,7 @@ const AudioRecorder = (function() {
         // Create record button
         elements.recordBtn = document.createElement('button');
         elements.recordBtn.className = 'audio-recorder-btn';
-        elements.recordBtn.textContent = 'Start Recording';
+        elements.recordBtn.textContent = 'RECORD';
         elements.recordBtn.onclick = toggleRecording;
 
         // Prevent spacebar from triggering the button (only allow direct clicks)
