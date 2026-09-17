@@ -504,7 +504,9 @@
             // (6,3); the object starts on the left at (2,4). Because the wall
             // is two cells thick, no single block jump can cross it - the
             // player must use the magnet to pull a block out of the wall and
-            // open a gap. Ego is lavender; object is violet.
+            // open a gap. Ego is lavender; object is violet. Each block has
+            // its own color, assigned per cell exactly as specified.
+            const ORANGE = '#FF5F15', YELLOW = '#DDCC77', LIME = '#BBCC33', ROSE = '#CC6677';
             return {
                 id: 3,
                 name: "Level 3",
@@ -514,17 +516,17 @@
                     { start: { x: 2, y: 4 }, movement: MOVE_EVADE }
                 ],
                 blocks: [
-                    { x: 3, y: 1 }, { x: 4, y: 1 },
-                    { x: 3, y: 2 }, { x: 4, y: 2 },
-                    { x: 3, y: 3 }, { x: 4, y: 3 },
-                    { x: 3, y: 4 }, { x: 4, y: 4 },
-                    { x: 3, y: 5 }, { x: 4, y: 5 },
-                    { x: 3, y: 6 }, { x: 4, y: 6 }
+                    { x: 3, y: 1, color: ORANGE }, { x: 4, y: 1, color: ROSE },
+                    { x: 3, y: 2, color: LIME },   { x: 4, y: 2, color: ORANGE },
+                    { x: 3, y: 3, color: YELLOW }, { x: 4, y: 3, color: LIME },
+                    { x: 3, y: 4, color: ROSE },   { x: 4, y: 4, color: YELLOW },
+                    { x: 3, y: 5, color: ORANGE }, { x: 4, y: 5, color: ROSE },
+                    { x: 3, y: 6, color: YELLOW }, { x: 4, y: 6, color: ORANGE }
                 ],
                 colors: {
                     ego: '#DAB1DA',    // lavender
                     object: '#332288', // violet
-                    block: '#D3D3D3'   // grey
+                    block: '#D3D3D3'   // fallback only - every block above sets its own color
                 }
             };
         }
