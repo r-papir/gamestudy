@@ -122,7 +122,7 @@
         }
 
         /* Bottom-right corner, shown while playing - needed to advance past
-           the empty placeholder level (5), which has no ego cell and
+           the empty placeholder levels (4, 5), which have no ego cell and
            so nothing for the arrow keys to do. */
         #skip-button {
             right: 20px;
@@ -328,7 +328,7 @@
         //     jump - that cell was always the jump's landing cell, making
         //     every capture impossible. Capture is now by landing on the
         //     object, but the rule is kept: it is what lets the ego corner
-        //     an evading object at all. Level 4 solvability re-verified by
+        //     an evading object at all. Level 6 (then Level 4) solvability re-verified by
         //     exhaustive search after the change.)
         // ===========================
 
@@ -520,7 +520,7 @@
         }
 
         function level3() {
-            // First 'evade' level (same mechanics as Level 4 and every level
+            // First 'evade' level (same mechanics as Level 6 and every level
             // after it). The object starts at (2,2), the one gap in a solid
             // 4x4 slab of block cells filling the top-left corner, so it is
             // boxed in and cannot flee until the player opens the slab - and
@@ -564,15 +564,15 @@
             };
         }
 
-        function level4() {
-            // First level with a block cell. The object cell now uses the
-            // 'evade' (greedy chase-state) algorithm instead of 'random'. The
+        function level6() {
+            // (Was Level 4 until 2026-09-16; moved to slot 6 unchanged.)
+            // Single free-roaming 'evade' object with one block cell. The
             // block at (5,4) sits beside the object at (4,3) - the player will
             // likely need the magnet to drag it into the object's escape
             // routes so the object can be cornered and stepped on.
             return {
-                id: 4,
-                name: "Level 4",
+                id: 6,
+                name: "Level 6",
                 isPlayable: true,
                 egoStart: { x: 3, y: 4 },
                 objects: [
@@ -1079,7 +1079,7 @@
         });
 
         // Skip button - advance to the next level without solving it. Needed
-        // for the empty placeholder level (5), which has no ego cell
+        // for the empty placeholder levels (4, 5), which have no ego cell
         // for the arrow keys to move. Mirrors the win transition (same fade +
         // timing) but logs 'skip_level' and skips the ripple.
         document.getElementById('skip-button').addEventListener('click', () => {
@@ -1231,8 +1231,9 @@
             level1(),
             level2(),
             level3(),
-            level4(),
-            blankLevel(5)
+            blankLevel(4),
+            blankLevel(5),
+            level6()
         ];
 
         // Per-level object movement algorithms, for the data.
