@@ -538,10 +538,10 @@
         function level4() {
             // 'Evade' level (same mechanics as Levels 2, 3, 5 and 6). The ego
             // starts at (1,6) in the bottom-left corner under a slab of blocks
-            // across row 4 (columns 1-5) and row 5 (columns 1, 2 and 4), with
-            // more blocks at (3,3), (4,3), (5,3), (4,6) and (5,6). The object
-            // starts at (3,2) above the slab. Ego and object are both
-            // lavender, deliberately. Each block has its own color, assigned
+            // across row 4 (columns 1-5) and row 5 (columns 1, 2, 4 and 5),
+            // with more blocks at (3,3), (4,3), (5,3), (4,6) and (5,6). The
+            // object starts at (3,2) above the slab. Ego and object are both
+            // purple, deliberately. Each block has its own color, assigned
             // per cell exactly as specified.
             const PINK = '#E89EB8', VIOLET = '#332288';
             return {
@@ -557,11 +557,12 @@
                     { x: 1, y: 4, color: PINK },   { x: 2, y: 4, color: VIOLET }, { x: 3, y: 4, color: PINK },
                     { x: 4, y: 4, color: VIOLET }, { x: 5, y: 4, color: PINK },
                     { x: 1, y: 5, color: VIOLET }, { x: 2, y: 5, color: PINK },   { x: 4, y: 5, color: PINK },
+                    { x: 5, y: 5, color: VIOLET },
                     { x: 4, y: 6, color: VIOLET }, { x: 5, y: 6, color: PINK }
                 ],
                 colors: {
-                    ego: '#DAB1DA',    // lavender
-                    object: '#DAB1DA', // lavender (same as ego, by design)
+                    ego: '#A074E8',    // purple
+                    object: '#A074E8', // purple (same as ego, by design)
                     block: '#D3D3D3'   // fallback only - every block above sets its own color
                 }
             };
