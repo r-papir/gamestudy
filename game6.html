@@ -422,14 +422,15 @@
         // ---------------------------------------------------------------
 
         function level1() {
-            // Tutorial level. One object cell, no blocks. The object moves
-            // with the 'cycle' algorithm - it ignores the ego completely and
-            // walks a fixed figure-eight loop over the 2x3 patch of cells
-            // (2..3, 3..5), one cell per ego move, so there is nothing to
+            // Tutorial level. One object cell and two teal blocks. The object
+            // moves with the 'cycle' algorithm - it ignores the ego completely
+            // and walks a fixed figure-eight loop over the 2x3 patch of cells
+            // (2..3, 4..6), one cell per ego move, so there is nothing to
             // evade here; the player just has to learn the loop and step
-            // onto it.
+            // onto it. The blocks at (2,3) and (3,3) sit directly above the
+            // loop.
             //
-            //   (2,3) -> (3,3) -> (3,4) -> (2,4) -> (2,5) -> (3,5) -> (3,4) -> (2,4) -> back to (2,3)
+            //   (2,4) -> (3,4) -> (3,5) -> (2,5) -> (2,6) -> (3,6) -> (3,5) -> (2,5) -> back to (2,4)
             return {
                 id: 1,
                 name: "Level 1",
@@ -437,19 +438,22 @@
                 egoStart: { x: 6, y: 1 },
                 objects: [
                     {
-                        start: { x: 2, y: 3 },
+                        start: { x: 2, y: 4 },
                         movement: MOVE_CYCLE,
                         path: [
-                            { x: 2, y: 3 }, { x: 3, y: 3 }, { x: 3, y: 4 }, { x: 2, y: 4 },
-                            { x: 2, y: 5 }, { x: 3, y: 5 }, { x: 3, y: 4 }, { x: 2, y: 4 }
+                            { x: 2, y: 4 }, { x: 3, y: 4 }, { x: 3, y: 5 }, { x: 2, y: 5 },
+                            { x: 2, y: 6 }, { x: 3, y: 6 }, { x: 3, y: 5 }, { x: 2, y: 5 }
                         ]
                     }
                 ],
-                blocks: [],
+                blocks: [
+                    { x: 2, y: 3 },
+                    { x: 3, y: 3 }
+                ],
                 colors: {
                     ego: '#332288',    // violet
                     object: '#E89EB8', // pink
-                    block: '#D3D3D3'   // grey (unused this level)
+                    block: '#44AA99'   // teal
                 }
             };
         }
