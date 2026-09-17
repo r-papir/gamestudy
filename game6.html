@@ -308,7 +308,7 @@
         //     the highest-priority legal orthogonal step each turn. (The name
         //     is legacy from an earlier random-walk version; it is fully
         //     deterministic now, like everything else here.)
-        //   - 'evade'  (Level 3 onward - every level from here uses it): a
+        //   - 'evade'  (Level 2 onward - every level from here uses it): a
         //     "chase state" that flees the ego.
         //     GREEDY EVASION ALGORITHM: a one-ply greedy heuristic (steepest-
         //     ascent hill-climbing restricted to a single step) - the object
@@ -412,7 +412,7 @@
         // Schema:
         //   egoStart : { x, y }                 ego start cell (required)
         //   objects  : [ { start:{x,y}, movement, path? }, ... ]  (required; [] = none)
-        //              movement: 'cycle' (Level 1), 'random' (unused) or 'evade' (Levels 3+)
+        //              movement: 'cycle' (Level 1), 'random' (unused) or 'evade' (Levels 2+)
         //              path: [ {x,y}, ... ] - required for 'cycle' only; the loop the
         //                    object walks, in order. `start` must be one of its cells.
         //   blocks   : [ { x, y, color? }, ... ] (required; [] = none)
@@ -450,6 +450,37 @@
                     ego: '#332288',    // violet
                     object: '#CC6677', // rose
                     block: '#D3D3D3'   // grey (unused this level)
+                }
+            };
+        }
+
+        function level2() {
+            // 'Evade' level (same mechanics as Levels 3, 5 and 6). The ego
+            // starts at (5,5), boxed in by a ring of eight block cells. The
+            // object starts in the far corner at (1,1), behind an L-shaped
+            // wall of blocks along row 2 (columns 2-6) and column 2 (rows
+            // 2-6), so it can only roam the row-1 / column-1 corridor.
+            return {
+                id: 2,
+                name: "Level 2",
+                isPlayable: true,
+                egoStart: { x: 5, y: 5 },
+                objects: [
+                    { start: { x: 1, y: 1 }, movement: MOVE_EVADE }
+                ],
+                blocks: [
+                    // ring around the ego
+                    { x: 4, y: 4 }, { x: 5, y: 4 }, { x: 6, y: 4 },
+                    { x: 4, y: 5 },                 { x: 6, y: 5 },
+                    { x: 4, y: 6 }, { x: 5, y: 6 }, { x: 6, y: 6 },
+                    // L-shaped wall around the corner
+                    { x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 }, { x: 5, y: 2 }, { x: 6, y: 2 },
+                    { x: 2, y: 3 }, { x: 2, y: 4 }, { x: 2, y: 5 }, { x: 2, y: 6 }
+                ],
+                colors: {
+                    ego: '#332288',    // violet
+                    object: '#CC6677', // rose
+                    block: '#D3D3D3'   // grey
                 }
             };
         }
@@ -1215,7 +1246,7 @@
 
         levels = [
             level1(),
-            blankLevel(2),
+            level2(),
             level3(),
             blankLevel(4),
             level5(),
