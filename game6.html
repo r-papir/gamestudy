@@ -122,7 +122,7 @@
         }
 
         /* Bottom-right corner, shown while playing - needed to advance past
-           the empty placeholder levels (3, 5), which have no ego cell and
+           the empty placeholder level (5), which has no ego cell and
            so nothing for the arrow keys to do. */
         #skip-button {
             right: 20px;
@@ -308,7 +308,8 @@
         //     the highest-priority legal orthogonal step each turn. (The name
         //     is legacy from an earlier random-walk version; it is fully
         //     deterministic now, like everything else here.)
-        //   - 'evade'  (Level 4 onward): a "chase state" that flees the ego.
+        //   - 'evade'  (Level 3 onward - every level from here uses it): a
+        //     "chase state" that flees the ego.
         //     GREEDY EVASION ALGORITHM: a one-ply greedy heuristic (steepest-
         //     ascent hill-climbing restricted to a single step) - the object
         //     considers staying put plus each legal orthogonal step, and picks
@@ -411,7 +412,7 @@
         // Schema:
         //   egoStart : { x, y }                 ego start cell (required)
         //   objects  : [ { start:{x,y}, movement, path? }, ... ]  (required; [] = none)
-        //              movement: 'cycle' (Levels 1-2), 'random' (unused) or 'evade' (Level 4+)
+        //              movement: 'cycle' (Levels 1-2), 'random' (unused) or 'evade' (Levels 3+)
         //              path: [ {x,y}, ... ] - required for 'cycle' only; the loop the
         //                    object walks, in order. `start` must be one of its cells.
         //   blocks   : [ { x, y, color? }, ... ] (required; [] = none)
@@ -514,6 +515,49 @@
                     ego: '#FFFFFF',
                     object: '#FFFFFF',
                     block: '#FFFFFF'
+                }
+            };
+        }
+
+        function level3() {
+            // First 'evade' level (same mechanics as Level 4 and every level
+            // after it). The object starts at (3,3), the one gap in a solid
+            // 4x4 slab of block cells filling the top-left corner, so it is
+            // boxed in and cannot flee until the player opens the slab. Ego
+            // starts at (5,6). Ego and object are both violet, deliberately.
+            //
+            // Block colors alternate lime / teal / blue (game3.html palette),
+            // assigned per cell exactly as specified.
+            const LIME = '#BBCC33', TEAL = '#44AA99', BLUE = '#ADD8E6';
+            return {
+                id: 3,
+                name: "Level 3",
+                isPlayable: true,
+                egoStart: { x: 5, y: 6 },
+                objects: [
+                    { start: { x: 3, y: 3 }, movement: MOVE_EVADE }
+                ],
+                blocks: [
+                    { x: 1, y: 1, color: LIME },
+                    { x: 2, y: 1, color: TEAL },
+                    { x: 3, y: 1, color: BLUE },
+                    { x: 4, y: 1, color: LIME },
+                    { x: 1, y: 2, color: TEAL },
+                    { x: 2, y: 2, color: BLUE },
+                    { x: 3, y: 2, color: LIME },
+                    { x: 4, y: 2, color: TEAL },
+                    { x: 1, y: 3, color: BLUE },
+                    { x: 2, y: 3, color: LIME },
+                    { x: 4, y: 3, color: LIME },
+                    { x: 1, y: 4, color: LIME },
+                    { x: 2, y: 4, color: TEAL },
+                    { x: 3, y: 4, color: LIME },
+                    { x: 4, y: 4, color: BLUE }
+                ],
+                colors: {
+                    ego: '#332288',    // violet
+                    object: '#332288', // violet (same as ego, by design)
+                    block: '#D3D3D3'   // fallback only - every block above sets its own color
                 }
             };
         }
@@ -1033,7 +1077,7 @@
         });
 
         // Skip button - advance to the next level without solving it. Needed
-        // for the empty placeholder levels (3, 5), which have no ego cell
+        // for the empty placeholder level (5), which has no ego cell
         // for the arrow keys to move. Mirrors the win transition (same fade +
         // timing) but logs 'skip_level' and skips the ripple.
         document.getElementById('skip-button').addEventListener('click', () => {
@@ -1184,7 +1228,7 @@
         levels = [
             level1(),
             level2(),
-            blankLevel(3),
+            level3(),
             level4(),
             blankLevel(5)
         ];
