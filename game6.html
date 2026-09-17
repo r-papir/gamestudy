@@ -521,10 +521,12 @@
 
         function level3() {
             // First 'evade' level (same mechanics as Level 4 and every level
-            // after it). The object starts at (3,3), the one gap in a solid
+            // after it). The object starts at (2,2), the one gap in a solid
             // 4x4 slab of block cells filling the top-left corner, so it is
-            // boxed in and cannot flee until the player opens the slab. Ego
-            // starts at (5,6). Ego and object are both violet, deliberately.
+            // boxed in and cannot flee until the player opens the slab - and
+            // no single block jump can land on (2,2) either, so the magnet is
+            // needed. Ego starts at (5,6). Ego and object are both violet,
+            // deliberately.
             //
             // Block colors alternate lime / teal / blue (game3.html palette),
             // assigned per cell exactly as specified.
@@ -535,7 +537,7 @@
                 isPlayable: true,
                 egoStart: { x: 5, y: 6 },
                 objects: [
-                    { start: { x: 3, y: 3 }, movement: MOVE_EVADE }
+                    { start: { x: 2, y: 2 }, movement: MOVE_EVADE }
                 ],
                 blocks: [
                     { x: 1, y: 1, color: LIME },
@@ -543,11 +545,11 @@
                     { x: 3, y: 1, color: BLUE },
                     { x: 4, y: 1, color: LIME },
                     { x: 1, y: 2, color: TEAL },
-                    { x: 2, y: 2, color: BLUE },
                     { x: 3, y: 2, color: LIME },
                     { x: 4, y: 2, color: TEAL },
                     { x: 1, y: 3, color: BLUE },
                     { x: 2, y: 3, color: LIME },
+                    { x: 3, y: 3, color: TEAL },
                     { x: 4, y: 3, color: LIME },
                     { x: 1, y: 4, color: LIME },
                     { x: 2, y: 4, color: TEAL },
