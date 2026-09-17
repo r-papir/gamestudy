@@ -519,6 +519,38 @@
             };
         }
 
+        function level3() {
+            // 'Evade' level (same mechanics as Levels 5 and 6). A solid wall
+            // of block cells two columns thick (columns 3 and 4, every row)
+            // splits the grid down the middle. The ego starts on the right at
+            // (6,3); the object starts on the left at (2,4). Because the wall
+            // is two cells thick, no single block jump can cross it - the
+            // player must use the magnet to pull a block out of the wall and
+            // open a gap. Ego and object are the same colors as Levels 1-2.
+            return {
+                id: 3,
+                name: "Level 3",
+                isPlayable: true,
+                egoStart: { x: 6, y: 3 },
+                objects: [
+                    { start: { x: 2, y: 4 }, movement: MOVE_EVADE }
+                ],
+                blocks: [
+                    { x: 3, y: 1 }, { x: 4, y: 1 },
+                    { x: 3, y: 2 }, { x: 4, y: 2 },
+                    { x: 3, y: 3 }, { x: 4, y: 3 },
+                    { x: 3, y: 4 }, { x: 4, y: 4 },
+                    { x: 3, y: 5 }, { x: 4, y: 5 },
+                    { x: 3, y: 6 }, { x: 4, y: 6 }
+                ],
+                colors: {
+                    ego: '#332288',    // violet
+                    object: '#CC6677', // rose
+                    block: '#D3D3D3'   // grey
+                }
+            };
+        }
+
         function level5() {
             // (Was Level 3 until 2026-09-17; moved to slot 5 unchanged.)
             // 'Evade' level (same mechanics as Level 6 and every level
@@ -1231,7 +1263,7 @@
         levels = [
             level1(),
             level2(),
-            blankLevel(3),
+            level3(),
             blankLevel(4),
             level5(),
             level6()
