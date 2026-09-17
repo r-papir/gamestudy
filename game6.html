@@ -264,17 +264,20 @@
         // Three kinds of pieces:
         //   - ego   : the player's vehicle, moved one cell at a time with the
         //             arrow keys (no diagonals, no wrap - the grid edge blocks).
-        //   - object: collectible. Captured Peg-Solitaire style - the ego must
-        //             be orthogonally adjacent to it and press the arrow key
-        //             that jumps IT (ego -> object -> the empty cell beyond, in
-        //             a straight line). If the landing cell is blocked or off
-        //             the grid, the jump (and the whole move) is illegal and
-        //             the ego does not move at all. A collected object is
-        //             removed from the board immediately.
-        //   - block : an obstacle. It can also be jumped over the same way,
-        //             but nothing is collected and the block does not move -
-        //             it just lets the ego land on the far side. Blocks never
-        //             move on their own.
+        //   - object: collectible. Captured by LANDING ON IT - whenever an ego
+        //             move ends on an object's cell (a plain step onto it, the
+        //             far side of a block jump, or a drag step) that object is
+        //             collected and removed from the board immediately. Objects
+        //             are never jumped over; to the ego they are walkable cells.
+        //             (Until 2026-09-16 capture was Peg-Solitaire style - jump
+        //             over the object onto the empty cell beyond. See git
+        //             history.)
+        //   - block : an obstacle. The ego can jump over a single block
+        //             Peg-Solitaire style (ego -> block -> the cell beyond, in
+        //             a straight line) if the far cell is in bounds and holds
+        //             no block; nothing happens to the block. If the far cell
+        //             is not available the whole move is illegal and the ego
+        //             does not move. Blocks never move on their own.
         //
         // Space bar toggles the "magnet" state (on/off). This state is NEVER
         // shown to the player anywhere in the UI - it is a "latent obligation":
@@ -319,12 +322,13 @@
         //     NO-BACKWARD-ESCAPE RULE: while the object is orthogonally
         //     adjacent to the ego (distance exactly 1), it is additionally
         //     forbidden from continuing straight past itself, away from the
-        //     ego, on the ego's own row/column. That exact cell is always
-        //     where a jump would need to land, so without this rule the
-        //     object could always flee into the one cell a capture requires,
-        //     making every capture structurally impossible (verified by
-        //     exhaustive search before this rule was added - see git history).
-        //     It may still flee to either of the two perpendicular cells.
+        //     ego, on the ego's own row/column. It may still flee to either
+        //     of the two perpendicular cells. (Introduced when capture was a
+        //     jump - that cell was always the jump's landing cell, making
+        //     every capture impossible. Capture is now by landing on the
+        //     object, but the rule is kept: it is what lets the ego corner
+        //     an evading object at all. Level 4 solvability re-verified by
+        //     exhaustive search after the change.)
         // ===========================
 
         const BLURB = 'There are no instructions for this game, intentionally.<br>Use the arrow keys and space bar to discover the controls, rules, and objective.';
@@ -392,7 +396,8 @@
                 "x": "column, increases left to right (1-6)",
                 "y": "row, increases top to bottom (1-6)",
                 "movement": "Arrow keys move the ego one cell (Up/Down/Left/Right), no diagonals, no wrap - off the grid edge is blocked and does not count as a move.",
-                "jump": "If the target cell holds an object or block, and the cell two steps further in the same direction is empty and in bounds, the ego jumps there in one move; an object jumped this way is collected and removed, a block jumped this way is untouched. If the landing cell is not free, the whole move is illegal and the ego does not move.",
+                "collect": "An object is collected (removed) the moment an ego move ends on its cell - by stepping onto it, by landing on it after a block jump, or by a drag step. Objects are walkable and are never jumped over.",
+                "jump": "If the target cell holds a block, and the cell two steps further in the same direction is in bounds and holds no block, the ego jumps there in one move; the block is untouched. If the landing cell holds an object, that object is collected. If the landing cell is out of bounds or holds a block, the whole move is illegal and the ego does not move.",
                 "magnet": "Space bar toggles a hidden magnet state (never shown in the UI). While on, a block that is or becomes orthogonally adjacent to the ego latches to that side of the ego and is dragged/pushed in lock-step with every ego move until magnet is toggled off again. Only one block can be attached at a time.",
                 "reaction": "Every ego move that actually succeeds (step, jump, or drag) triggers exactly one deterministic step from each remaining object cell - see sessionData.objectAlgorithms for which algorithm each level's objects use."
             },
@@ -420,8 +425,8 @@
             // with the 'cycle' algorithm - it ignores the ego completely and
             // walks a fixed figure-eight loop over the 2x3 patch of cells
             // (2..3, 3..5), one cell per ego move, so there is nothing to
-            // evade here; the player just has to learn the loop and catch it
-            // with a Peg-Solitaire jump.
+            // evade here; the player just has to learn the loop and step
+            // onto it.
             //
             //   (2,3) -> (3,3) -> (3,4) -> (2,4) -> (2,5) -> (3,5) -> (3,4) -> (2,4) -> back to (2,3)
             return {
@@ -452,8 +457,9 @@
             // Same mechanics as Level 1 ('cycle' object, ignores the ego), but
             // the object is fenced into the two-cell pocket (4,3)/(4,4) by a
             // ring of ten block cells, so the player has to discover the
-            // magnet and drag a block out of the ring before a jump is
-            // possible. The object just bounces between the two pocket cells:
+            // magnet and drag a block out of the ring (or jump a block in)
+            // before the object can be reached. The object just bounces
+            // between the two pocket cells:
             //
             //   (4,4) -> (4,3) -> (4,4) -> ...
             //
@@ -513,8 +519,8 @@
             // First level with a block cell. The object cell now uses the
             // 'evade' (greedy chase-state) algorithm instead of 'random'. The
             // block at (5,4) sits beside the object at (4,3) - the player will
-            // likely need the magnet to drag it out of (or into) the way of a
-            // jump.
+            // likely need the magnet to drag it into the object's escape
+            // routes so the object can be cornered and stepped on.
             return {
                 id: 4,
                 name: "Level 4",
@@ -706,9 +712,11 @@
         }
 
         // Ordinary ego movement (no block currently attached): one step into
-        // an empty cell, or a Peg-Solitaire jump over a single object/block
-        // cell in that direction if the far cell is empty and in bounds.
-        // Otherwise the whole move is illegal and nothing happens.
+        // the next cell (empty or holding an object - objects are walkable),
+        // or a Peg-Solitaire jump over a single block cell in that direction
+        // if the far cell is in bounds and holds no block. Ending the move on
+        // an object's cell collects it. Otherwise the whole move is illegal
+        // and nothing happens.
         function soloMove(dx, dy, key) {
             const ego = gameState.egoPos;
             const tx = ego.x + dx, ty = ego.y + dy;
@@ -718,19 +726,16 @@
                 return;
             }
 
-            const objIdx = objectIndexAt(tx, ty);
             const blkIdx = blockIndexAt(tx, ty);
 
             let landed = null;
-            let collectedIdx = -1;
 
-            if (objIdx === -1 && blkIdx === -1) {
+            if (blkIdx === -1) {
                 landed = { x: tx, y: ty };
             } else {
                 const lx = ego.x + 2 * dx, ly = ego.y + 2 * dy;
-                if (inBounds(lx, ly) && objectIndexAt(lx, ly) === -1 && blockIndexAt(lx, ly) === -1) {
+                if (inBounds(lx, ly) && blockIndexAt(lx, ly) === -1) {
                     landed = { x: lx, y: ly };
-                    if (objIdx !== -1) collectedIdx = objIdx;
                 }
             }
 
@@ -742,10 +747,12 @@
             ego.x = landed.x;
             ego.y = landed.y;
 
+            // Landing on an object collects it (step or jump alike).
+            const collectedIdx = objectIndexAt(ego.x, ego.y);
             if (collectedIdx !== -1) {
                 gameState.objects.splice(collectedIdx, 1);
                 logEvent('collect', { key });
-            } else if (objIdx !== -1 || blkIdx !== -1) {
+            } else if (blkIdx !== -1) {
                 logEvent('jump', { key });
             } else {
                 logEvent('move', { key });
@@ -759,7 +766,9 @@
         // Dragging a latched block: ego and the attached block translate by
         // the same [dx,dy], preserving their offset exactly. The whole move is
         // illegal (nothing happens to either piece) unless both destinations
-        // are in bounds and unoccupied by anything other than the pair itself.
+        // are in bounds, neither holds another block, and the block's
+        // destination holds no object. The ego's destination MAY hold an
+        // object - landing on it collects it, same as any other move.
         function dragMove(dx, dy, key) {
             const ego = gameState.egoPos;
             const att = gameState.attached;
@@ -775,7 +784,7 @@
 
             const blocksAt = (x, y) => gameState.blocks.some((b, i) => i !== att.blockIndex && b.x === x && b.y === y);
 
-            if (objectIndexAt(newEgo.x, newEgo.y) !== -1 || blocksAt(newEgo.x, newEgo.y) ||
+            if (blocksAt(newEgo.x, newEgo.y) ||
                 objectIndexAt(newBlock.x, newBlock.y) !== -1 || blocksAt(newBlock.x, newBlock.y)) {
                 logEvent('blocked', { key });
                 return;
@@ -784,7 +793,14 @@
             ego.x = newEgo.x; ego.y = newEgo.y;
             block.x = newBlock.x; block.y = newBlock.y;
 
-            logEvent('drag', { key });
+            // Landing on an object collects it, even mid-drag.
+            const collectedIdx = objectIndexAt(ego.x, ego.y);
+            if (collectedIdx !== -1) {
+                gameState.objects.splice(collectedIdx, 1);
+                logEvent('collect', { key });
+            } else {
+                logEvent('drag', { key });
+            }
 
             afterEgoMoved();
         }
@@ -836,9 +852,9 @@
                     // NO-BACKWARD-ESCAPE RULE (see the file-header comment for
                     // why): while orthogonally adjacent to the ego, drop the
                     // one candidate that continues straight past the object,
-                    // away from the ego, on the ego's own row/column - that is
-                    // always exactly the cell a capturing jump needs to land
-                    // on. The two perpendicular candidates, if legal, remain.
+                    // away from the ego, on the ego's own row/column. The two
+                    // perpendicular candidates, if legal, remain. This is what
+                    // makes cornering (and so stepping onto) the object possible.
                     if (manhattan(obj, gameState.egoPos) === 1) {
                         const awayDx = Math.sign(obj.x - gameState.egoPos.x);
                         const awayDy = Math.sign(obj.y - gameState.egoPos.y);
@@ -964,7 +980,7 @@
         function generateGameStateMatrix() {
             // matrix is a plain 0-based array; coordinates are 1-based, so
             // index with -1. 'E' empty, 'B' block, 'O' object, 'V' ego. Ego
-            // is written last so it wins a shared cell (mid-jump snapshots).
+            // is written last so it wins a shared cell.
             const matrix = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('E'));
             if (gameState.isPlayable) {
                 for (const b of gameState.blocks) matrix[b.y - 1][b.x - 1] = 'B';
