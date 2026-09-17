@@ -519,8 +519,9 @@
             };
         }
 
-        function level3() {
-            // First 'evade' level (same mechanics as Level 6 and every level
+        function level5() {
+            // (Was Level 3 until 2026-09-17; moved to slot 5 unchanged.)
+            // 'Evade' level (same mechanics as Level 6 and every level
             // after it). The object starts at (2,2), the one gap in a solid
             // 4x4 slab of block cells filling the top-left corner, so it is
             // boxed in and cannot flee until the player opens the slab - and
@@ -532,8 +533,8 @@
             // assigned per cell exactly as specified.
             const LIME = '#BBCC33', TEAL = '#44AA99', BLUE = '#ADD8E6';
             return {
-                id: 3,
-                name: "Level 3",
+                id: 5,
+                name: "Level 5",
                 isPlayable: true,
                 egoStart: { x: 5, y: 6 },
                 objects: [
@@ -1230,9 +1231,9 @@
         levels = [
             level1(),
             level2(),
-            level3(),
+            blankLevel(3),
             blankLevel(4),
-            blankLevel(5),
+            level5(),
             level6()
         ];
 
