@@ -533,13 +533,12 @@
 
         function level4() {
             // 'Evade' level (same mechanics as Levels 2, 3, 5 and 6). The ego
-            // starts at (1,6), sealed into the bottom-left pocket ((1,6) and
-            // (2,6)) by a two-row slab of blocks across rows 4-5, columns 1-4,
-            // plus (3,6) and (4,6). Every jump out of the pocket would land
-            // on another block, so the magnet is needed to open it. The object
-            // starts at (3,2) above the slab. Ego and object are both
-            // lavender, deliberately. Each block has its own color, assigned
-            // per cell exactly as specified.
+            // starts at (1,6) in the bottom-left corner below a slab of
+            // blocks across rows 4-5 (columns 1-4, minus (3,5)), with more
+            // blocks at (3,3), (4,3), (3,6) and (4,6). The object starts at
+            // (3,2) above the slab. Ego and object are both lavender,
+            // deliberately. Each block has its own color, assigned per cell
+            // exactly as specified.
             const PINK = '#E89EB8', VIOLET = '#332288';
             return {
                 id: 4,
@@ -550,11 +549,12 @@
                     { start: { x: 3, y: 2 }, movement: MOVE_EVADE }
                 ],
                 blocks: [
+                    { x: 3, y: 3, color: VIOLET }, { x: 4, y: 3, color: PINK },
                     { x: 1, y: 4, color: PINK },   { x: 2, y: 4, color: VIOLET },
                     { x: 3, y: 4, color: PINK },   { x: 4, y: 4, color: VIOLET },
                     { x: 1, y: 5, color: VIOLET }, { x: 2, y: 5, color: PINK },
-                    { x: 3, y: 5, color: VIOLET }, { x: 4, y: 5, color: PINK },
-                    { x: 3, y: 6, color: PINK },   { x: 4, y: 6, color: VIOLET }
+                                                   { x: 4, y: 5, color: PINK },
+                    { x: 3, y: 6, color: VIOLET }, { x: 4, y: 6, color: VIOLET }
                 ],
                 colors: {
                     ego: '#DAB1DA',    // lavender
