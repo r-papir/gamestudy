@@ -217,6 +217,7 @@
         }
     </style>
     <link rel="stylesheet" href="puzzle-theme.css">
+    <link rel="stylesheet" href="key-indicator.css">
 </head>
 <body>
     <!-- EYE TRACKING DISABLED (2026-09-16): pre-game calibration gate (redirected to calibration.html).
@@ -284,6 +285,7 @@
     </div>
 
     <!-- EYE TRACKING DISABLED (2026-09-16): <script src="webgazer.js"></script> -->
+    <script src="key-indicator.js"></script>
     <script src="audio-recorder.js"></script>
     <script src="s3-uploader.js"></script>
     <script>S3Uploader.setApiUrl('https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod');</script>
@@ -907,6 +909,7 @@
             if (!gameState.isPlayable) return;
 
             // Take the one-key lock only when the press actually moves a piece.
+            KeyIndicator.press(e.key);
             if (movePiece(piece)) heldKey = e.key;
         });
 

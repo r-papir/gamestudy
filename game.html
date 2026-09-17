@@ -209,6 +209,7 @@
         }
     </style>
     <link rel="stylesheet" href="puzzle-theme.css">
+    <link rel="stylesheet" href="key-indicator.css">
 </head>
 <body>
     <!-- EYE TRACKING DISABLED (2026-09-16): pre-game calibration gate (redirected to calibration.html).
@@ -264,6 +265,7 @@
     </div>
 
     <!-- EYE TRACKING DISABLED (2026-09-16): <script src="webgazer.js"></script> -->
+    <script src="key-indicator.js"></script>
     <script src="audio-recorder.js"></script>
     <script src="s3-uploader.js"></script>
     <script>S3Uploader.setApiUrl('https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod');</script>
@@ -687,24 +689,28 @@
             switch(e.key) {
                 case 'ArrowUp':
                     e.preventDefault();
+                    KeyIndicator.press(e.key);
                     logMovement('ArrowUp', 'up', 0, -1);
                     moveAvatar(0, -1);
                     fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
+                    KeyIndicator.press(e.key);
                     logMovement('ArrowDown', 'down', 0, 1);
                     moveAvatar(0, 1);
                     fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });
                     break;
                 case 'ArrowLeft':
                     e.preventDefault();
+                    KeyIndicator.press(e.key);
                     logMovement('ArrowLeft', 'left', -1, 0);
                     moveAvatar(-1, 0);
                     fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
+                    KeyIndicator.press(e.key);
                     logMovement('ArrowRight', 'right', 1, 0);
                     moveAvatar(1, 0);
                     fetch('http://localhost:5000/update_state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildAgentState()) });

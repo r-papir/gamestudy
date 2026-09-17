@@ -1,0 +1,52 @@
+/* key-indicator.css - on-screen arrow keys + space bar that light up when a
+   keypress is acted on (see key-indicator.js). Look adapted from keyboard-css
+   (https://shhdharmen.github.io/keyboard-css/), "light" variant.
+
+   Shows ONLY the key being pressed right now - no state, no history. */
+
+#key-indicator {
+    position: absolute;
+    top: 50%;
+    left: calc(50% + var(--kbd-grid-half, 0px) + 36px); /* right of the grid; set by key-indicator.js */
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: repeat(3, 44px);
+    grid-auto-rows: 44px;
+    gap: 6px;
+    pointer-events: none;
+    user-select: none;
+    z-index: 2;
+}
+
+#key-indicator .kbd-key {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 18px;
+    line-height: 1;
+    color: #343a40;
+    background-color: #f8f9fa;
+    border: 1px solid #dae0e5;
+    border-radius: 0.25rem;
+    box-shadow: 0 0 #cbd3da, 0 1px #cbd3da, 0 2px #cbd3da, 0 3px #cbd3da,
+                0 4px #cbd3da, 0 5px #cbd3da,
+                2px 2.5px 4px #adb5bd, 0 -1px 2.5px #adb5bd;
+    transform: translate3d(0, 0, 0);
+    transition: all 0.25s cubic-bezier(0.2, 1, 0.2, 1);
+}
+
+#key-indicator .kbd-key.active {
+    background-color: #dae0e5;
+    border-color: transparent;
+    box-shadow: 0 0 1px 1px #9fadba;
+    transform: translate3d(0, 5px, 0);
+}
+
+/* Layout: Up on top, Left/Down/Right beneath, space bar spanning all three. */
+#key-indicator .kbd-up    { grid-column: 2; grid-row: 1; }
+#key-indicator .kbd-left  { grid-column: 1; grid-row: 2; }
+#key-indicator .kbd-down  { grid-column: 2; grid-row: 2; }
+#key-indicator .kbd-right { grid-column: 3; grid-row: 2; }
+#key-indicator .kbd-space { grid-column: 1 / span 3; grid-row: 3; height: 32px; align-self: start; margin-top: 4px; }
