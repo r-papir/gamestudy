@@ -19,6 +19,10 @@
     };
     const HOLD_MS = 180;   // how long a key stays lit after a press
 
+    // <script src="key-indicator.js" data-space="off"> greys out the space bar
+    // on puzzles where it does nothing (still drawn, never lights up).
+    const spaceOff = !!(document.currentScript && document.currentScript.dataset.space === 'off');
+
     let root = null;
     let lit = null;
     let releaseTimer = null;
@@ -36,7 +40,7 @@
             '<div class="kbd-key kbd-left">&#8592;</div>' +
             '<div class="kbd-key kbd-down">&#8595;</div>' +
             '<div class="kbd-key kbd-right">&#8594;</div>' +
-            '<div class="kbd-key kbd-space"></div>';
+            '<div class="kbd-key kbd-space' + (spaceOff ? ' kbd-disabled' : '') + '"></div>';
         container.appendChild(root);
 
         // Sit just right of the grid: offset from the container's centre by
@@ -65,7 +69,7 @@
         if (releaseTimer) clearTimeout(releaseTimer);
         release();
         lit = root.querySelector('.' + cls);
-        if (!lit) return;
+        if (!lit || lit.classList.contains('kbd-disabled')) { lit = null; return; }
         lit.classList.add('active');
         releaseTimer = setTimeout(release, HOLD_MS);
     }

@@ -50,3 +50,15 @@
 #key-indicator .kbd-down  { grid-column: 2; grid-row: 2; }
 #key-indicator .kbd-right { grid-column: 3; grid-row: 2; }
 #key-indicator .kbd-space { grid-column: 1 / span 3; grid-row: 3; height: 32px; align-self: start; margin-top: 4px; }
+
+/* Greyed-out key (space bar on puzzles where it does nothing): flat, muted,
+   and never lights up. */
+#key-indicator .kbd-key.kbd-disabled {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #adb5bd;
+    box-shadow: 0 0 #dee2e6, 0 1px #dee2e6, 0 2px #dee2e6, 0 3px #dee2e6,
+                0 4px #dee2e6, 0 5px #dee2e6;
+    opacity: 0.55;
+}
+
