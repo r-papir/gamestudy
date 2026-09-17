@@ -455,13 +455,12 @@
 
         function level2() {
             // Same mechanics as Level 1 ('cycle' object, ignores the ego), but
-            // the object is fenced into the two-cell pocket (4,3)/(4,4) by a
-            // ring of ten block cells, so the player has to discover the
-            // magnet and drag a block out of the ring (or jump a block in)
-            // before the object can be reached. The object just bounces
-            // between the two pocket cells:
+            // the object lives in a one-cell-wide corridor, column 4 rows 1-4,
+            // walled in by block cells down columns 3 and 5 (rows 1-5) and
+            // capped at the bottom by the block at (4,5). The object shuttles
+            // up and down the corridor:
             //
-            //   (4,4) -> (4,3) -> (4,4) -> ...
+            //   (4,1) -> (4,2) -> (4,3) -> (4,4) -> (4,3) -> (4,2) -> back to (4,1)
             //
             // Every block has its own color (palette shared with game3.html)
             // so the player can tell which block they have moved.
@@ -472,22 +471,26 @@
                 egoStart: { x: 1, y: 6 },
                 objects: [
                     {
-                        start: { x: 4, y: 4 },
+                        start: { x: 4, y: 1 },
                         movement: MOVE_CYCLE,
-                        path: [ { x: 4, y: 4 }, { x: 4, y: 3 } ]
+                        path: [
+                            { x: 4, y: 1 }, { x: 4, y: 2 }, { x: 4, y: 3 },
+                            { x: 4, y: 4 }, { x: 4, y: 3 }, { x: 4, y: 2 }
+                        ]
                     }
                 ],
                 blocks: [
-                    { x: 3, y: 2, color: '#44AA99' }, // teal
-                    { x: 3, y: 3, color: '#DDCC77' }, // gold
-                    { x: 3, y: 4, color: '#ff9b4f' }, // orange
-                    { x: 3, y: 5, color: '#BBCC33' }, // olive
-                    { x: 4, y: 2, color: '#ADD8E6' }, // light blue
+                    { x: 3, y: 1, color: '#44AA99' }, // teal
+                    { x: 3, y: 2, color: '#DDCC77' }, // gold
+                    { x: 3, y: 3, color: '#ff9b4f' }, // orange
+                    { x: 3, y: 4, color: '#BBCC33' }, // olive
+                    { x: 3, y: 5, color: '#ADD8E6' }, // light blue
                     { x: 4, y: 5, color: '#882255' }, // wine
-                    { x: 5, y: 2, color: '#33FF66' }, // green
-                    { x: 5, y: 3, color: '#00CCFF' }, // cyan
-                    { x: 5, y: 4, color: '#D3D3D3' }, // grey
-                    { x: 5, y: 5, color: '#88CCEE' }  // sky
+                    { x: 5, y: 1, color: '#33FF66' }, // green
+                    { x: 5, y: 2, color: '#00CCFF' }, // cyan
+                    { x: 5, y: 3, color: '#D3D3D3' }, // grey
+                    { x: 5, y: 4, color: '#88CCEE' }, // sky
+                    { x: 5, y: 5, color: '#00CC66' }  // jade
                 ],
                 colors: {
                     ego: '#332288',    // violet (as Level 1)
