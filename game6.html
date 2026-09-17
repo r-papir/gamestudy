@@ -531,6 +531,39 @@
             };
         }
 
+        function level4() {
+            // 'Evade' level (same mechanics as Levels 2, 3, 5 and 6). The ego
+            // starts at (1,6), sealed into the bottom-left pocket ((1,6) and
+            // (2,6)) by a two-row slab of blocks across rows 4-5, columns 1-4,
+            // plus (3,6) and (4,6). Every jump out of the pocket would land
+            // on another block, so the magnet is needed to open it. The object
+            // starts at (3,2) above the slab. Ego and object are both
+            // lavender, deliberately. Each block has its own color, assigned
+            // per cell exactly as specified.
+            const PINK = '#E89EB8', VIOLET = '#332288';
+            return {
+                id: 4,
+                name: "Level 4",
+                isPlayable: true,
+                egoStart: { x: 1, y: 6 },
+                objects: [
+                    { start: { x: 3, y: 2 }, movement: MOVE_EVADE }
+                ],
+                blocks: [
+                    { x: 1, y: 4, color: PINK },   { x: 2, y: 4, color: VIOLET },
+                    { x: 3, y: 4, color: PINK },   { x: 4, y: 4, color: VIOLET },
+                    { x: 1, y: 5, color: VIOLET }, { x: 2, y: 5, color: PINK },
+                    { x: 3, y: 5, color: VIOLET }, { x: 4, y: 5, color: PINK },
+                    { x: 3, y: 6, color: PINK },   { x: 4, y: 6, color: VIOLET }
+                ],
+                colors: {
+                    ego: '#DAB1DA',    // lavender
+                    object: '#DAB1DA', // lavender (same as ego, by design)
+                    block: '#D3D3D3'   // fallback only - every block above sets its own color
+                }
+            };
+        }
+
         function level5() {
             // (Was Level 3 until 2026-09-17; moved to slot 5 unchanged.)
             // 'Evade' level (same mechanics as Level 6 and every level
@@ -1244,7 +1277,7 @@
             level1(),
             level2(),
             level3(),
-            blankLevel(4),
+            level4(),
             level5(),
             level6()
         ];
