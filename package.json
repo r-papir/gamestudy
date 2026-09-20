@@ -1,0 +1,23 @@
+{
+  "name": "gamestudy",
+  "version": "1.0.0",
+  "description": "<img src=\"CogSciLogo.png\" alt=\"CogSci Logo\" width=\"350\" align=\"right\">",
+  "main": "audio-recorder.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r-papir/gamestudy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/r-papir/gamestudy/issues"
+  },
+  "homepage": "https://github.com/r-papir/gamestudy#readme",
+  "dependencies": {
+    "firebase": "^12.19.0"
+  }
+}

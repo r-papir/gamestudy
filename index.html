@@ -17,7 +17,6 @@
             --primary: #d15884;        /* matches the mascot - unchanged */
             --primary-hover: #e37f9b;  /* unchanged */
             --primary-deep: #5E1A35;
-            --glitch-cyan: #28C7D6;   /* held in reserve - not used on the menu */
             --glitch-magenta: #E7318C;
             --grid-line: #D4D4CE;
         }
@@ -258,5 +257,41 @@
     <!-- EYE TRACKING DISABLED (2026-09-16):
     <p class="eye-tracking-note">* To skip eye-tracking calibration, click <em>"Continue without eye tracking"</em> when prompted.</p>
     -->
+
+<!-- FIREBASE SCRIPT -->
+<script type="module">
+    // 1. Import ONLY the main Firebase app module
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
+    import { getAnalytics } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-analytics.js';
+    import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js';
+
+    // 2. Your web app's Firebase configuration
+    // (Notice there is NO databaseURL here anymore!)
+    const firebaseConfig = {
+        apiKey: "AIzaSyD__eK9Ri5Cr_ijP3q3AzyjEEyzW1nnsjk",
+        authDomain: "step-bench.firebaseapp.com",
+        databaseURL: "https://step-bench-default-rtdb.firebaseio.com/",
+        projectId: "step-bench",
+        storageBucket: "step-bench.firebasestorage.app",
+        messagingSenderId: "644040443136",
+        appId: "1:644040443136:web:09079e572fc2285acc9fe5",
+        measurementId: "G-4BWB3Y5KZH"
+
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    // Save a test puzzle JSON object to the "puzzles/test_game" path
+    set(ref(db, 'puzzles/test_game'), {
+        playerName: "Puzzle Master",
+        score: 100,
+        completed: true
+});
+
+</script>
+
 </body>
 </html>
