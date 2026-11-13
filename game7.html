@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEP-Bench — Puzzle 7</title>
+    <link rel="icon" href="mascot.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            text-align: center;
+            position: relative;
+        }
+
+        #ripple-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            border: 7px solid #32CD32;
+            width: 50px;
+            height: 50px;
+            margin-left: -25px;
+            margin-top: -25px;
+            opacity: 0;
+            transform: scale(0);
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            10% {
+                transform: scale(0.5);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(8);
+                opacity: 0;
+            }
+        }
+
+        #instructions {
+            margin-bottom: 20px;
+            font-size: 18px;
+            padding: 15px;
+            color: var(--ink);
+            border-radius: 8px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #instructions.fade-out {
+            opacity: 0;
+        }
+
+        #grid {
+            display: inline-grid;
+            grid-template-columns: repeat(6, 80px);
+            grid-template-rows: repeat(6, 80px);
+            gap: 2px;
+            background-color: #e0e0e0;
+            padding: 2px;
+            border: 3px solid #e0e0e0;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #grid.fade-out {
+            opacity: 0;
+        }
+
+        #button-container {
+            display: none;
+        }
+
+        /* Appearance comes from puzzle-theme.css; position only.
+           #download-button lives inside the dashboard. */
+        #restart-button {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            z-index: 1000;
+            display: none;   /* shown only once the game is complete */
+        }
+
+        .audio-recorder-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            text-align: right;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #e0e0e0;
+            box-sizing: border-box;
+            background-color: #FFFFFF;
+            position: relative;
+        }
+
+        /* Wall: solid dark cell, nothing can enter */
+        .cell.wall {
+            background-color: #555555;
+            border-color: #555555;
+        }
+
+        /* Socket: thick solid border in the color it requires */
+        .cell.socket {
+            border: 8px solid;
+        }
+
+        /* Flipper: thick dotted grey border */
+        .cell.flipper {
+            border: 8px dotted #666666;
+        }
+
+        /* Pieces are drawn as a child element so cell borders stay visible */
+        .piece {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        /* Avatar: a circle (blocks are squares) */
+        .piece.avatar {
+            top: 14%;
+            left: 14%;
+            right: 14%;
+            bottom: 14%;
+            border-radius: 50%;
+        }
+
+        .completion-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            cursor: pointer;
+        }
+        .completion-overlay[hidden] { display: none; }
+        .completion-overlay.visible { opacity: 1; }
+        .completion-card {
+            padding: 48px 56px;
+            text-align: center;
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .completion-overlay.visible .completion-card { transform: scale(1); }
+        .completion-card h2 {
+            margin: 0 0 12px;
+            font-size: 28px;
+        }
+        .completion-card p {
+            margin: 0;
+            font-size: 16px;
+        }
+        .confetti-piece {
+            position: fixed;
+            top: -10px;
+            width: 10px;
+            height: 14px;
+            z-index: 10000;
+            opacity: 1;
+            animation: confetti-fall linear forwards;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            85% { opacity: 1; }
+            100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+    <link rel="stylesheet" href="puzzle-theme.css">
+    <link rel="stylesheet" href="key-indicator.css">
+    <style>
+        /* Password gate - covers the puzzle until the password is entered. */
+        .password-overlay {
+            background: var(--surface, #F9F9F6);
+            opacity: 1;
+            cursor: default;
+            z-index: 10001;
+        }
+        .password-overlay .completion-card { transform: none; }
+        .password-input {
+            display: block;
+            width: 100%;
+            margin-top: 18px;
+            padding: 10px 14px;
+            font-family: 'Silkscreen', 'Courier New', monospace;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-align: center;
+            color: var(--ink, #1C1A17);
+            background: #FFFFFF;
+            border: 3px solid var(--ink, #1C1A17);
+            border-radius: 10px;
+            outline: none;
+        }
+        .password-input:focus { box-shadow: 0 0 0 2px var(--primary, #d15884); }
+        .password-error {
+            min-height: 1.2em;
+            margin-top: 10px !important;
+            font-size: 14px !important;
+            color: #B3261E !important;
+        }
+        .password-card.shake { animation: password-shake 0.35s; }
+        @keyframes password-shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="password-overlay" class="completion-overlay password-overlay">
+        <form class="completion-card password-card" id="password-form" autocomplete="off">
+            <h2>Puzzle 7</h2>
+            <p>Enter the password to continue.</p>
+            <input type="password" id="password-input" class="password-input" inputmode="numeric" aria-label="Password" autofocus>
+            <p class="password-error" id="password-error" aria-live="polite"></p>
+            <div class="card-actions">
+                <a class="card-btn" href="index.html" style="text-decoration:none">Back</a>
+                <button type="submit" class="card-btn">Enter</button>
+            </div>
+        </form>
+    </div>
+    <div id="dashboard">
+        <div class="dash-row">
+            <a id="dash-home" href="index.html">Home</a>
+            <span class="dash-sep"></span>
+            <select id="dash-puzzle" aria-label="Switch puzzle">
+                <option value="game.html">Puzzle 1</option>
+                <option value="game2new.html">Puzzle 2</option>
+                <option value="game3.html">Puzzle 3</option>
+                <option value="game4.html">Puzzle 4</option>
+                <option value="game5.html">Puzzle 5</option>
+                <option value="game6.html">Puzzle 6</option>
+                <option value="game7.html" selected>Puzzle 7</option>
+            </select>
+            <span class="dash-sep"></span>
+            <span class="dash-field"><span>Level</span> <b id="dash-level">1</b></span>
+        </div>
+        <div class="dash-row">
+            <button id="download-button">Download Data</button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        There are no instructions for this game, intentionally.<br>Use the arrow keys and space bar to discover the controls, rules, and objective.
+    </div>
+    <div id="game-container">
+        <div id="ripple-container"></div>
+        <div id="grid"></div>
+    </div>
+    <button id="restart-button">Start Over</button>
+
+    <div id="quit-overlay" class="completion-overlay quit-overlay" hidden>
+        <div class="completion-card">
+            <h2>Quit puzzle?</h2>
+            <div class="card-actions">
+                <button type="button" class="card-btn" id="quit-confirm">Quit</button>
+                <button type="button" class="card-btn" id="quit-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="key-indicator.js"></script>
+    <script src="audio-recorder.js"></script>
+    <script src="s3-uploader.js"></script>
+    <script>if (typeof S3Uploader !== 'undefined') S3Uploader.setApiUrl('https://n00wf4nmw6.execute-api.us-east-1.amazonaws.com/prod');</script>
+    <script>
+        // Get or generate shared 4-digit session code (persists across all games in same session)
+        let sessionCode = sessionStorage.getItem('gameSessionCode');
+        if (!sessionCode) {
+            sessionCode = String(Math.floor(1000 + Math.random() * 9000));
+            sessionStorage.setItem('gameSessionCode', sessionCode);
+        }
+
+        // Shared helper scripts are optional: the puzzle still runs if this file is opened on its own.
+        function pressKeyIndicator(key) {
+            if (typeof KeyIndicator !== 'undefined' && KeyIndicator.press) KeyIndicator.press(key);
+        }
+
+        // ===========================
+        // RULES (hidden from the player)
+        // ===========================
+        // - The avatar (circle) and every block (square) has one of two polarities,
+        //   shown as two colors. Space flips the avatar's polarity.
+        // - SAME polarity repels:   the avatar can PUSH a same-colored block one cell.
+        // - OPPOSITE polarity attracts: the avatar cannot walk into an opposite-colored
+        //   block, but when it steps directly away from one, the block is PULLED along
+        //   into the cell the avatar just left.
+        // - Walls (dark cells) stop the avatar and blocks.
+        // - Flippers (dotted cells) flip the polarity of any BLOCK that enters them.
+        //   The avatar is unaffected.
+        // - Sockets (thick solid border) need a block of the border's color.
+        //   The level is solved when every socket holds a matching block.
+        //
+        // LEVEL MAP LEGEND (6 strings of 6 characters; row 1 is the top)
+        //   .  empty            #  wall             @  avatar start
+        //   a  block, polarity 0        b  block, polarity 1
+        //   A  socket needing polarity 0    B  socket needing polarity 1
+        //   *  flipper
+        // Coordinates are (x, y) = (column, row), 1-based; map[y-1][x-1].
+        // ===========================
+
+        // ===== CORE-BEGIN =====
+        const GRID_SIZE = 6;
+
+        function parseLevel(def) {
+            const st = {
+                walls: [], sockets: [], flippers: [], blocks: [],
+                avatar: { x: 1, y: 1 },
+                avatarPolarity: def.avatarPolarity,
+                moveCount: 0
+            };
+            for (let y = 1; y <= GRID_SIZE; y++) {
+                for (let x = 1; x <= GRID_SIZE; x++) {
+                    const ch = def.map[y - 1][x - 1];
+                    if (ch === '#') st.walls.push({ x, y });
+                    else if (ch === '@') st.avatar = { x, y };
+                    else if (ch === 'a') st.blocks.push({ x, y, polarity: 0 });
+                    else if (ch === 'b') st.blocks.push({ x, y, polarity: 1 });
+                    else if (ch === 'A') st.sockets.push({ x, y, polarity: 0 });
+                    else if (ch === 'B') st.sockets.push({ x, y, polarity: 1 });
+                    else if (ch === '*') st.flippers.push({ x, y });
+                }
+            }
+            return st;
+        }
+
+        function inBounds(x, y) { return x >= 1 && x <= GRID_SIZE && y >= 1 && y <= GRID_SIZE; }
+        function isWall(st, x, y) { return st.walls.some(w => w.x === x && w.y === y); }
+        function blockAt(st, x, y) { return st.blocks.find(b => b.x === x && b.y === y) || null; }
+        function isFlipper(st, x, y) { return st.flippers.some(f => f.x === x && f.y === y); }
+
+        // Put a block in a cell; entering a flipper flips the block's polarity
+        function placeBlock(st, block, x, y) {
+            block.x = x;
+            block.y = y;
+            if (isFlipper(st, x, y)) block.polarity = 1 - block.polarity;
+        }
+
+        // Space bar: flip the avatar's polarity
+        function flipAvatar(st) {
+            st.avatarPolarity = 1 - st.avatarPolarity;
+            return 'flip';
+        }
+
+        // Arrow key: try to step the avatar by (dx, dy).
+        // Returns 'blocked', 'move', 'push', 'pull', or 'push+pull'.
+        function stepAvatar(st, dx, dy) {
+            const ax = st.avatar.x, ay = st.avatar.y;
+            const nx = ax + dx, ny = ay + dy;
+            if (!inBounds(nx, ny) || isWall(st, nx, ny)) return 'blocked';
+
+            let result = 'move';
+
+            // Block ahead: same polarity is pushed, opposite polarity blocks the way
+            const ahead = blockAt(st, nx, ny);
+            if (ahead) {
+                if (ahead.polarity !== st.avatarPolarity) return 'blocked';
+                const bx = nx + dx, by = ny + dy;
+                if (!inBounds(bx, by) || isWall(st, bx, by) || blockAt(st, bx, by)) return 'blocked';
+                placeBlock(st, ahead, bx, by);
+                result = 'push';
+            }
+
+            // Block directly behind: opposite polarity is dragged along
+            const behind = blockAt(st, ax - dx, ay - dy);
+
+            st.avatar.x = nx;
+            st.avatar.y = ny;
+            st.moveCount++;
+
+            if (behind && behind.polarity !== st.avatarPolarity) {
+                placeBlock(st, behind, ax, ay);
+                result = result === 'push' ? 'push+pull' : 'pull';
+            }
+            return result;
+        }
+
+        // Solved when every socket holds a block of the matching polarity
+        function isSolved(st) {
+            return st.sockets.length > 0 && st.sockets.every(s => {
+                const b = blockAt(st, s.x, s.y);
+                return b && b.polarity === s.polarity;
+            });
+        }
+        // ===== CORE-END =====
+
+        // Level definitions. colors[0] is polarity 0, colors[1] is polarity 1
+        // (always one light and one dark color so they stay distinguishable).
+        function level1() {
+            // Push: the block is the avatar's color and sits in line with the socket.
+            return {
+                id: 1,
+                name: "Level 1",
+                avatarPolarity: 0,
+                colors: ['#DDCC77', '#332288'],
+                map: [
+                    "......",
+                    "......",
+                    ".@.a.A",
+                    "......",
+                    "......",
+                    "......",
+                ]
+            };
+        }
+
+        function level2() {
+            // Pull: the block is the other color and against the edge, so it can only be dragged.
+            return {
+                id: 2,
+                name: "Level 2",
+                avatarPolarity: 0,
+                colors: ['#ADD8E6', '#882255'],
+                map: [
+                    "......",
+                    "......",
+                    "......",
+                    "@..B.b",
+                    "......",
+                    "......",
+                ]
+            };
+        }
+
+        function level3() {
+            // Pull the block out of one corner, then switch color to push it into the other.
+            return {
+                id: 3,
+                name: "Level 3",
+                avatarPolarity: 0,
+                colors: ['#BBCC33', '#332288'],
+                map: [
+                    "b.....",
+                    "......",
+                    "..##..",
+                    "..##..",
+                    "......",
+                    "@....B",
+                ]
+            };
+        }
+
+        function level4() {
+            // Two blocks, two sockets; each socket only accepts its own color.
+            return {
+                id: 4,
+                name: "Level 4",
+                avatarPolarity: 0,
+                colors: ['#DDCC77', '#882255'],
+                map: [
+                    ".....B",
+                    ".a.#..",
+                    "...#b.",
+                    ".###..",
+                    "......",
+                    "A..@..",
+                ]
+            };
+        }
+
+        function level5() {
+            // Flipper: the only block is the wrong color for the socket until it crosses the dotted cell.
+            return {
+                id: 5,
+                name: "Level 5",
+                avatarPolarity: 0,
+                colors: ['#88CCEE', '#332288'],
+                map: [
+                    "......",
+                    "......",
+                    "@.a*B.",
+                    "......",
+                    "......",
+                    "......",
+                ]
+            };
+        }
+
+        function level6() {
+            // The flipper is the only doorway through the wall; whichever block goes through changes color.
+            return {
+                id: 6,
+                name: "Level 6",
+                avatarPolarity: 0,
+                colors: ['#BBCC33', '#882255'],
+                map: [
+                    "A..#..",
+                    ".a.#.B",
+                    "...*..",
+                    ".a.#..",
+                    "...#..",
+                    "@..#..",
+                ]
+            };
+        }
+
+        // Game state
+        let levels = [];
+        let currentLevelIndex = 0;
+        let isTransitioning = false; // Block input while a level is fading out
+        let gameState = parseLevel({ avatarPolarity: 0, map: ["......", "......", "......", "......", "......", "......"] });
+        let levelColors = ['#DDCC77', '#332288'];
+
+        // Session logging
+        function newSessionData() {
+            return {
+                game: "Game G",
+                legend: {
+                    "E": "Empty - background cell",
+                    "W": "Wall - nothing can enter",
+                    "S": "Socket - empty destination cell that needs a block of a specific polarity",
+                    "F": "Flipper - dotted cell that flips the polarity of a block entering it",
+                    "X": "Block with polarity 0",
+                    "Y": "Block with polarity 1",
+                    "A": "Avatar - the player's piece"
+                },
+                coordinates: {
+                    "grid": "6x6 grid",
+                    "origin": "(x 1, y 1) is the top-left corner (1-based)",
+                    "x": "column, increases left to right (1-6)",
+                    "y": "row, increases top to bottom (1-6)",
+                    "dx": "-1 = left, +1 = right, 0 = no horizontal movement",
+                    "dy": "-1 = up, +1 = down, 0 = no vertical movement",
+                    "note": "The matrix shows only the top-most thing in each cell (avatar, then block, then socket/flipper). Full block and socket lists are logged alongside each event."
+                },
+                sessionStart: new Date().toISOString(),
+                events: []
+            };
+        }
+        let sessionData = newSessionData();
+
+        // Initialize grid display
+        function initGrid() {
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            // 1-based coordinates: cells run (1,1)..(6,6)
+            for (let y = 1; y <= GRID_SIZE; y++) {
+                for (let x = 1; x <= GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        // Load level
+        function loadLevel(levelIndex) {
+            if (levelIndex >= levels.length) {
+                return;
+            }
+
+            const dashLevel = document.getElementById('dash-level');
+            if (dashLevel) dashLevel.textContent = levelIndex + 1;
+
+            // Clear any remaining ripples from previous level
+            document.getElementById('ripple-container').innerHTML = '';
+
+            const level = levels[levelIndex];
+            gameState = parseLevel(level);
+            levelColors = [...level.colors];
+
+            renderGrid();
+
+            // Fade in the new level
+            document.getElementById('grid').classList.remove('fade-out');
+            document.getElementById('instructions').classList.remove('fade-out');
+        }
+
+        // Render the grid
+        function renderGrid() {
+            for (let y = 1; y <= GRID_SIZE; y++) {
+                for (let x = 1; x <= GRID_SIZE; x++) {
+                    const cell = document.getElementById(`cell-${x}-${y}`);
+
+                    // Reset cell
+                    cell.className = 'cell';
+                    cell.style.borderColor = '';
+                    cell.innerHTML = '';
+
+                    if (isWall(gameState, x, y)) {
+                        cell.classList.add('wall');
+                        continue;
+                    }
+
+                    const socket = gameState.sockets.find(s => s.x === x && s.y === y);
+                    if (socket) {
+                        cell.classList.add('socket');
+                        cell.style.borderColor = levelColors[socket.polarity];
+                    } else if (isFlipper(gameState, x, y)) {
+                        cell.classList.add('flipper');
+                    }
+
+                    const block = blockAt(gameState, x, y);
+                    if (block) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece block';
+                        piece.style.backgroundColor = levelColors[block.polarity];
+                        cell.appendChild(piece);
+                    }
+
+                    if (gameState.avatar.x === x && gameState.avatar.y === y) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece avatar';
+                        piece.style.backgroundColor = levelColors[gameState.avatarPolarity];
+                        cell.appendChild(piece);
+                    }
+                }
+            }
+        }
+
+        // Advance after a solved level
+        function handleLevelSolved() {
+            isTransitioning = true;
+            createRipple();
+
+            const gridElement = document.getElementById('grid');
+            const instructionsElement = document.getElementById('instructions');
+            gridElement.classList.add('fade-out');
+            instructionsElement.classList.add('fade-out');
+
+            setTimeout(() => {
+                currentLevelIndex++;
+                isTransitioning = false;
+                if (currentLevelIndex < levels.length) {
+                    loadLevel(currentLevelIndex);
+                } else {
+                    // Game complete - show restart button and upload data
+                    gridElement.classList.remove('fade-out');
+                    instructionsElement.classList.remove('fade-out');
+                    document.getElementById('restart-button').style.display = 'block';
+                    handleGameComplete();
+                    showCompletionMessage('7');
+                }
+            }, 800);
+        }
+
+        // Apply one player action, then re-render and check for a win
+        function doMove(dx, dy) {
+            stepAvatar(gameState, dx, dy);
+            renderGrid();
+            if (isSolved(gameState)) handleLevelSolved();
+        }
+
+        function doFlip() {
+            flipAvatar(gameState);
+            renderGrid();
+        }
+
+        function showCompletionMessage(puzzleLetter) {
+            const overlay = document.createElement('div');
+            overlay.className = 'completion-overlay';
+            overlay.innerHTML = '<div class="completion-card">' +
+                '<h2>Congratulations!</h2>' +
+                '<p>You completed all levels of Puzzle ' + puzzleLetter + '.</p>' +
+                '</div>';
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+
+            const colors = ['#e53935','#1e88e5','#43a047','#fdd835','#8e24aa','#fb8c00','#00acc1'];
+            for (let i = 0; i < 80; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+                piece.style.animationDelay = Math.random() * 1.5 + 's';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                piece.style.width = (6 + Math.random() * 8) + 'px';
+                piece.style.height = (8 + Math.random() * 10) + 'px';
+                document.body.appendChild(piece);
+            }
+
+            overlay.addEventListener('click', () => {
+                overlay.classList.remove('visible');
+                setTimeout(() => {
+                    overlay.remove();
+                    document.querySelectorAll('.confetti-piece').forEach(p => p.remove());
+                }, 500);
+            });
+        }
+
+        // Create ripple effect on win
+        function createRipple() {
+            const container = document.getElementById('ripple-container');
+
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const ripple = document.createElement('div');
+                    ripple.className = 'ripple';
+                    ripple.style.animation = 'ripple 1s ease-out forwards';
+                    container.appendChild(ripple);
+
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 1100);
+                }, i * 200);
+            }
+        }
+
+        // Generate game state matrix for logging
+        // matrix is a plain 0-based array; coordinates are 1-based, so index with -1.
+        function generateGameStateMatrix() {
+            const matrix = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('E'));
+
+            gameState.walls.forEach(w => { matrix[w.y - 1][w.x - 1] = 'W'; });
+            gameState.sockets.forEach(s => { matrix[s.y - 1][s.x - 1] = 'S'; });
+            gameState.flippers.forEach(f => { matrix[f.y - 1][f.x - 1] = 'F'; });
+            gameState.blocks.forEach(b => { matrix[b.y - 1][b.x - 1] = b.polarity === 0 ? 'X' : 'Y'; });
+            matrix[gameState.avatar.y - 1][gameState.avatar.x - 1] = 'A';
+
+            return matrix;
+        }
+
+        // Log event (state is captured BEFORE the action is applied)
+        function logEvent(key, action, dx, dy) {
+            sessionData.events.push({
+                timestamp: new Date().toISOString(),
+                level: currentLevelIndex + 1,
+                key: key,
+                action: action,
+                delta: { dx: dx, dy: dy },
+                positionBefore: { x: gameState.avatar.x, y: gameState.avatar.y },
+                avatarPolarityBefore: gameState.avatarPolarity,
+                blocksBefore: gameState.blocks.map(b => ({ ...b })),
+                sockets: gameState.sockets.map(s => ({ ...s })),
+                moveCount: gameState.moveCount,
+                gameStateBefore: generateGameStateMatrix()
+            });
+        }
+
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            if (currentLevelIndex >= levels.length) return;
+            if (isTransitioning) return; // Block input during transition
+
+            switch(e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    pressKeyIndicator(e.key);
+                    logEvent('ArrowUp', 'move_up', 0, -1);
+                    doMove(0, -1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    pressKeyIndicator(e.key);
+                    logEvent('ArrowDown', 'move_down', 0, 1);
+                    doMove(0, 1);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    pressKeyIndicator(e.key);
+                    logEvent('ArrowLeft', 'move_left', -1, 0);
+                    doMove(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    pressKeyIndicator(e.key);
+                    logEvent('ArrowRight', 'move_right', 1, 0);
+                    doMove(1, 0);
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    pressKeyIndicator(e.key);
+                    logEvent('Space', 'flip_polarity', 0, 0);
+                    doFlip();
+                    break;
+                case 'r':
+                case 'R':
+                    e.preventDefault();
+                    logEvent('R', 'restart_level', 0, 0);
+                    loadLevel(currentLevelIndex);
+                    break;
+            }
+        });
+
+        // Handle restart button click
+        document.getElementById('restart-button').addEventListener('click', () => {
+            currentLevelIndex = 0;
+            document.getElementById('restart-button').style.display = 'none';
+            sessionData = newSessionData();
+            loadLevel(currentLevelIndex);
+        });
+
+        // Handle download button click
+        document.getElementById('download-button').addEventListener('click', () => {
+            const hasRecorder = typeof AudioRecorder !== 'undefined';
+            const participantId = hasRecorder && AudioRecorder.promptParticipantId
+                ? AudioRecorder.promptParticipantId()
+                : prompt('Participant ID:');
+            if (participantId === null) return;
+
+            sessionData.sessionEnd = new Date().toISOString();
+            // Transcription is not collected; key kept as [] so the log schema matches the other puzzles.
+            sessionData.transcription = [];
+
+            let dataStr = JSON.stringify(sessionData, null, 2);
+
+            // Post-process to compress gameStateBefore arrays into compact rows
+            dataStr = dataStr.replace(
+                /"gameStateBefore":\s*\[\s*\[\s*("[A-Z]",?\s*)+\]\s*(,\s*\[\s*("[A-Z]",?\s*)+\]\s*)*\]/g,
+                (match) => {
+                    const letters = match.match(/"[A-Z]"/g);
+                    if (!letters) return match;
+
+                    const rows = [];
+                    for (let i = 0; i < letters.length; i += GRID_SIZE) {
+                        rows.push('[' + letters.slice(i, i + GRID_SIZE).join(',') + ']');
+                    }
+
+                    return '"gameStateBefore": [\n        ' + rows.join(',\n        ') + '\n      ]';
+                }
+            );
+
+            let dateStr;
+            if (hasRecorder && AudioRecorder.formatDateMMDDYYYY) {
+                dateStr = AudioRecorder.formatDateMMDDYYYY();
+            } else {
+                const d = new Date();
+                dateStr = String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + d.getFullYear();
+            }
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${participantId}_gG_gamestate_${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // S3 Upload Functions
+        function showUploadStatus(message, type) {
+            let statusEl = document.getElementById('upload-status');
+            if (!statusEl) {
+                statusEl = document.createElement('div');
+                statusEl.id = 'upload-status';
+                statusEl.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #333; color: white; border-radius: 8px; z-index: 1000; font-family: sans-serif; font-size: 14px; transition: opacity 0.3s;';
+                document.body.appendChild(statusEl);
+            }
+            statusEl.textContent = message;
+            statusEl.style.background = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#1565c0';
+        }
+
+        async function handleGameComplete() {
+            // Prepare session data
+            sessionData.sessionEnd = new Date().toISOString();
+            sessionData.transcription = [];
+
+            // Check if S3Uploader is configured
+            if (typeof S3Uploader === 'undefined' || !S3Uploader.getApiUrl()) {
+                console.log('S3Uploader not configured. Skipping upload.');
+                return;
+            }
+
+            // Upload to S3
+            showUploadStatus('Uploading session data...', 'uploading');
+
+            const result = await S3Uploader.upload(
+                sessionCode,
+                sessionData.game,
+                sessionData,
+                null,  // eye-tracking data (disabled)
+                null,  // audio chunks (disabled)
+                (status) => showUploadStatus(status, 'uploading')
+            );
+
+            if (result.success) {
+                showUploadStatus('Data uploaded successfully!', 'success');
+                setTimeout(() => {
+                    const statusEl = document.getElementById('upload-status');
+                    if (statusEl) statusEl.style.opacity = '0';
+                }, 3000);
+            } else {
+                showUploadStatus('Upload failed. Use Download button as backup.', 'error');
+            }
+        }
+
+        // Initialize game
+        levels = [level1(), level2(), level3(), level4(), level5(), level6()];
+        initGrid();
+        loadLevel(0);
+
+        // Initialize audio recorder (skipped if the shared script is not present)
+        if (typeof AudioRecorder !== 'undefined' && AudioRecorder.init) {
+            AudioRecorder.init({
+                gamePrefix: 'puzzle-game7',
+                gameName: 'Game G',
+                getGameState: function() {
+                    return {
+                        level: currentLevelIndex + 1,
+                        avatarPos: { ...gameState.avatar },
+                        avatarPolarity: gameState.avatarPolarity,
+                        blocks: gameState.blocks.map(b => ({ ...b })),
+                        sockets: gameState.sockets.map(s => ({ ...s })),
+                        flippers: gameState.flippers.map(f => ({ ...f })),
+                        moveCount: gameState.moveCount,
+                        gameStateMatrix: generateGameStateMatrix()
+                    };
+                },
+                keyActionMap: {
+                    'ArrowUp': 'move_up',
+                    'ArrowDown': 'move_down',
+                    'ArrowLeft': 'move_left',
+                    'ArrowRight': 'move_right',
+                    ' ': 'flip_polarity',
+                    'r': 'restart_level',
+                    'R': 'restart_level'
+                },
+                insertBeforeSelector: '#dashboard',
+                onRecordingStart: () => {},
+                onRecordingStop: () => {}
+            });
+        }
+    </script>
+
+    <script>
+        // Dashboard puzzle switcher - confirm with a "Quit puzzle?" dialog
+        // before navigating away (Home included).
+        (function () {
+            var select = document.getElementById('dash-puzzle');
+            var home = document.getElementById('dash-home');
+            var overlay = document.getElementById('quit-overlay');
+            if (!overlay) return;
+            var CURRENT = 'game7.html';
+            var pending = null;
+
+            function askQuit(target) {
+                pending = target;
+                overlay.hidden = false;
+                requestAnimationFrame(function () { overlay.classList.add('visible'); });
+            }
+
+            if (select) select.addEventListener('change', function () {
+                var target = this.value;
+                this.value = CURRENT;
+                if (target && target !== CURRENT) askQuit(target);
+            });
+
+            if (home) home.addEventListener('click', function (e) {
+                e.preventDefault();
+                askQuit(home.getAttribute('href') || 'index.html');
+            });
+
+            document.getElementById('quit-confirm').addEventListener('click', function () {
+                if (pending) window.location.href = pending;
+            });
+            document.getElementById('quit-cancel').addEventListener('click', function () {
+                overlay.classList.remove('visible');
+                setTimeout(function () { overlay.hidden = true; }, 400);
+                pending = null;
+            });
+        })();
+    </script>
+    <script>
+        // Password gate: asked every time the page loads. Game keys are
+        // blocked until the correct password is entered.
+        (function () {
+            var PASSWORD = '257';
+            var overlay = document.getElementById('password-overlay');
+            var form = document.getElementById('password-form');
+            var input = document.getElementById('password-input');
+            var error = document.getElementById('password-error');
+            var locked = true;
+
+            function blockKeys(e) {
+                if (!locked) return;
+                // Let the password field receive typing and Enter, but stop the
+                // game, key indicator and recorder from seeing any keys.
+                e.stopImmediatePropagation();
+                if (e.target !== input && e.key !== 'Tab') e.preventDefault();
+            }
+            window.addEventListener('keydown', blockKeys, true);
+            window.addEventListener('keyup', blockKeys, true);
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (input.value === PASSWORD) {
+                    locked = false;
+                    overlay.hidden = true;
+                    // Start the session clock when the puzzle actually becomes playable.
+                    if (typeof sessionData !== 'undefined') sessionData.sessionStart = new Date().toISOString();
+                    input.blur();
+                } else {
+                    error.textContent = 'Incorrect password.';
+                    input.value = '';
+                    form.classList.remove('shake');
+                    void form.offsetWidth;
+                    form.classList.add('shake');
+                    input.focus();
+                }
+            });
+            input.focus();
+        })();
+    </script>
+</body>
+</html>
