@@ -208,58 +208,8 @@
     </style>
     <link rel="stylesheet" href="puzzle-theme.css">
     <link rel="stylesheet" href="key-indicator.css">
-    <style>
-        /* Password gate - covers the puzzle until the password is entered. */
-        .password-overlay {
-            background: var(--surface, #F9F9F6);
-            opacity: 1;
-            cursor: default;
-            z-index: 10001;
-        }
-        .password-overlay .completion-card { transform: none; }
-        .password-input {
-            display: block;
-            width: 100%;
-            margin-top: 18px;
-            padding: 10px 14px;
-            font-family: 'Silkscreen', 'Courier New', monospace;
-            font-size: 18px;
-            letter-spacing: 2px;
-            text-align: center;
-            color: var(--ink, #1C1A17);
-            background: #FFFFFF;
-            border: 3px solid var(--ink, #1C1A17);
-            border-radius: 10px;
-            outline: none;
-        }
-        .password-input:focus { box-shadow: 0 0 0 2px var(--primary, #d15884); }
-        .password-error {
-            min-height: 1.2em;
-            margin-top: 10px !important;
-            font-size: 14px !important;
-            color: #B3261E !important;
-        }
-        .password-card.shake { animation: password-shake 0.35s; }
-        @keyframes password-shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            75% { transform: translateX(8px); }
-        }
-    </style>
 </head>
 <body>
-    <div id="password-overlay" class="completion-overlay password-overlay">
-        <form class="completion-card password-card" id="password-form" autocomplete="off">
-            <h2>Puzzle 7</h2>
-            <p>Enter the password to continue.</p>
-            <input type="password" id="password-input" class="password-input" inputmode="numeric" aria-label="Password" autofocus>
-            <p class="password-error" id="password-error" aria-live="polite"></p>
-            <div class="card-actions">
-                <a class="card-btn" href="index.html" style="text-decoration:none">Back</a>
-                <button type="submit" class="card-btn">Enter</button>
-            </div>
-        </form>
-    </div>
     <div id="dashboard">
         <div class="dash-row">
             <a id="dash-home" href="index.html">Home</a>
@@ -992,47 +942,6 @@
                 setTimeout(function () { overlay.hidden = true; }, 400);
                 pending = null;
             });
-        })();
-    </script>
-    <script>
-        // Password gate: asked every time the page loads. Game keys are
-        // blocked until the correct password is entered.
-        (function () {
-            var PASSWORD = '257';
-            var overlay = document.getElementById('password-overlay');
-            var form = document.getElementById('password-form');
-            var input = document.getElementById('password-input');
-            var error = document.getElementById('password-error');
-            var locked = true;
-
-            function blockKeys(e) {
-                if (!locked) return;
-                // Let the password field receive typing and Enter, but stop the
-                // game, key indicator and recorder from seeing any keys.
-                e.stopImmediatePropagation();
-                if (e.target !== input && e.key !== 'Tab') e.preventDefault();
-            }
-            window.addEventListener('keydown', blockKeys, true);
-            window.addEventListener('keyup', blockKeys, true);
-
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                if (input.value === PASSWORD) {
-                    locked = false;
-                    overlay.hidden = true;
-                    // Start the session clock when the puzzle actually becomes playable.
-                    if (typeof sessionData !== 'undefined') sessionData.sessionStart = new Date().toISOString();
-                    input.blur();
-                } else {
-                    error.textContent = 'Incorrect password.';
-                    input.value = '';
-                    form.classList.remove('shake');
-                    void form.offsetWidth;
-                    form.classList.add('shake');
-                    input.focus();
-                }
-            });
-            input.focus();
         })();
     </script>
 </body>
